@@ -1,5 +1,12 @@
+__precompile__()
+
 module MultivariateMoments
 
-# package code goes here
+using MultivariatePolynomials
+const MP = MultivariatePolynomials
+
+include("measure.jl")
+include("exp.jl")
+include("matmeasure.jl")
 
 end # module

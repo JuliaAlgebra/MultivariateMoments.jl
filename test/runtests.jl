@@ -1,5 +1,12 @@
 using MultivariateMoments
 using Base.Test
+using MultivariatePolynomials
 
-# write your own tests here
-@test 1 == 2
+import DynamicPolynomials
+Mod = DynamicPolynomials
+include("commutativetests.jl")
+#include("noncommutativetests.jl")
+
+#import TypedPolynomials
+#Mod = TypedPolynomials
+#include("commutativetests.jl")
