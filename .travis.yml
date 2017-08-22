@@ -24,6 +24,10 @@ git:
 #    - gfortran
 #before_script: # homebrew for mac
 #  - if [ $TRAVIS_OS_NAME = osx ]; then brew install gcc; fi
+before_script:
+  - julia -e 'Pkg.clone("git://github.com/blegat/MultivariatePolynomials.jl.git")'
+  - julia -e 'Pkg.clone("git://github.com/blegat/SemialgebraicSets.jl.git")'
+  - julia -e 'Pkg.clone("git://github.com/blegat/DynamicPolynomials.jl.git")'
 
 ## uncomment the following lines to override the default test script
 #script:
