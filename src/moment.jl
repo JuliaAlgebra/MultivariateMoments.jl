@@ -6,11 +6,11 @@ struct Moment{T, MT <: AbstractMonomial} <: AbstractMoment{T}
 end
 
 """
-    moment(α::T, m::AbstractMonomial)
+    moment(α, m::AbstractMonomial)
 
 Creates the moment of the monomial `m` and of value `α`.
 """
-moment(α::T, m::AbstractMonomial) = Moment(α, m)
+moment(α, m::AbstractMonomial) = Moment(α, m)
 
 """
     value(m::AbstractMomentLike{T})::T where T

@@ -1,4 +1,4 @@
-export SymMatrix, MatMeasure, getmat
+export SymMatrix, MatMeasure, getmat, matmeasure, AtomicMeasure, extractatoms
 
 struct SymMatrix{T} <: AbstractMatrix{T}
     Q::Vector{T}
@@ -49,7 +49,7 @@ function MatMeasure{T}(f::Function, x::AbstractVector) where T
 end
 MatMeasure(f::Function, x) = MatMeasure{Base.promote_op(f, Int, Int)}(f, x)
 
-function _matmeasure(μ::Measure{T, MT, MVT}, X::MVT) where {T, MT, MVT}
+function matmeasure(μ::Measure{T}, X) where T
     function getmom(i, j)
         x = X[i] * X[j]
         for m in moments(μ)
@@ -59,9 +59,8 @@ function _matmeasure(μ::Measure{T, MT, MVT}, X::MVT) where {T, MT, MVT}
         end
         throw(ArgumentError("μ does not have the moment $(x)"))
     end
-    MatMeasure{T, MV, MVT}(getmom, X)
+    MatMeasure{T}(getmom, X)
 end
-MatMeasure{T, MT, MVT}(μ::Measure{T, MT, MVT}, X) where {T, MT, MVT} = _matmeasure(μ, monovec(X))
 
 function MatMeasure(Q::AbstractMatrix{T}, x, σ) where T
     MatMeasure{T}((i,j) -> Q[σ[i], σ[j]], x)
@@ -72,7 +71,7 @@ function MatMeasure(Q::AbstractMatrix, x)
 end
 
 function getmat{C, T}(μ::MatMeasure{C, T})
-    _getmat(μ.Q, length(μ.x))
+    Matrix(μ.Q, length(μ.x))
 end
 
 type AtomicMeasure{T, V}
@@ -84,8 +83,8 @@ function AtomicMeasure{V, S, T}(vars::V, λ::Vector{S}, vals::Vector{Vector{T}})
     AtomicMeasure{promote_type(S, T), V}(vars, λ, vals)
 end
 
-function Measure(μ::AtomicMeasure{T}, x) where {T}
-    Measure{T, monomialtype(x), monovectype(x)}(μ, x)
+function Measure(μ::AtomicMeasure{T}, x::AbstractVector{TT}) where {T, TT}
+    Measure{T, monomialtype(TT), monovectype(x)}(μ, x)
 end
 function Measure{T, MT, MVT}(μ::AtomicMeasure{T}, x) where {T, MT, MVT}
     X = monovec(x)
