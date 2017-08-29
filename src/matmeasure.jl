@@ -1,4 +1,6 @@
 export SymMatrix, MatMeasure, getmat, matmeasure, AtomicMeasure, extractatoms
+using RowEchelon
+using SemialgebraicSets
 
 struct SymMatrix{T} <: AbstractMatrix{T}
     Q::Vector{T}
@@ -32,10 +34,13 @@ end
 Base.getindex(Q::SymMatrix, I::Tuple) = Q[I...]
 Base.getindex(Q::SymMatrix, I::CartesianIndex) = Q[I.I]
 
-struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
+mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
     Q::SymMatrix{T}
     x::MVT
+    support::Nullable{AlgebraicSet}
 end
+MatMeasure{T, MT, MVT}(Q::SymMatrix{T}, x::MVT) where {T, MT, MVT} = MatMeasure{T, MT, MVT}(Q, x, nothing)
+
 MP.variables(μ::MatMeasure) = variables(μ.x)
 MP.nvariables(μ::MatMeasure) = nvariables(μ.x)
 
@@ -71,7 +76,7 @@ function MatMeasure(Q::AbstractMatrix, x)
 end
 
 function getmat{C, T}(μ::MatMeasure{C, T})
-    Matrix(μ.Q, length(μ.x))
+    Matrix(μ.Q)
 end
 
 type AtomicMeasure{T, V}
@@ -99,8 +104,8 @@ end
 function solve_system(U, x)
     m, r = size(U)
     @assert m == length(x)
-    n = nvars(x)
-    v = vars(x)
+    n = nvariables(x)
+    v = variables(x)
     pivots = [findfirst(j -> U[j, i] != 0, 1:m) for i in 1:r]
     if any(pivots .== 0)
         keep = pivots .> 0
@@ -131,7 +136,7 @@ function solve_system(U, x)
     r, vals
 end
 
-function extractatoms(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
+function computesupport!(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
     # We reverse the ordering so that the first columns corresponds to low order monomials
     # so that we have more chance that low order monomials are in β and then more chance
     # v[i] * β to be in μ.x
@@ -146,14 +151,64 @@ function extractatoms(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
 #   r = sum(F.S .> tol)
 #   V = F.U[:, 1:r] .* repmat(sqrt.(S[1:r])', size(F.U, 1), 1)
     rref!(V, ɛ == -1 ? sqrt(eps(norm(V, Inf))) : ɛ)
-    r, vals = solve_system(V', μ.x)
+    #r, vals = solve_system(V', μ.x)
+
+    # System is
+    # y = [U 0] * y
+    # where y = x[end:-1:1]
+    # which is
+    # y = U * β
+    display(V)
+    @show μ.x
+    equation(i) = sum(j -> μ.x[m+1-j] * V[j, i], 1:r) - μ.x[m+1-i]
+    system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(μ.x)))
+    @show system
+    μ.support = algebraicset(system)
+end
+
+function extractatoms(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
+    M = getmat(μ)[end:-1:1, end:-1:1]
+    computesupport!(μ, tol, shift, ɛ)
+    supp = get(μ.support)
+    @show equalities(supp)
+    if !iszerodimensional(supp)
+        error("Cannot extract atoms of Measure with non zero-dimensional support")
+    end
+    vals = collect(supp)
+    r = length(vals)
     # Determine weights
     Ms = similar(M, r, r)
-    v = vars(μ)
+    v = variables(μ)
     for i in 1:r
-        vi = ζ(vals[i], μ.x, v)
+        vi = dirac(μ.x, v => vals[i])
         Ms[:, i] = vi.a[end:-1:end-r+1] * vi.a[end]
     end
     λ = Ms \ M[1:r, 1]
     AtomicMeasure(v, λ, vals)
+end
+
+function permcomp(f, m)
+    picked = IntSet()
+    for i in 1:m
+        k = 0
+        for j in 1:m
+            if !(j in picked) && f(i, j)
+                k = j
+                break
+            end
+        end
+        if k == 0
+            return false
+        end
+        push!(picked, k)
+    end
+    true
+end
+function Base.isapprox(μ::AtomicMeasure, ν::AtomicMeasure; kws...)
+    m = length(μ.λ)
+    if length(ν.λ) != m
+        false
+    else
+        permcomp((i, j) -> isapprox(μ.λ[i], ν.λ[j]; kws...) && isapprox(μ.vals[i], ν.vals[j]; kws...), m)
+    end
 end

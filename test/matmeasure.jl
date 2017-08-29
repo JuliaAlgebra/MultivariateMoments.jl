@@ -1,5 +1,6 @@
 @testset "MatMeasure" begin
     Mod.@polyvar x y
+    matmeasure(Measure([1], [x]), [y])
     @test_throws ArgumentError matmeasure(Measure([1], [x]), [y])
 end
 
