@@ -1,6 +1,5 @@
 @testset "MatMeasure" begin
     Mod.@polyvar x y
-    matmeasure(Measure([1], [x]), [y])
     @test_throws ArgumentError matmeasure(Measure([1], [x]), [y])
 end
 
@@ -28,9 +27,12 @@ end
          0 0 0 0 0 1;
          0 0 2 0 0 0] # x^2 = 2x
     # β will be [z, y, x, y*z, x*z, x*y]
-    x = MonomialVector([z, y, x, z^2, y*z, y^2, x*z, x*y, x^2])
+    x = monovec([z, y, x, z^2, y*z, y^2, x*z, x*y, x^2])
     # x*β contains x*y*z, x^2*z, x^2*y which are not present so it show fail
-    @test_throws ErrorException MultivariatePolynomials.solve_system(U, x)
+    V = MultivariateMoments.build_system(U', x)
+    @test iszerodimensional(V)
+    @test collect(V)
+    @test_throws ErrorException MultivariatePolynomials.solve_system(U', x)
 end
 
 #@testset "[HL05] Section 4" begin

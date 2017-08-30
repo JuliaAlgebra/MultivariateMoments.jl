@@ -84,8 +84,8 @@ type AtomicMeasure{T, V}
     λ::Vector{T} # The measure is sum λ_i * δ_{support_i}
     support::Vector{Vector{T}} # Elements of the finite support
 end
-function AtomicMeasure{V, S, T}(vars::V, λ::Vector{S}, vals::Vector{Vector{T}})
-    AtomicMeasure{promote_type(S, T), V}(vars, λ, vals)
+function AtomicMeasure{V, S, T}(vars::V, λ::Vector{S}, support::Vector{Vector{T}})
+    AtomicMeasure{promote_type(S, T), V}(vars, λ, support)
 end
 
 function Measure(μ::AtomicMeasure{T}, x::AbstractVector{TT}) where {T, TT}
@@ -136,6 +136,21 @@ function solve_system(U, x)
     r, vals
 end
 
+function build_system(U::AbstractMatrix, mv::AbstractVector)
+    # System is
+    # y = [U 0] * y
+    # where y = x[end:-1:1]
+    # which is
+    # y = U * β
+    display(U)
+    @show mv
+    m = length(mv)
+    equation(i) = sum(j -> mv[m+1-j] * U[j, i], 1:size(U, 1)) - mv[m+1-i]
+    system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(mv)))
+    @show system
+    algebraicset(system)
+end
+
 function computesupport!(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
     # We reverse the ordering so that the first columns corresponds to low order monomials
     # so that we have more chance that low order monomials are in β and then more chance
@@ -153,17 +168,17 @@ function computesupport!(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
     rref!(V, ɛ == -1 ? sqrt(eps(norm(V, Inf))) : ɛ)
     #r, vals = solve_system(V', μ.x)
 
-    # System is
-    # y = [U 0] * y
-    # where y = x[end:-1:1]
-    # which is
-    # y = U * β
-    display(V)
-    @show μ.x
-    equation(i) = sum(j -> μ.x[m+1-j] * V[j, i], 1:r) - μ.x[m+1-i]
-    system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(μ.x)))
-    @show system
-    μ.support = algebraicset(system)
+#    # System is
+#    # y = [U 0] * y
+#    # where y = x[end:-1:1]
+#    # which is
+#    # y = U * β
+#    display(V)
+#    @show μ.x
+#    equation(i) = sum(j -> μ.x[m+1-j] * V[j, i], 1:r) - μ.x[m+1-i]
+#    system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(μ.x)))
+#    @show system
+    μ.support = build_system(V, μ.x)
 end
 
 function extractatoms(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
@@ -209,6 +224,8 @@ function Base.isapprox(μ::AtomicMeasure, ν::AtomicMeasure; kws...)
     if length(ν.λ) != m
         false
     else
-        permcomp((i, j) -> isapprox(μ.λ[i], ν.λ[j]; kws...) && isapprox(μ.vals[i], ν.vals[j]; kws...), m)
+        @show μ.support
+        @show ν.support
+        permcomp((i, j) -> isapprox(μ.λ[i], ν.λ[j]; kws...) && isapprox(μ.support[i], ν.support[j]; kws...), m)
     end
 end

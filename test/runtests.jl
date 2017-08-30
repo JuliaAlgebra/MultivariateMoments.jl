@@ -1,6 +1,7 @@
 using MultivariateMoments
 using Base.Test
 using MultivariatePolynomials
+using SemialgebraicSets
 
 import DynamicPolynomials
 Mod = DynamicPolynomials
