@@ -31,8 +31,11 @@ end
     # x*β contains x*y*z, x^2*z, x^2*y which are not present so it show fail
     V = MultivariateMoments.build_system(U', x)
     @test iszerodimensional(V)
-    @test collect(V)
-    @test_throws ErrorException MultivariatePolynomials.solve_system(U', x)
+    sols = [[2.0, 0., 0.], [2.0, 2.0, 0.], [2.0, 2.0, 2.0], [0., 0., 0.]]
+    @test length(V) == 4
+    for sol in sols
+        @test any(v -> isapprox(sol, v, rtol=1e-4), V)
+    end
 end
 
 #@testset "[HL05] Section 4" begin
