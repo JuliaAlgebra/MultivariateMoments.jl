@@ -101,40 +101,41 @@ end
 # where y = x[end:-1:1]
 # which is
 # y = U * β
-function solve_system(U, x)
-    m, r = size(U)
-    @assert m == length(x)
-    n = nvariables(x)
-    v = variables(x)
-    pivots = [findfirst(j -> U[j, i] != 0, 1:m) for i in 1:r]
-    if any(pivots .== 0)
-        keep = pivots .> 0
-        pivots = pivots[keep]
-        r = length(pivots)
-        U = U[:, keep]
-    end
-    β = x[m+1-pivots]
-    function multisearch_check(y)
-        idxs = multisearch(x, y)
-        if any(idxs .== 0)
-            error("Missing monomials $(y[idxs .== 0]) in $(x)")
-        end
-        idxs
-    end
-    Ns = [U[m+1-reverse(multisearch_check(v[i] * β)), :] for i in 1:n]
-    λ = rand(n)
-    λ /= sum(λ)
-    N = sum(λ .* Ns)
-    Z = schurfact(N)[:Z]
-    vals = [Vector{Float64}(n) for j in 1:r]
-    for j in 1:r
-        qj = Z[:, j]
-        for i in 1:n
-            vals[j][i] = dot(qj, Ns[i] * qj)
-        end
-    end
-    r, vals
-end
+# The code for solving the system with reordered schur has been moved to SemialgebraicSets.jl
+#function solve_system(U, x)
+#    m, r = size(U)
+#    @assert m == length(x)
+#    n = nvariables(x)
+#    v = variables(x)
+#    pivots = [findfirst(j -> U[j, i] != 0, 1:m) for i in 1:r]
+#    if any(pivots .== 0)
+#        keep = pivots .> 0
+#        pivots = pivots[keep]
+#        r = length(pivots)
+#        U = U[:, keep]
+#    end
+#    β = x[m+1-pivots]
+#    function multisearch_check(y)
+#        idxs = multisearch(x, y)
+#        if any(idxs .== 0)
+#            error("Missing monomials $(y[idxs .== 0]) in $(x)")
+#        end
+#        idxs
+#    end
+#    Ns = [U[m+1-reverse(multisearch_check(v[i] * β)), :] for i in 1:n]
+#    λ = rand(n)
+#    λ /= sum(λ)
+#    N = sum(λ .* Ns)
+#    Z = schurfact(N)[:Z]
+#    vals = [Vector{Float64}(n) for j in 1:r]
+#    for j in 1:r
+#        qj = Z[:, j]
+#        for i in 1:n
+#            vals[j][i] = dot(qj, Ns[i] * qj)
+#        end
+#    end
+#    r, vals
+#end
 
 function build_system(U::AbstractMatrix, mv::AbstractVector)
     # System is
@@ -142,12 +143,9 @@ function build_system(U::AbstractMatrix, mv::AbstractVector)
     # where y = x[end:-1:1]
     # which is
     # y = U * β
-    display(U)
-    @show mv
     m = length(mv)
     equation(i) = sum(j -> mv[m+1-j] * U[j, i], 1:size(U, 1)) - mv[m+1-i]
     system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(mv)))
-    @show system
     algebraicset(system)
 end
 
@@ -167,17 +165,6 @@ function computesupport!(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
 #   V = F.U[:, 1:r] .* repmat(sqrt.(S[1:r])', size(F.U, 1), 1)
     rref!(V, ɛ == -1 ? sqrt(eps(norm(V, Inf))) : ɛ)
     #r, vals = solve_system(V', μ.x)
-
-#    # System is
-#    # y = [U 0] * y
-#    # where y = x[end:-1:1]
-#    # which is
-#    # y = U * β
-#    display(V)
-#    @show μ.x
-#    equation(i) = sum(j -> μ.x[m+1-j] * V[j, i], 1:r) - μ.x[m+1-i]
-#    system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(μ.x)))
-#    @show system
     μ.support = build_system(V, μ.x)
 end
 
@@ -185,7 +172,6 @@ function extractatoms(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
     M = getmat(μ)[end:-1:1, end:-1:1]
     computesupport!(μ, tol, shift, ɛ)
     supp = get(μ.support)
-    @show equalities(supp)
     if !iszerodimensional(supp)
         error("Cannot extract atoms of Measure with non zero-dimensional support")
     end
@@ -224,8 +210,6 @@ function Base.isapprox(μ::AtomicMeasure, ν::AtomicMeasure; kws...)
     if length(ν.λ) != m
         false
     else
-        @show μ.support
-        @show ν.support
         permcomp((i, j) -> isapprox(μ.λ[i], ν.λ[j]; kws...) && isapprox(μ.support[i], ν.support[j]; kws...), m)
     end
 end
