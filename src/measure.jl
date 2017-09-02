@@ -21,6 +21,7 @@ function (+)(μ::Measure, ν::Measure)
 end
 
 MP.monomials(μ::Measure) = μ.x
+MP.variables(μ::Measure) = variables(μ.x)
 moments(μ::Measure) = map((α, x) -> moment(α, x), μ.a, μ.x)
 
 Measure(a::Vector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike} = Measure{T, monomialtype(TT), monovectype(x)}(monovec(a, x)...)
