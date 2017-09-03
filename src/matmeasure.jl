@@ -1,4 +1,6 @@
 export SymMatrix, MatMeasure, getmat, matmeasure, AtomicMeasure, extractatoms
+export LowRankChol, ShiftChol, SVDChol
+
 using RowEchelon
 using SemialgebraicSets
 
@@ -75,8 +77,13 @@ function MatMeasure(Q::AbstractMatrix, x)
     MatMeasure(Q, X, σ)
 end
 
-function getmat{C, T}(μ::MatMeasure{C, T})
+function getmat(μ::MatMeasure)
     Matrix(μ.Q)
+end
+
+function measure(ν::MatMeasure)
+    n = length(ν.x)
+    measure(ν.Q.Q, [ν.x[i] * ν.x[j] for i in 1:n for j in i:n])
 end
 
 type AtomicMeasure{T, V}
@@ -144,48 +151,96 @@ function build_system(U::AbstractMatrix, mv::AbstractVector)
     # which is
     # y = U * β
     m = length(mv)
-    equation(i) = sum(j -> mv[m+1-j] * U[j, i], 1:size(U, 1)) - mv[m+1-i]
+    r = size(U, 1)
+    pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i in 1:r]
+    if any(pivots .== 0)
+        keep = pivots .> 0
+        pivots = pivots[keep]
+        r = length(pivots)
+        U = U[keep, :]
+    end
+    β = monovec(mv[m+1-pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
+    equation(i) = sum(j -> β[r+1-j] * U[j, i], 1:r) - mv[m+1-i]
     system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(mv)))
-    algebraicset(system)
+    # Type instability here :(
+    if mindegree(mv) == maxdegree(mv) # Homogeneous
+        projectivealgebraicset(system)
+    else
+        algebraicset(system)
+    end
 end
 
-function computesupport!(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
+"""
+    LowRankChol
+
+Method for computing a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`` psd matrix `Q` such that `Q = U'U`.
+"""
+abstract type LowRankChol end
+
+"""
+    ShiftChold <: LowRankChol
+
+Shift the matrix by `shift` times the identity matrix before cholesky.
+"""
+type ShiftChol{T} <: LowRankChol
+    shift::T
+end
+
+"""
+    SVDChold <: LowRankChol
+
+Use SVD decomposition.
+"""
+type SVDChol <: LowRankChol end
+
+"""
+    lowrankchol(M::AbstractMatrix, dec::LowRankChol, ranktol)
+
+Returns a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`` psd matrix `Q` such that `Q = U'U`.
+The rank of `M` is the number of singular values larger than `ranktol`.
+"""
+function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
+    m = LinAlg.checksquare(M)
+    U = chol(M + dec.shift * eye(m))
+    V = U[map(i -> (U[i, i])^2 > ranktol, 1:m), :]
+end
+function lowrankchol(M::AbstractMatrix, dec::SVDChol, ranktol)
+    F = svdfact(M)
+    S = F.S
+    r = count(F.S .> ranktol)
+    V = F.U[1:r, :] .* repmat(sqrt.(S[1:r]), 1, size(F.U, 2))
+end
+
+
+function computesupport!(μ::MatMeasure, ranktol::Real, ɛ::Real=-1, dec::LowRankChol=SVDChol())
     # We reverse the ordering so that the first columns corresponds to low order monomials
     # so that we have more chance that low order monomials are in β and then more chance
     # v[i] * β to be in μ.x
     M = getmat(μ)[end:-1:1, end:-1:1]
-    m = size(M, 1)
-    #r = rank(M, tol)
-    U = chol(M + shift * eye(m))
-    V = U[map(i -> abs(U[i, i]) > tol, 1:m), :]
-    r = size(V, 1)
-#   F = svdfact(M)
-#   S = F.S
-#   r = sum(F.S .> tol)
-#   V = F.U[:, 1:r] .* repmat(sqrt.(S[1:r])', size(F.U, 1), 1)
-    rref!(V, ɛ == -1 ? sqrt(eps(norm(V, Inf))) : ɛ)
-    #r, vals = solve_system(V', μ.x)
-    μ.support = build_system(V, μ.x)
+    U = lowrankchol(M, dec, ranktol)
+    rref!(U, ɛ == -1 ? sqrt(eps(norm(U, Inf))) : ɛ)
+    #r, vals = solve_system(U', μ.x)
+    μ.support = build_system(U, μ.x)
 end
 
-function extractatoms(μ::MatMeasure, tol::Real, shift::Real, ɛ::Real=-1)
-    M = getmat(μ)[end:-1:1, end:-1:1]
-    computesupport!(μ, tol, shift, ɛ)
-    supp = get(μ.support)
+function extractatoms(ν::MatMeasure, args...)
+    M = getmat(ν)[end:-1:1, end:-1:1]
+    computesupport!(ν, args...)
+    supp = get(ν.support)
     if !iszerodimensional(supp)
         error("Cannot extract atoms of Measure with non zero-dimensional support")
     end
     vals = collect(supp)
     r = length(vals)
     # Determine weights
-    Ms = similar(M, r, r)
-    v = variables(μ)
+    μ = measure(ν)
+    vars = variables(μ)
+    A = similar(M, length(μ.x), r)
     for i in 1:r
-        vi = dirac(μ.x, v => vals[i])
-        Ms[:, i] = vi.a[end:-1:end-r+1] * vi.a[end]
+        A[:, i] = dirac(μ.x, vars => vals[i]).a
     end
-    λ = Ms \ M[1:r, 1]
-    AtomicMeasure(v, λ, vals)
+    λ = A \ μ.a
+    AtomicMeasure(vars, λ, vals)
 end
 
 function permcomp(f, m)
