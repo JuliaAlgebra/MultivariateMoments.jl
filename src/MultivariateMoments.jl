@@ -18,5 +18,7 @@ include("moment.jl")
 include("measure.jl")
 include("exp.jl")
 include("matmeasure.jl")
+include("atomic.jl")
+include("extract.jl")
 
 end # module
