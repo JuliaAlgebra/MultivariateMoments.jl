@@ -103,33 +103,52 @@ The rank of `M` is the number of singular values larger than `ranktol`.
 function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
     m = LinAlg.checksquare(M)
     U = chol(M + dec.shift * eye(m))
-    U[map(i -> (U[i, i])^2 > ranktol, 1:m), :]
+    σs = map(i -> (U[i, i])^2, 1:m)
+    nM = maximum(σs)
+    tol = nM * ranktol
+    rm = find(σs .<= tol)
+    if isempty(rm)
+        cM = ranktol
+    else
+        cM = maximum(σs[rm])
+    end
+    nM, cM, U[σs .> tol, :]
 end
 function lowrankchol(M::AbstractMatrix, dec::SVDChol, ranktol)
     F = svdfact(M)
-    S = F.S
-    r = count(F.S .> ranktol)
-    (F.U[:, 1:r] * diagm(sqrt.(S[1:r])))'
+    nM = F.S[1] # norm of M
+    tol = nM * ranktol
+    r = findfirst(σ2 -> σ2 <= tol, F.S)
+    if r == 0
+        cM = ranktol
+        r = length(F.S)
+    else
+        cM = F.S[r] / nM
+        r -= 1
+    end
+    nM, cM, (F.U[:, 1:r] * diagm(sqrt.(F.S[1:r])))'
 end
 
 
-function computesupport!(μ::MatMeasure, ranktol::Real, ɛ::Real=-1, dec::LowRankChol=SVDChol())
+function computesupport!(μ::MatMeasure, ranktol::Real, dec::LowRankChol=SVDChol())
     # We reverse the ordering so that the first columns corresponds to low order monomials
     # so that we have more chance that low order monomials are in β and then more chance
     # v[i] * β to be in μ.x
-    M = getmat(μ)[end:-1:1, end:-1:1]
-    U = lowrankchol(M, dec, ranktol)
-    rref!(U, ɛ == -1 ? sqrt(eps(norm(U, Inf))) : ɛ)
+    M = getmat(μ)
+    m = LinAlg.checksquare(M)
+    M = M[m:-1:1, m:-1:1]
+    nM, cM, U = lowrankchol(M, dec, ranktol)
+    rref!(U, nM * cM / sqrt(m))
     #r, vals = solve_system(U', μ.x)
-    μ.support = build_system(U, μ.x, ranktol) # TODO determine what is better between ranktol and sqrt(ranktol) here
+    μ.support = build_system(U, μ.x, sqrt(cM)) # TODO determine what is better between ranktol and sqrt(ranktol) here
 end
 
-function extractatoms(ν::MatMeasure{T}, ranktol, ɛ::Real=-1, args...)::Nullable{AtomicMeasure{T, Base.promote_op(variables, typeof(ν))}} where T
+function extractatoms(ν::MatMeasure{T}, ranktol, args...)::Nullable{AtomicMeasure{T, Base.promote_op(variables, typeof(ν))}} where T
     M = getmat(ν)[end:-1:1, end:-1:1]
-    computesupport!(ν, ranktol, ɛ, args...)
+    computesupport!(ν, ranktol, args...)
     supp = get(ν.support)
     if !iszerodimensional(supp)
-        nothing
+        return nothing
     end
     vals = collect(supp)
     r = length(vals)

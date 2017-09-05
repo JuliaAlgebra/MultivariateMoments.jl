@@ -9,6 +9,13 @@ function AtomicMeasure{V, S, T}(vars::V, λ::Vector{S}, support::Vector{Vector{T
     AtomicMeasure{promote_type(S, T), V}(vars, λ, support)
 end
 
+function Base.show(io::IO, η::AtomicMeasure)
+    println(io, "Atomic measure on the variables $(η.v) with $(length(η.λ)) atoms:")
+    for (λ, x) in zip(η.λ, η.support)
+        println(io, " at $x with weight $λ")
+    end
+end
+
 function Measure(μ::AtomicMeasure{T}, x::AbstractVector{TT}) where {T, TT}
     Measure{T, monomialtype(TT), monovectype(x)}(μ, x)
 end
