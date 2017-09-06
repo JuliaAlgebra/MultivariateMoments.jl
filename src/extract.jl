@@ -161,7 +161,7 @@ function extractatoms(ν::MatMeasure{T}, ranktol, args...)::Nullable{AtomicMeasu
     end
     λ = A \ μ.a
     isf = isfinite.(λ)
-    λ[isf]
+    λ = λ[isf]
     vals = vals[isf]
     if isempty(vals)
         nothing
