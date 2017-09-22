@@ -1,4 +1,4 @@
-export Measure, dirac
+export Measure, dirac, measure
 
 # If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
 struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasure{T}
