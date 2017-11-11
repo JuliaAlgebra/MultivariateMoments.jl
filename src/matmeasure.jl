@@ -7,16 +7,21 @@ struct SymMatrix{T} <: AbstractMatrix{T}
     n
 end
 
-# i < j
+# i <= j
 function trimap(i, j, n)
     div(n*(n+1), 2) - div((n-i+1)*(n-i+2), 2) + j-i+1
 end
 
+# j <= i
+function trimap(i, j)
+    div((i-1)*i, 2) + j
+end
+
 function trimat(::Type{T}, f, n, σ) where {T}
-    Q = Vector{T}(trimap(n, n, n))
+    Q = Vector{T}(trimap(n, n))
     for i in 1:n
-        for j in i:n
-            Q[trimap(i, j, n)] = f(σ[i], σ[j])
+        for j in 1:i
+            Q[trimap(i, j)] = f(σ[i], σ[j])
         end
     end
     SymMatrix{T}(Q, n)
@@ -25,7 +30,7 @@ end
 Base.size(Q::SymMatrix) = (Q.n, Q.n)
 
 function Base.getindex(Q::SymMatrix, i, j)
-    Q.Q[trimap(min(i, j), max(i, j), Q.n)]
+    Q.Q[trimap(max(i, j), min(i, j))]
 end
 function Base.getindex(Q::SymMatrix, k)
     i, j = divrem(k-1, Q.n)
@@ -82,5 +87,5 @@ end
 
 function measure(ν::MatMeasure)
     n = length(ν.x)
-    measure(ν.Q.Q, [ν.x[i] * ν.x[j] for i in 1:n for j in i:n])
+    measure(ν.Q.Q, [ν.x[i] * ν.x[j] for i in 1:n for j in 1:i])
 end
