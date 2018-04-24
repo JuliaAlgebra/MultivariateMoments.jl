@@ -1,11 +1,11 @@
 export AtomicMeasure
 
-type AtomicMeasure{T, V}
+struct AtomicMeasure{T, V}
     v::V # Vector/Tuple of variables
     λ::Vector{T} # The measure is sum λ_i * δ_{support_i}
     support::Vector{Vector{T}} # Elements of the finite support
 end
-function AtomicMeasure{V, S, T}(vars::V, λ::Vector{S}, support::Vector{Vector{T}})
+function AtomicMeasure(vars::V, λ::Vector{S}, support::Vector{Vector{T}}) where {V, S, T}
     AtomicMeasure{promote_type(S, T), V}(vars, λ, support)
 end
 
