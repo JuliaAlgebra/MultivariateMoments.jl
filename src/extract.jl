@@ -83,7 +83,7 @@ abstract type LowRankChol end
 
 Shift the matrix by `shift` times the identity matrix before cholesky.
 """
-type ShiftChol{T} <: LowRankChol
+struct ShiftChol{T} <: LowRankChol
     shift::T
 end
 
@@ -92,7 +92,7 @@ end
 
 Use SVD decomposition.
 """
-type SVDChol <: LowRankChol end
+struct SVDChol <: LowRankChol end
 
 """
     lowrankchol(M::AbstractMatrix, dec::LowRankChol, ranktol)
