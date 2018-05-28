@@ -144,7 +144,6 @@ function computesupport!(μ::MatMeasure, ranktol::Real, dec::LowRankChol=SVDChol
 end
 
 function extractatoms(ν::MatMeasure{T}, ranktol, args...)::Nullable{AtomicMeasure{T, Base.promote_op(variables, typeof(ν))}} where T
-    M = getmat(ν)[end:-1:1, end:-1:1]
     computesupport!(ν, ranktol, args...)
     supp = get(ν.support)
     if !iszerodimensional(supp)
@@ -155,7 +154,7 @@ function extractatoms(ν::MatMeasure{T}, ranktol, args...)::Nullable{AtomicMeasu
     # Determine weights
     μ = measure(ν)
     vars = variables(μ)
-    A = similar(M, length(μ.x), r)
+    A = Matrix{T}(length(μ.x), r)
     for i in 1:r
         A[:, i] = dirac(μ.x, vars => vals[i]).a
     end
