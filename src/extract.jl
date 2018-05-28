@@ -61,7 +61,16 @@ function build_system(U::AbstractMatrix, mv::AbstractVector, ztol)
         U = U[keep, :]
     end
     β = monovec(mv[m+1-pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
-    equation(i) = sum(j -> β[r+1-j] * U[j, i], 1:r) - mv[m+1-i]
+    function equation(i)
+        if iszero(r) # sum throws ArgumentError: reducing over an empty collection is not allowed, if r is zero
+            println("YIHAAAA")
+            z = zero(eltype(β)) * zero(eltype(U))
+            s = z + z # For type stability
+        else
+            s = sum(j -> β[r+1-j] * U[j, i], 1:r)
+        end
+        s - mv[m+1-i]
+    end
     system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(mv)))
     # Type instability here :(
     if mindegree(mv) == maxdegree(mv) # Homogeneous

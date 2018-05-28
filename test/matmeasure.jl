@@ -63,6 +63,10 @@ end
     μ = Measure([2., 0.0, 1e-6],
                 monomials(x, 2))
     ν = matmeasure(μ, monomials(x, 1))
+    # The following tests that the method does not error if ranktol eliminates everything
+    # In particular, this tests that the function equation(i) do not call sum when r equal to 0
+    # this that throws an ArgumentError as details in src/extract.jl
+    @test isnull(extractatoms(ν, 1.0))
     atoms = extractatoms(ν, 1e-5)
     @test !isnull(atoms)
     @test get(atoms) ≈ η
