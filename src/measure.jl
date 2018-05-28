@@ -12,10 +12,11 @@ struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: Abstract
 end
 
 measure(a, X) = Measure(a, X)
-(*)(α, μ::Measure) = measure(α * μ.a, μ.x)
-(*)(μ::Measure, α) = measure(μ.a * α, μ.x)
+Base.:(*)(α, μ::Measure) = measure(α * μ.a, μ.x)
+Base.:(*)(μ::Measure, α) = measure(μ.a * α, μ.x)
+Base.:(-)(μ::Measure) = measure(-μ.a, μ.x)
 
-function (+)(μ::Measure, ν::Measure)
+function Base.:(+)(μ::Measure, ν::Measure)
     @assert μ.x == ν.x
     measure(μ.a + ν.a, μ.x)
 end
