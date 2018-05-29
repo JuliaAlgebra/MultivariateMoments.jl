@@ -1,24 +1,37 @@
-export expectation
-
 const APL = AbstractPolynomialLike
 
-function _dot(m::Measure, p::APL, f)
+function _expectation(μ::Measure, p::APL, f)
     i = 1
     s = 0
     for t in terms(p)
-        while i <= length(m.x) && monomial(t) != m.x[i]
+        while i <= length(μ.x) && monomial(t) != μ.x[i]
             i += 1
         end
-        if i > length(m.x)
-            error("The polynomial $p has a nonzero term $t with monomial $(t.x) for which the expectation is not known in $m")
+        if i > length(μ.x)
+            error("The polynomial $p has a nonzero term $t with monomial $(t.x) for which the expectation is not known in $μ")
         end
-        s += f(m.a[i], coefficient(t))
+        s += f(μ.a[i], coefficient(t))
         i += 1
     end
     s
 end
-Base.dot(m::Measure, p::APL) = _dot(m, p, (*))
-Base.dot(p::APL, m::Measure) = _dot(m, p, (a, b) -> b * a)
 
-expectation(m::Measure, p::APL) = dot(m, p)
-expectation(p::APL, m::Measure) = dot(p, m)
+"""
+    MultivariateMoments.expectation(μ::AbstractMeasureLike, p::AbstractPolynomialLike)
+    MultivariateMoments.expectation(p::AbstractPolynomialLike, μ::AbstractMeasureLike)
+
+Computes the expectation ``\\mathbb{E}_{\\mu}[p]``.
+"""
+function expectation end
+
+expectation(μ::Measure, p::APL) = _expectation(μ, p, (*))
+expectation(p::APL, μ::Measure) = _expectation(μ, p, (a, b) -> b * a) # a and b may be noncommutative
+
+"""
+    dot(μ::AbstractMeasureLike, p::AbstractPolynomialLike)
+    dot(p::AbstractPolynomialLike, μ::AbstractMeasureLike)
+
+See [`expectation`](@ref)
+"""
+Base.dot(μ::Measure, p::APL) = expectation(μ, p)
+Base.dot(p::APL, μ::Measure) = expectation(p, μ)
