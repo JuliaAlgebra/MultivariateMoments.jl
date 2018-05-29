@@ -1,4 +1,5 @@
-export Measure, dirac, measure
+export measure, dirac
+export variables, monomials, moments
 
 # If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
 struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasure{T}
@@ -10,22 +11,43 @@ struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: Abstract
         new(a, x)
     end
 end
+Measure(a::Vector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike} = Measure{T, monomialtype(TT), monovectype(x)}(monovec(a, x)...)
 
+"""
+    measure(a, X::AbstractVector{<:AbstractMonomial})
+
+Creates a measure with moments `moment(a[i], X[i])` for each `i`.
+"""
 measure(a, X) = Measure(a, X)
+
+"""
+    variables(μ::AbstractMeasureLike)
+
+Returns the variables of `μ` in decreasing order. Just like in MultivariatePolynomials, it could contain variables of zero degree in every monomial.
+"""
+MP.variables(μ::Measure) = variables(μ.x)
+
+"""
+    monomials(μ::AbstractMeasureLike)
+
+Returns an iterator over the monomials of `μ` sorted in the decreasing order.
+"""
+MP.monomials(μ::Measure) = μ.x
+
+"""
+    moments(μ::AbstractMeasureLike)
+
+Returns an iterator over the moments of `μ` sorted in decreasing order of monomial.
+"""
+moments(μ::Measure) = map((α, x) -> moment(α, x), μ.a, μ.x)
+
 Base.:(*)(α, μ::Measure) = measure(α * μ.a, μ.x)
 Base.:(*)(μ::Measure, α) = measure(μ.a * α, μ.x)
 Base.:(-)(μ::Measure) = measure(-μ.a, μ.x)
-
 function Base.:(+)(μ::Measure, ν::Measure)
     @assert μ.x == ν.x
     measure(μ.a + ν.a, μ.x)
 end
-
-MP.monomials(μ::Measure) = μ.x
-MP.variables(μ::Measure) = variables(μ.x)
-moments(μ::Measure) = map((α, x) -> moment(α, x), μ.a, μ.x)
-
-Measure(a::Vector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike} = Measure{T, monomialtype(TT), monovectype(x)}(monovec(a, x)...)
 
 """
     dirac(X::AbstractVector{<:AbstractMoment}, s::AbstractSubstitution...)
