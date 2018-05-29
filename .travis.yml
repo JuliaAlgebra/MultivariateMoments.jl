@@ -34,4 +34,4 @@ after_success:
   - julia -e 'cd(Pkg.dir("MultivariateMoments")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
   # push docs to gh-pages branch
   - julia -e 'Pkg.add("Documenter")'
-  - julia -e 'cd(Pkg.dir("SumOfSquares")); include(joinpath("docs", "make.jl"))'
+  - julia -e 'cd(Pkg.dir("MultivariateMoments")); include(joinpath("docs", "make.jl"))'
