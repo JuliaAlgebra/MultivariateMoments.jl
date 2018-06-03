@@ -18,7 +18,7 @@ function WeightedDiracMeasure(center::Vector{S}, weight::T) where {S, T}
 end
 
 """
-    struct AtomicMeasure{T, V}
+    struct AtomicMeasure{T, V} <: AbstractMeasureLike{T}
         variables::V                           # Vector/Tuple of variables
         atoms::Vector{WeightedDiracMeasure{T}} # Atoms of the measure
     end
