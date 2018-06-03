@@ -63,7 +63,6 @@ function build_system(U::AbstractMatrix, mv::AbstractVector, ztol)
     β = monovec(mv[m+1-pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
     function equation(i)
         if iszero(r) # sum throws ArgumentError: reducing over an empty collection is not allowed, if r is zero
-            println("YIHAAAA")
             z = zero(eltype(β)) * zero(eltype(U))
             s = z + z # For type stability
         else
@@ -158,22 +157,22 @@ function extractatoms(ν::MatMeasure{T}, ranktol, args...)::Nullable{AtomicMeasu
     if !iszerodimensional(supp)
         return nothing
     end
-    vals = collect(supp)
-    r = length(vals)
+    centers = collect(supp)
+    r = length(centers)
     # Determine weights
     μ = measure(ν)
     vars = variables(μ)
     A = Matrix{T}(length(μ.x), r)
     for i in 1:r
-        A[:, i] = dirac(μ.x, vars => vals[i]).a
+        A[:, i] = dirac(μ.x, vars => centers[i]).a
     end
-    λ = A \ μ.a
-    isf = isfinite.(λ)
-    λ = λ[isf]
-    vals = vals[isf]
-    if isempty(vals)
+    weights = A \ μ.a
+    isf = isfinite.(weights)
+    weights = weights[isf]
+    centers = centers[isf]
+    if isempty(centers)
         nothing
     else
-        AtomicMeasure(vars, λ, vals)
+        AtomicMeasure(vars, WeightedDiracMeasure.(centers, weights))
     end
 end
