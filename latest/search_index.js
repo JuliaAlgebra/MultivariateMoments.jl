@@ -21,7 +21,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Index",
     "title": "Contents",
     "category": "section",
-    "text": "Pages = [\"moments.md\", \"atom.md\"]\nDepth = 2"
+    "text": "Pages = [\"moments.md\", \"atoms.md\"]\nDepth = 2"
 },
 
 {
@@ -142,6 +142,46 @@ var documenterSearchIndex = {"docs": [
     "title": "Expectation",
     "category": "section",
     "text": "The expectation of polynomial with respect to a measure can be computed either using MultivariateMoments.expectation or using the Base.dot scalar product.MultivariateMoments.expectation\ndot"
+},
+
+{
+    "location": "atoms.html#",
+    "page": "Atoms extraction",
+    "title": "Atoms extraction",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "atoms.html#Atoms-extration-1",
+    "page": "Atoms extraction",
+    "title": "Atoms extration",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.WeightedDiracMeasure",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.WeightedDiracMeasure",
+    "category": "type",
+    "text": "struct WeightedDiracMeasure{T}\n    center::Vector{T}\n    weight::T\nend\n\nRepresents a weighted dirac measure with centered at center and with weight weight.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.AtomicMeasure",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.AtomicMeasure",
+    "category": "type",
+    "text": "struct AtomicMeasure{T, V} <: AbstractMeasureLike{T}\n    variables::V                           # Vector/Tuple of variables\n    atoms::Vector{WeightedDiracMeasure{T}} # Atoms of the measure\nend\n\nAn measure is said to be atomic if it is a sum of weighted dirac measures. For instance, eta = 2 delta_(1 0) + 3 delta_(12 12) is an atomic measure since it is a sum of the diracs centered at (1 0) and (12 12) and weighted respectively by 2 and 3. That is, mathbbE_etap = 2p(1 0) + 3p(12 12).\n\nThe AtomicMeasure struct stores an atomic measure where variables contains the variables and atoms contains atoms of the measure.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#Atomic-measure-1",
+    "page": "Atoms extraction",
+    "title": "Atomic measure",
+    "category": "section",
+    "text": "WeightedDiracMeasure\nAtomicMeasure"
 },
 
 ]}
