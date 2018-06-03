@@ -14,7 +14,7 @@ abstract type AbstractMeasure{T} <: AbstractMeasureLike{T} end
 
 include("moment.jl")
 include("measure.jl")
-include("exp.jl")
+include("expextation.jl")
 include("matmeasure.jl")
 include("atomic.jl")
 include("extract.jl")
