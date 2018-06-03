@@ -39,6 +39,16 @@ end
 Base.getindex(Q::SymMatrix, I::Tuple) = Q[I...]
 Base.getindex(Q::SymMatrix, I::CartesianIndex) = Q[I.I]
 
+"""
+    mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
+        Q::SymMatrix{T}
+        x::MVT
+        support::Nullable{AlgebraicSet}
+    end
+
+Measure ``\\nu`` represented by the moments of the monomial matrix ``x x^\\top`` in the symmetric matrix `Q`.
+The set of points that are zeros of all the polynomials ``p`` such that ``\\mathbb{E}_{\\nu}[p] = 0`` is stored in the field `support` when it is computed.
+"""
 mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
     Q::SymMatrix{T}
     x::MVT
@@ -59,6 +69,11 @@ function MatMeasure{T}(f::Function, x::AbstractVector) where T
 end
 MatMeasure(f::Function, x) = MatMeasure{Base.promote_op(f, Int, Int)}(f, x)
 
+"""
+    matmeasure(μ::Measure, x)
+
+Creates a matrix the moment matrix for the moment matrix  ``x x^\\top`` using the moments of `μ`.
+"""
 function matmeasure(μ::Measure{T}, X) where T
     function getmom(i, j)
         x = X[i] * X[j]

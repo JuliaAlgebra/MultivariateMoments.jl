@@ -87,7 +87,7 @@ Method for computing a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`
 abstract type LowRankChol end
 
 """
-    ShiftChold <: LowRankChol
+    ShiftChol <: LowRankChol
 
 Shift the matrix by `shift` times the identity matrix before cholesky.
 """
@@ -96,18 +96,20 @@ struct ShiftChol{T} <: LowRankChol
 end
 
 """
-    SVDChold <: LowRankChol
+    SVDChol <: LowRankChol
 
 Use SVD decomposition.
 """
 struct SVDChol <: LowRankChol end
 
 """
-    lowrankchol(M::AbstractMatrix, dec::LowRankChol, ranktol)
+    MultivariateMoments.lowrankchol(Q::AbstractMatrix, dec::LowRankChol, ranktol)
 
-Returns a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`` psd matrix `Q` such that `Q = U'U`.
-The rank of `M` is the number of singular values larger than `ranktol`.
+Returns a ``r \\times n`` matrix ``U`` of a ``n \\times n`` rank ``r`` positive semidefinite matrix ``Q`` such that ``Q = U^\\top U``.
+The rank of ``Q`` is the number of singular values larger than `ranktol```{} \\cdot \\sigma_1`` where ``\\sigma_1`` is the largest singular value.
 """
+function lowrankchol end
+
 function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
     m = LinAlg.checksquare(M)
     U = chol(M + dec.shift * eye(m))
@@ -137,7 +139,12 @@ function lowrankchol(M::AbstractMatrix, dec::SVDChol, ranktol)
     nM, cM, (F.U[:, 1:r] * diagm(sqrt.(F.S[1:r])))'
 end
 
+"""
+    MultivariateMoments.computesupport!(ν::MatMeasure, ranktol, [dec])
 
+Computes the `support` field of `ν`.
+The `ranktol` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
+"""
 function computesupport!(μ::MatMeasure, ranktol::Real, dec::LowRankChol=SVDChol())
     # We reverse the ordering so that the first columns corresponds to low order monomials
     # so that we have more chance that low order monomials are in β and then more chance
@@ -151,6 +158,12 @@ function computesupport!(μ::MatMeasure, ranktol::Real, dec::LowRankChol=SVDChol
     μ.support = build_system(U, μ.x, sqrt(cM)) # TODO determine what is better between ranktol and sqrt(ranktol) here
 end
 
+"""
+    extractatoms(ν::MatMeasure, ranktol, [dec])
+
+Returns a `Nullable` that contains an `AtomicMeasure` with the atoms of `ν` if it is atomic.
+The `ranktol` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
+"""
 function extractatoms(ν::MatMeasure{T}, ranktol, args...)::Nullable{AtomicMeasure{T, Base.promote_op(variables, typeof(ν))}} where T
     computesupport!(ν, ranktol, args...)
     supp = get(ν.support)
