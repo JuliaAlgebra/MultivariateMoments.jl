@@ -6,6 +6,7 @@ makedocs(
     pages = [
         "Index" => "index.md"
         "Moments and expectation" => "moments.md"
+        "Atoms extraction" => "atoms.md"
     ],
     # The following ensures that we only include the docstrings from
     # this module for functions define in Base that we overwrite.
