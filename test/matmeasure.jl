@@ -4,12 +4,11 @@
     μ = measure(1:3, [x^2, x*y, y^2])
     X = [x, y]
     for ν in (matmeasure(μ, X), matmeasure((i, j) -> i + j - 1, X))
-        Q = getmat(ν)
-        @test Q[1:4] == [1, 2, 2, 3]
-        @test Q[1, 1] == 1
-        @test Q[1, 2] == 2
-        @test Q[2, 1] == 2
-        @test Q[2, 2] == 3
+        @test ν.Q[1:4] == [1, 2, 2, 3]
+        @test ν.Q[1, 1] == 1
+        @test ν.Q[1, 2] == 2
+        @test ν.Q[2, 1] == 2
+        @test ν.Q[2, 2] == 3
         @test variables(ν)[1] == x
         @test variables(ν)[2] == y
         @test nvariables(ν) == 2

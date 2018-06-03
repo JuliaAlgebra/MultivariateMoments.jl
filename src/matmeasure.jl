@@ -29,12 +29,8 @@ end
 
 Base.size(Q::SymMatrix) = (Q.n, Q.n)
 
-function Base.getindex(Q::SymMatrix, i, j)
+function Base.getindex(Q::SymMatrix, i::Integer, j::Integer)
     Q.Q[trimap(max(i, j), min(i, j))]
-end
-function Base.getindex(Q::SymMatrix, k)
-    i, j = divrem(k-1, Q.n)
-    Q[i+1, j+1]
 end
 Base.getindex(Q::SymMatrix, I::Tuple) = Q[I...]
 Base.getindex(Q::SymMatrix, I::CartesianIndex) = Q[I.I]
