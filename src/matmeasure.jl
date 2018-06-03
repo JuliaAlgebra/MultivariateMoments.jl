@@ -8,9 +8,9 @@ struct SymMatrix{T} <: AbstractMatrix{T}
 end
 
 # i <= j
-function trimap(i, j, n)
-    div(n*(n+1), 2) - div((n-i+1)*(n-i+2), 2) + j-i+1
-end
+#function trimap(i, j, n) # It was used when Q was the lower triangular part
+#    div(n*(n+1), 2) - div((n-i+1)*(n-i+2), 2) + j-i+1
+#end
 
 # j <= i
 function trimap(i, j)
@@ -68,6 +68,7 @@ function MatMeasure{T}(f::Function, x::AbstractVector) where T
     MatMeasure{T}(f, X, σ)
 end
 MatMeasure(f::Function, x) = MatMeasure{Base.promote_op(f, Int, Int)}(f, x)
+matmeasure(f::Function, x) = MatMeasure(f, x)
 
 """
     matmeasure(μ::Measure, x)

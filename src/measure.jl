@@ -11,7 +11,7 @@ struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: Abstract
         new(a, x)
     end
 end
-Measure(a::Vector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike} = Measure{T, monomialtype(TT), monovectype(x)}(monovec(a, x)...)
+Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike} = Measure{T, monomialtype(TT), monovectype(x)}(monovec(a, x)...)
 
 """
     measure(a, X::AbstractVector{<:AbstractMonomial})

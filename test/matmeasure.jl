@@ -1,6 +1,20 @@
 @testset "MatMeasure" begin
     Mod.@polyvar x y
     @test_throws ArgumentError matmeasure(measure([1], [x]), [y])
+    μ = measure(1:3, [x^2, x*y, y^2])
+    X = [x, y]
+    for ν in (matmeasure(μ, X), matmeasure((i, j) -> i + j - 1, X))
+        Q = getmat(ν)
+        @test Q[1:4] == [1, 2, 2, 3]
+        @test Q[1, 1] == 1
+        @test Q[1, 2] == 2
+        @test Q[2, 1] == 2
+        @test Q[2, 2] == 3
+        @test variables(ν)[1] == x
+        @test variables(ν)[2] == y
+        @test nvariables(ν) == 2
+    end
+    @test_throws ArgumentError matmeasure(measure([1], [x]), [y])
 end
 
 # [HL05] Henrion, D. & Lasserre, J-B.
@@ -63,6 +77,8 @@ end
     μ = measure([2., 0.0, 1e-6],
                 monomials(x, 2))
     ν = matmeasure(μ, monomials(x, 1))
+    # All singular values will be at least 1e-6 > 1e-12 it won't eliminate any row
+    @test isnull(extractatoms(ν, 1e-12, ShiftChol(1e-6)))
     # The following tests that the method does not error if ranktol eliminates everything
     # In particular, this tests that the function equation(i) do not call sum when r equal to 0
     # this that throws an ArgumentError as details in src/extract.jl
