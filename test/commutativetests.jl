@@ -1,3 +1,4 @@
 include("measure.jl")
-include("exp.jl")
+include("expectation.jl")
 include("matmeasure.jl")
+include("atomic.jl")

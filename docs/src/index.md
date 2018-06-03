@@ -5,6 +5,6 @@ It also includes the extraction of atomic measures from moment matrices which is
 
 ## Contents
 ```@contents
-Pages = ["moments.md", "atom.md"]
+Pages = ["moments.md", "atoms.md"]
 Depth = 2
 ```
