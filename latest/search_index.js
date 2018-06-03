@@ -161,6 +161,30 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "atoms.html#MultivariateMoments.MatMeasure",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.MatMeasure",
+    "category": "type",
+    "text": "mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}\n    Q::SymMatrix{T}\n    x::MVT\n    support::Nullable{AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.matmeasure",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.matmeasure",
+    "category": "function",
+    "text": "matmeasure(μ::Measure, x)\n\nCreates a matrix the moment matrix for the moment matrix  x x^top using the moments of μ.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#Moment-matrix-1",
+    "page": "Atoms extraction",
+    "title": "Moment matrix",
+    "category": "section",
+    "text": "MatMeasure\nmatmeasure"
+},
+
+{
     "location": "atoms.html#MultivariateMoments.WeightedDiracMeasure",
     "page": "Atoms extraction",
     "title": "MultivariateMoments.WeightedDiracMeasure",
@@ -182,6 +206,62 @@ var documenterSearchIndex = {"docs": [
     "title": "Atomic measure",
     "category": "section",
     "text": "WeightedDiracMeasure\nAtomicMeasure"
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.computesupport!",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.computesupport!",
+    "category": "function",
+    "text": "MultivariateMoments.computesupport!(ν::MatMeasure, ranktol, [dec])\n\nComputes the support field of ν. The ranktol and dec parameters are passed as is to the lowrankchol function.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.extractatoms",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.extractatoms",
+    "category": "function",
+    "text": "extractatoms(ν::MatMeasure, ranktol, [dec])\n\nReturns a Nullable that contains an AtomicMeasure with the atoms of ν if it is atomic. The ranktol and dec parameters are passed as is to the lowrankchol function.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.LowRankChol",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.LowRankChol",
+    "category": "type",
+    "text": "LowRankChol\n\nMethod for computing a r times n matrix U of a n times n rank r psd matrix Q such that Q = U\'U.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.ShiftChol",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.ShiftChol",
+    "category": "type",
+    "text": "ShiftChol <: LowRankChol\n\nShift the matrix by shift times the identity matrix before cholesky.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.SVDChol",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.SVDChol",
+    "category": "type",
+    "text": "SVDChol <: LowRankChol\n\nUse SVD decomposition.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#MultivariateMoments.lowrankchol",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.lowrankchol",
+    "category": "function",
+    "text": "MultivariateMoments.lowrankchol(Q::AbstractMatrix, dec::LowRankChol, ranktol)\n\nReturns a r times n matrix U of a n times n rank r positive semidefinite matrix Q such that Q = U^top U. The rank of Q is the number of singular values larger than ranktol cdot sigma_1 where sigma_1 is the largest singular value.\n\n\n\n"
+},
+
+{
+    "location": "atoms.html#Atoms-extraction-1",
+    "page": "Atoms extraction",
+    "title": "Atoms extraction",
+    "category": "section",
+    "text": "Given a MatMeasure with a positive semidefinite moment matrix, an algebraic system for which the set of solution is a superset of the support of the measure. If the measure is atomic and the MatMeasure contains enough moments, the algebraic system will only have a finite number of solutions which are the centers of the diracs of the measure.MultivariateMoments.computesupport!\nextractatomsThis system is obtained from a low rank cholesky decomposition of the moment matrix. This decomposition can either be obtained by a cholesky or SVD decomposition from which we remove the rows corresponding to the negligeable eigenvalues/singular values.LowRankChol\nShiftChol\nSVDChol\nMultivariateMoments.lowrankchol"
 },
 
 ]}
