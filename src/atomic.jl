@@ -29,15 +29,16 @@ That is, ``\\mathbb{E}_{\\eta}[p] = 2p(1, 0) + 3p(1/2, 1/2)``.
 
 The `AtomicMeasure` struct stores an atomic measure where `variables` contains the variables and `atoms` contains atoms of the measure.
 """
-struct AtomicMeasure{T, V}
+struct AtomicMeasure{T, V} <: AbstractMeasureLike{T}
     variables::V                           # Vector/Tuple of variables
     atoms::Vector{WeightedDiracMeasure{T}} # Atoms of the measure
 end
 
 function Base.show(io::IO, η::AtomicMeasure)
-    println(io, "Atomic measure on the variables $(η.variables) with $(length(η.atoms)) atoms:")
+    print(io, "Atomic measure on the variables $(join(η.variables, ", ")) with $(length(η.atoms)) atoms:")
     for atom in η.atoms
-        println(io, " at $(atom.center) with weight $(atom.weight)")
+        println(io)
+        print(io, " at $(atom.center) with weight $(atom.weight)")
     end
 end
 
@@ -49,6 +50,9 @@ function Measure{T, MT, MVT}(η::AtomicMeasure{T}, x) where {T, MT, MVT}
     X = monovec(x)
     sum(atom.weight * dirac(X, η.variables => atom.center) for atom in η.atoms)
 end
+
+expectation(η::AtomicMeasure, p::APL) = sum(δ -> δ.weight * p(η.variables => δ.center), η.atoms)
+expectation(p::APL, η::AtomicMeasure) = expectation(η, p)
 
 function permcomp(f, m)
     picked = IntSet()
@@ -71,9 +75,5 @@ end
 Base.isapprox(η1::WeightedDiracMeasure, η2::WeightedDiracMeasure; kws...) = isapprox(η1.weight, η2.weight; kws...) && isapprox(η1.center, η2.center; kws...)
 function Base.isapprox(η1::AtomicMeasure, η2::AtomicMeasure; kws...)
     m = length(η1.atoms)
-    if length(η2.atoms) != m
-        false
-    else
-        permcomp((i, j) -> isapprox(η1.atoms[i], η2.atoms[j]; kws...), m)
-    end
+    length(η2.atoms) == m && permcomp((i, j) -> isapprox(η1.atoms[i], η2.atoms[j]; kws...), m)
 end
