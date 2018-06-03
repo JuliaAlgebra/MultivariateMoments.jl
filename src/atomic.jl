@@ -8,7 +8,7 @@ export AtomicMeasure, WeightedDiracMeasure
 
 Represents a weighted dirac measure with centered at `center` and with weight `weight`.
 """
-struct WeightedDiracMeasure{T}
+struct WeightedDiracMeasure{T} # Cannot subtype AbstractMeasureLike, since it does not contain the variables corresponding to the coefficients of the center
     center::Vector{T}
     weight::T
 end
