@@ -19,7 +19,7 @@ end
 
 """
     struct AtomicMeasure{T, V}
-        variables::V                   # Vector/Tuple of variables
+        variables::V                           # Vector/Tuple of variables
         atoms::Vector{WeightedDiracMeasure{T}} # Atoms of the measure
     end
 
@@ -30,7 +30,7 @@ That is, ``\\mathbb{E}_{\\eta}[p] = 2p(1, 0) + 3p(1/2, 1/2)``.
 The `AtomicMeasure` struct stores an atomic measure where `variables` contains the variables and `atoms` contains atoms of the measure.
 """
 struct AtomicMeasure{T, V}
-    variables::V                   # Vector/Tuple of variables
+    variables::V                           # Vector/Tuple of variables
     atoms::Vector{WeightedDiracMeasure{T}} # Atoms of the measure
 end
 
