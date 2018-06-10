@@ -1,9 +1,9 @@
 # Multivariate Moments
 
-| **Documentation** | **PackageEvaluator** | **Build Status** |
-|:-----------------:|:--------------------:|:----------------:|
-| [![][docs-stable-img]][docs-stable-url] | [![][pkg-0.6-img]][pkg-0.6-url] | [![Build Status][build-img]][build-url] |
-| [![][docs-latest-img]][docs-latest-url] | [![][pkg-0.7-img]][pkg-0.7-url] | [![Coveralls branch][coveralls-img]][coveralls-url] [![Codecov branch][codecov-img]][codecov-url] |
+| **Documentation** | **PackageEvaluator** | **Build Status** | **References to cite** |
+|:-----------------:|:--------------------:|:----------------:|:----------------------:|
+| [![][docs-stable-img]][docs-stable-url] | [![][pkg-0.6-img]][pkg-0.6-url] | [![Build Status][build-img]][build-url] | [![DOI][zenodo-img]][zenodo-url] |
+| [![][docs-latest-img]][docs-latest-url] | [![][pkg-0.7-img]][pkg-0.7-url] | [![Coveralls branch][coveralls-img]][coveralls-url] [![Codecov branch][codecov-img]][codecov-url] | |
 
 Extension of [MultivariatePolynomials](https://github.com/JuliaAlgebra/MultivariatePolynomials.jl) to moments of multivariate measures and their scalar product with polynomials.
 It also includes the extraction of atomic measures from moment matrices which is related to the [moment problem](https://en.wikipedia.org/wiki/Moment_problem).
@@ -29,3 +29,6 @@ It also includes the extraction of atomic measures from moment matrices which is
 [coveralls-url]: https://coveralls.io/github/JuliaAlgebra/MultivariateMoments.jl?branch=master
 [codecov-img]: http://codecov.io/github/JuliaAlgebra/MultivariateMoments.jl/coverage.svg?branch=master
 [codecov-url]: http://codecov.io/github/JuliaAlgebra/MultivariateMoments.jl?branch=master
+
+[zenodo-url]: https://doi.org/10.5281/zenodo.1260357
+[zenodo-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.1260357.svg
