@@ -125,7 +125,11 @@ function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
     nM, cM, U[σs .> tol, :]
 end
 function lowrankchol(M::AbstractMatrix, dec::SVDChol, ranktol)
-    F = svd(M)
+    if VERSION >= v"0.7-"
+        F = svd(M)
+    else
+        F = svdfact(M)
+    end
     nM = F.S[1] # norm of M
     tol = nM * ranktol
     r = something(findfirst(σ2 -> σ2 <= tol, F.S), 0)
