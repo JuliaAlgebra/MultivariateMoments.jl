@@ -112,7 +112,11 @@ function lowrankchol end
 
 function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
     m = Compat.LinearAlgebra.checksquare(M)
-    U = cholesky(M + dec.shift * I).U
+    if VERSION >= v"0.7-"
+        U = cholesky(M + dec.shift * I).U
+    else
+        U = chol(M + dec.shift * I)
+    end
     σs = map(i -> (U[i, i])^2, 1:m)
     nM = maximum(σs)
     tol = nM * ranktol
