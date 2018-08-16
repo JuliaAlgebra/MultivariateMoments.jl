@@ -26,8 +26,8 @@ end
     ν = matmeasure(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-14))
         atoms = extractatoms(ν, 1e-4, lrc)
-        @test !isnull(atoms)
-        @test get(atoms) ≈ η
+        @test atoms !== nothing
+        @test atoms ≈ η
     end
 end
 
@@ -65,8 +65,8 @@ end
     ν = matmeasure(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-16))
         atoms = extractatoms(ν, 1e-16, lrc)
-        @test !isnull(atoms)
-        @test get(atoms) ≈ η
+        @test atoms !== nothing
+        @test atoms ≈ η
     end
 end
 
@@ -77,14 +77,14 @@ end
                 monomials(x, 2))
     ν = matmeasure(μ, monomials(x, 1))
     # All singular values will be at least 1e-6 > 1e-12 it won't eliminate any row
-    @test isnull(extractatoms(ν, 1e-12, ShiftChol(1e-6)))
+    @test extractatoms(ν, 1e-12, ShiftChol(1e-6)) === nothing
     # The following tests that the method does not error if ranktol eliminates everything
     # In particular, this tests that the function equation(i) do not call sum when r equal to 0
     # this that throws an ArgumentError as details in src/extract.jl
-    @test isnull(extractatoms(ν, 1.0))
+    @test extractatoms(ν, 1.0) === nothing
     atoms = extractatoms(ν, 1e-5)
-    @test !isnull(atoms)
-    @test get(atoms) ≈ η
+    @test atoms !== nothing
+    @test atoms ≈ η
 end
 
 @testset "[LJP17] Example ?" begin
@@ -92,8 +92,8 @@ end
     η = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.], 2.53267)])
     ν = matmeasure([2.53267 -0.0 -5.36283e-19; -0.0 -5.36283e-19 -0.0; -5.36283e-19 -0.0 7.44133e-6], monomials(x, 2))
     atoms = extractatoms(ν, 1e-5)
-    @test !isnull(atoms)
-    @test get(atoms) ≈ η
+    @test atoms !== nothing
+    @test atoms ≈ η
 end
 
 @testset "[LJP17] Example ?" begin
@@ -117,12 +117,12 @@ end
         # With 1e-7, the rank is detected to be 5
         # With 1e-8, the rank is detected to be 6
         atoms = extractatoms(ν, ranktol)
-        @test !isnull(atoms)
-        @test get(atoms) ≈ η
+        @test atoms !== nothing
+        @test atoms ≈ η
     end
     # With 1e-9, the rank is detected to be 7
     atoms = extractatoms(ν, 1e-9)
-    @test isnull(atoms)
+    @test atoms === nothing
 end
 
 @testset "[LJP17] applied to [JCG14] Example 6.1" begin
@@ -130,8 +130,8 @@ end
     η = AtomicMeasure(x, [WeightedDiracMeasure([1.0, 4.78736282579504, 1.24375738760842, -1.4231836829978], 0.039112791390926646)])
     ν = matmeasure([0.0397951 0.187094 0.0489553 -0.0551816; 0.187094 0.896353 0.232962 -0.265564; 0.0489553 0.232962 0.0614682 -0.0676226; -0.0551816 -0.265564 -0.0676226 0.0837186], monomials(x, 1))
     atoms = extractatoms(ν, 6e-3)
-    @test !isnull(atoms)
-    @test get(atoms) ≈ η
+    @test atoms !== nothing
+    @test atoms ≈ η
     atoms = extractatoms(ν, 8e-4)
-    @test isnull(atoms)
+    @test atoms === nothing
 end

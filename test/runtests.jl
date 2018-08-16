@@ -1,7 +1,10 @@
 using MultivariateMoments
-using Base.Test
 using MultivariatePolynomials
 using SemialgebraicSets
+
+using Compat
+using Compat.Test
+using Compat.LinearAlgebra
 
 # Taken from JuMP/test/solvers.jl
 function try_import(name::Symbol)

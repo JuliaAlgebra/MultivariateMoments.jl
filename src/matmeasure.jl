@@ -18,7 +18,7 @@ function trimap(i, j)
 end
 
 function trimat(::Type{T}, f, n, σ) where {T}
-    Q = Vector{T}(trimap(n, n))
+    Q = Vector{T}(undef, trimap(n, n))
     for i in 1:n
         for j in 1:i
             Q[trimap(i, j)] = f(σ[i], σ[j])
@@ -39,7 +39,7 @@ Base.getindex(Q::SymMatrix, I::CartesianIndex) = Q[I.I]
     mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
         Q::SymMatrix{T}
         x::MVT
-        support::Nullable{AlgebraicSet}
+        support::Union{Nothing, AlgebraicSet}
     end
 
 Measure ``\\nu`` represented by the moments of the monomial matrix ``x x^\\top`` in the symmetric matrix `Q`.
@@ -48,7 +48,7 @@ The set of points that are zeros of all the polynomials ``p`` such that ``\\math
 mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
     Q::SymMatrix{T}
     x::MVT
-    support::Nullable{AlgebraicSet}
+    support::Union{Nothing, AlgebraicSet}
 end
 MatMeasure{T, MT, MVT}(Q::SymMatrix{T}, x::MVT) where {T, MT, MVT} = MatMeasure{T, MT, MVT}(Q, x, nothing)
 

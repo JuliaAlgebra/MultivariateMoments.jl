@@ -33,5 +33,5 @@ expectation(p::APL, μ::Measure) = _expectation(μ, p, (a, b) -> b * a) # a and 
 
 See [`expectation`](@ref)
 """
-Base.dot(μ::AbstractMeasureLike, p::APL) = expectation(μ, p)
-Base.dot(p::APL, μ::AbstractMeasureLike) = expectation(p, μ)
+Compat.LinearAlgebra.dot(μ::AbstractMeasureLike, p::APL) = expectation(μ, p)
+Compat.LinearAlgebra.dot(p::APL, μ::AbstractMeasureLike) = expectation(p, μ)

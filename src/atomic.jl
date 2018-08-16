@@ -55,7 +55,7 @@ expectation(η::AtomicMeasure, p::APL) = sum(δ -> δ.weight * p(η.variables =>
 expectation(p::APL, η::AtomicMeasure) = expectation(η, p)
 
 function permcomp(f, m)
-    picked = IntSet()
+    picked = BitSet()
     for i in 1:m
         k = 0
         for j in 1:m

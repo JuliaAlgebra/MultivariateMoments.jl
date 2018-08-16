@@ -60,7 +60,7 @@ function build_system(U::AbstractMatrix, mv::AbstractVector, ztol)
         r = length(pivots)
         U = U[keep, :]
     end
-    β = monovec(mv[m+1-pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
+    β = monovec(mv[m + 1 .- pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
     function equation(i)
         if iszero(r) # sum throws ArgumentError: reducing over an empty collection is not allowed, if r is zero
             z = zero(eltype(β)) * zero(eltype(U))
@@ -111,12 +111,12 @@ The rank of ``Q`` is the number of singular values larger than `ranktol```{} \\c
 function lowrankchol end
 
 function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
-    m = LinAlg.checksquare(M)
-    U = chol(M + dec.shift * eye(m))
+    m = Compat.LinearAlgebra.checksquare(M)
+    U = cholesky(M + dec.shift * I).U
     σs = map(i -> (U[i, i])^2, 1:m)
     nM = maximum(σs)
     tol = nM * ranktol
-    rm = find(σs .<= tol)
+    rm = findall(σs .<= tol)
     if isempty(rm)
         cM = ranktol
     else
@@ -125,18 +125,18 @@ function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
     nM, cM, U[σs .> tol, :]
 end
 function lowrankchol(M::AbstractMatrix, dec::SVDChol, ranktol)
-    F = svdfact(M)
+    F = svd(M)
     nM = F.S[1] # norm of M
     tol = nM * ranktol
-    r = findfirst(σ2 -> σ2 <= tol, F.S)
-    if r == 0
+    r = something(findfirst(σ2 -> σ2 <= tol, F.S), 0)
+    if iszero(r)
         cM = ranktol
         r = length(F.S)
     else
         cM = F.S[r] / nM
         r -= 1
     end
-    nM, cM, (F.U[:, 1:r] * diagm(sqrt.(F.S[1:r])))'
+    nM, cM, (F.U[:, 1:r] * Diagonal(sqrt.(F.S[1:r])))'
 end
 
 """
@@ -150,23 +150,24 @@ function computesupport!(μ::MatMeasure, ranktol::Real, dec::LowRankChol=SVDChol
     # so that we have more chance that low order monomials are in β and then more chance
     # v[i] * β to be in μ.x
     M = getmat(μ)
-    m = LinAlg.checksquare(M)
+    m = Compat.LinearAlgebra.checksquare(M)
     M = M[m:-1:1, m:-1:1]
     nM, cM, U = lowrankchol(M, dec, ranktol)
-    rref!(U, nM * cM / sqrt(m))
+    W = Matrix(U)
+    rref!(W, nM * cM / sqrt(m))
     #r, vals = solve_system(U', μ.x)
-    μ.support = build_system(U, μ.x, sqrt(cM)) # TODO determine what is better between ranktol and sqrt(ranktol) here
+    μ.support = build_system(W, μ.x, sqrt(cM)) # TODO determine what is better between ranktol and sqrt(ranktol) here
 end
 
 """
     extractatoms(ν::MatMeasure, ranktol, [dec])
 
-Returns a `Nullable` that contains an `AtomicMeasure` with the atoms of `ν` if it is atomic.
+Return an `AtomicMeasure` with the atoms of `ν` if it is atomic or `nothing` if `ν` is not atomic.
 The `ranktol` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
 """
-function extractatoms(ν::MatMeasure{T}, ranktol, args...)::Nullable{AtomicMeasure{T, Base.promote_op(variables, typeof(ν))}} where T
+function extractatoms(ν::MatMeasure{T}, ranktol, args...) where T
     computesupport!(ν, ranktol, args...)
-    supp = get(ν.support)
+    supp = ν.support
     if !iszerodimensional(supp)
         return nothing
     end
@@ -175,7 +176,7 @@ function extractatoms(ν::MatMeasure{T}, ranktol, args...)::Nullable{AtomicMeasu
     # Determine weights
     μ = measure(ν)
     vars = variables(μ)
-    A = Matrix{T}(length(μ.x), r)
+    A = Matrix{T}(undef, length(μ.x), r)
     for i in 1:r
         A[:, i] = dirac(μ.x, vars => centers[i]).a
     end
