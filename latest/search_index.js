@@ -165,7 +165,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "MultivariateMoments.MatMeasure",
     "category": "type",
-    "text": "mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}\n    Q::SymMatrix{T}\n    x::MVT\n    support::Nullable{AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n"
+    "text": "mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}\n    Q::SymMatrix{T}\n    x::MVT\n    support::Union{Nothing, AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n"
 },
 
 {
@@ -221,7 +221,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "MultivariateMoments.extractatoms",
     "category": "function",
-    "text": "extractatoms(ν::MatMeasure, ranktol, [dec])\n\nReturns a Nullable that contains an AtomicMeasure with the atoms of ν if it is atomic. The ranktol and dec parameters are passed as is to the lowrankchol function.\n\n\n\n"
+    "text": "extractatoms(ν::MatMeasure, ranktol, [dec])\n\nReturn an AtomicMeasure with the atoms of ν if it is atomic or nothing if ν is not atomic. The ranktol and dec parameters are passed as is to the lowrankchol function.\n\n\n\n"
 },
 
 {
