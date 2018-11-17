@@ -4,7 +4,7 @@ using SemialgebraicSets
 
 struct SymMatrix{T} <: AbstractMatrix{T}
     Q::Vector{T}
-    n
+    n::Int
 end
 
 # i <= j
