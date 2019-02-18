@@ -1,9 +1,6 @@
-__precompile__()
-
 module MultivariateMoments
 
-using Compat
-using Compat.LinearAlgebra
+using LinearAlgebra
 
 using MultivariatePolynomials
 const MP = MultivariatePolynomials

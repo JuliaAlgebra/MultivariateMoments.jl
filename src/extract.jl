@@ -111,7 +111,7 @@ The rank of ``Q`` is the number of singular values larger than `ranktol```{} \\c
 function lowrankchol end
 
 function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
-    m = Compat.LinearAlgebra.checksquare(M)
+    m = LinearAlgebra.checksquare(M)
     if VERSION >= v"0.7-"
         U = cholesky(M + dec.shift * I).U
     else
@@ -158,7 +158,7 @@ function computesupport!(μ::MatMeasure, ranktol::Real, dec::LowRankChol=SVDChol
     # so that we have more chance that low order monomials are in β and then more chance
     # v[i] * β to be in μ.x
     M = getmat(μ)
-    m = Compat.LinearAlgebra.checksquare(M)
+    m = LinearAlgebra.checksquare(M)
     M = M[m:-1:1, m:-1:1]
     nM, cM, U = lowrankchol(M, dec, ranktol)
     W = Matrix(U)
