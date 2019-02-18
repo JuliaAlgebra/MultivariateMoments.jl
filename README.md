@@ -1,9 +1,9 @@
 # Multivariate Moments
 
-| **Documentation** | **PackageEvaluator** | **Build Status** | **References to cite** |
-|:-----------------:|:--------------------:|:----------------:|:----------------------:|
-| [![][docs-stable-img]][docs-stable-url] | [![][pkg-0.6-img]][pkg-0.6-url] | [![Build Status][build-img]][build-url] | [![DOI][zenodo-img]][zenodo-url] |
-| [![][docs-latest-img]][docs-latest-url] | [![][pkg-0.7-img]][pkg-0.7-url] | [![Coveralls branch][coveralls-img]][coveralls-url] [![Codecov branch][codecov-img]][codecov-url] | |
+| **Documentation** || **Build Status** | **References to cite** |
+|:-----------------:||:----------------:|:----------------------:|
+| [![][docs-stable-img]][docs-stable-url] | [![Build Status][build-img]][build-url] | [![DOI][zenodo-img]][zenodo-url] |
+| [![][docs-latest-img]][docs-latest-url] | [![Coveralls branch][coveralls-img]][coveralls-url] [![Codecov branch][codecov-img]][codecov-url] | |
 
 Extension of [MultivariatePolynomials](https://github.com/JuliaAlgebra/MultivariatePolynomials.jl) to moments of multivariate measures and their scalar product with polynomials.
 It also includes the extraction of atomic measures from moment matrices which is related to the [moment problem](https://en.wikipedia.org/wiki/Moment_problem).
@@ -17,11 +17,6 @@ It also includes the extraction of atomic measures from moment matrices which is
 [docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
 [docs-stable-url]: https://juliaalgebra.github.io/MultivariateMoments.jl/stable
 [docs-latest-url]: https://juliaalgebra.github.io/MultivariateMoments.jl/latest
-
-[pkg-0.6-img]: http://pkg.julialang.org/badges/MultivariateMoments_0.6.svg
-[pkg-0.6-url]: http://pkg.julialang.org/?pkg=MultivariateMoments
-[pkg-0.7-img]: http://pkg.julialang.org/badges/MultivariateMoments_0.7.svg
-[pkg-0.7-url]: http://pkg.julialang.org/?pkg=MultivariateMoments
 
 [build-img]: https://travis-ci.org/JuliaAlgebra/MultivariateMoments.jl.svg?branch=master
 [build-url]: https://travis-ci.org/JuliaAlgebra/MultivariateMoments.jl
