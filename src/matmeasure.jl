@@ -76,7 +76,7 @@ function matmeasure(μ::Measure{T}, X) where T
         x = X[i] * X[j]
         for m in moments(μ)
             if monomial(m) == x
-                return value(m)
+                return moment_value(m)
             end
         end
         throw(ArgumentError("μ does not have the moment $(x)"))

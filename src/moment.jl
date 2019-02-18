@@ -1,4 +1,4 @@
-export moment, value, monomial
+export moment, moment_value, monomial
 
 struct Moment{T, MT <: AbstractMonomial} <: AbstractMoment{T}
     α::T
@@ -13,15 +13,15 @@ Creates the moment of the monomial `m` of value `α`.
 moment(α, m::AbstractMonomial) = Moment(α, m)
 
 """
-    value(m::AbstractMomentLike)
+    moment_value(m::AbstractMomentLike)
 
 Returns the value of the moment `m`.
 
 ## Examples
 
-Calling `value(moment(3.1, x*y^2))` should return `3.1`.
+Calling `moment_value(moment(3.1, x*y^2))` should return `3.1`.
 """
-value(m::Moment) = m.α
+moment_value(m::Moment) = m.α
 
 """
     monomial(m::AbstractMomentLike)

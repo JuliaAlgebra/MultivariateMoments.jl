@@ -5,7 +5,7 @@
     μ = measure([1, 0, 2, 3], [x^2*y^2, y*x^2, x*y*x^2, x*y^2])
     @test monomials(μ) == [x^3*y, x^2*y^2, x^2*y, x*y^2]
     @test monomial.(moments(μ)) == [x^3*y, x^2*y^2, x^2*y, x*y^2]
-    @test MultivariateMoments.value.(moments(μ)) == [2, 1, 0, 3]
+    @test MultivariateMoments.moment_value.(moments(μ)) == [2, 1, 0, 3]
     @test all(nvariables.(moments(μ)) .== 2)
     @test degree.(moments(μ)) == [4, 4, 3, 3]
     @test μ.a == [2, 1, 0, 3]

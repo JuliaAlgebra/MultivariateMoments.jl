@@ -1,8 +1,11 @@
 using Documenter, MultivariateMoments
 
 makedocs(
-    format = :html,
     sitename = "MultivariateMoments",
+    # See https://github.com/JuliaDocs/Documenter.jl/issues/868
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
+    # See https://github.com/JuliaOpt/JuMP.jl/issues/1576
+    strict = true,
     pages = [
         "Index" => "index.md"
         "Moments and expectation" => "moments.md"
@@ -15,9 +18,4 @@ makedocs(
 
 deploydocs(
     repo   = "github.com/JuliaAlgebra/MultivariateMoments.jl.git",
-    target = "build",
-    osname = "linux",
-    julia  = "0.6",
-    deps   = nothing,
-    make   = nothing
 )

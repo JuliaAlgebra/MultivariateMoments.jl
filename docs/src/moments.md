@@ -11,7 +11,7 @@ The `moment` function returns an `AbstractMoment` which is a subtype of `Abstrac
 An `AbstractMomentLike` is a type that can act like an `AbstractMoment` (it is similar to MultivariatePolynomials' `AbstractMonomialLike`, `AbstractTermLike` and `AbstractPolynomialLike`),
 that is, it implements the following two functions
 ```@docs
-value
+moment_value
 monomial(::MultivariateMoments.Moment)
 ```
 
