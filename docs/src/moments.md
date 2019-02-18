@@ -43,5 +43,5 @@ dirac
 The expectation of polynomial with respect to a measure can be computed either using `MultivariateMoments.expectation` or using the `Base.dot` scalar product.
 ```@docs
 MultivariateMoments.expectation
-dot
+MultivariateMoments.dot
 ```
