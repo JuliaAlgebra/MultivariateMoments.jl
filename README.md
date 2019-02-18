@@ -1,7 +1,7 @@
 # Multivariate Moments
 
-| **Documentation** || **Build Status** | **References to cite** |
-|:-----------------:||:----------------:|:----------------------:|
+| **Documentation** | **Build Status** | **References to cite** |
+|:-----------------:|:----------------:|:----------------------:|
 | [![][docs-stable-img]][docs-stable-url] | [![Build Status][build-img]][build-url] | [![DOI][zenodo-img]][zenodo-url] |
 | [![][docs-latest-img]][docs-latest-url] | [![Coveralls branch][coveralls-img]][coveralls-url] [![Codecov branch][codecov-img]][codecov-url] | |
 
