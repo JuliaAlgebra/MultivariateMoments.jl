@@ -161,19 +161,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "atoms/#MultivariateMoments.MatMeasure",
+    "location": "atoms/#MultivariateMoments.MomentMatrix",
     "page": "Atoms extraction",
-    "title": "MultivariateMoments.MatMeasure",
+    "title": "MultivariateMoments.MomentMatrix",
     "category": "type",
-    "text": "mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}\n    Q::SymMatrix{T}\n    x::MVT\n    support::Union{Nothing, AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n\n\n"
+    "text": "mutable struct MomentMatrix{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}\n    Q::SymMatrix{T}\n    x::MVT\n    support::Union{Nothing, AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n\n\n"
 },
 
 {
-    "location": "atoms/#MultivariateMoments.matmeasure",
+    "location": "atoms/#MultivariateMoments.moment_matrix",
     "page": "Atoms extraction",
-    "title": "MultivariateMoments.matmeasure",
+    "title": "MultivariateMoments.moment_matrix",
     "category": "function",
-    "text": "matmeasure(μ::Measure, x)\n\nCreates a matrix the moment matrix for the moment matrix  x x^top using the moments of μ.\n\n\n\n\n\n"
+    "text": "moment_matrix(μ::Measure, x)\n\nCreates a matrix the moment matrix for the moment matrix  x x^top using the moments of μ.\n\n\n\n\n\n"
 },
 
 {
@@ -181,7 +181,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "Moment matrix",
     "category": "section",
-    "text": "MatMeasure\nmatmeasure"
+    "text": "MomentMatrix\nmoment_matrix"
 },
 
 {
@@ -213,7 +213,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "MultivariateMoments.computesupport!",
     "category": "function",
-    "text": "MultivariateMoments.computesupport!(ν::MatMeasure, ranktol, [dec])\n\nComputes the support field of ν. The ranktol and dec parameters are passed as is to the lowrankchol function.\n\n\n\n\n\n"
+    "text": "MultivariateMoments.computesupport!(ν::MomentMatrix, ranktol, [dec])\n\nComputes the support field of ν. The ranktol and dec parameters are passed as is to the lowrankchol function.\n\n\n\n\n\n"
 },
 
 {
@@ -221,7 +221,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "MultivariateMoments.extractatoms",
     "category": "function",
-    "text": "extractatoms(ν::MatMeasure, ranktol, [dec])\n\nReturn an AtomicMeasure with the atoms of ν if it is atomic or nothing if ν is not atomic. The ranktol and dec parameters are passed as is to the lowrankchol function.\n\n\n\n\n\n"
+    "text": "extractatoms(ν::MomentMatrix, ranktol, [dec])\n\nReturn an AtomicMeasure with the atoms of ν if it is atomic or nothing if ν is not atomic. The ranktol and dec parameters are passed as is to the lowrankchol function.\n\n\n\n\n\n"
 },
 
 {
@@ -261,7 +261,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "Atoms extraction",
     "category": "section",
-    "text": "Given a MatMeasure with a positive semidefinite moment matrix, an algebraic system for which the set of solution is a superset of the support of the measure. If the measure is atomic and the MatMeasure contains enough moments, the algebraic system will only have a finite number of solutions which are the centers of the diracs of the measure.MultivariateMoments.computesupport!\nextractatomsThis system is obtained from a low rank cholesky decomposition of the moment matrix. This decomposition can either be obtained by a cholesky or SVD decomposition from which we remove the rows corresponding to the negligeable eigenvalues/singular values.LowRankChol\nShiftChol\nSVDChol\nMultivariateMoments.lowrankchol"
+    "text": "Given a MomentMatrix with a positive semidefinite moment matrix, an algebraic system for which the set of solution is a superset of the support of the measure. If the measure is atomic and the MomentMatrix contains enough moments, the algebraic system will only have a finite number of solutions which are the centers of the diracs of the measure.MultivariateMoments.computesupport!\nextractatomsThis system is obtained from a low rank cholesky decomposition of the moment matrix. This decomposition can either be obtained by a cholesky or SVD decomposition from which we remove the rows corresponding to the negligeable eigenvalues/singular values.LowRankChol\nShiftChol\nSVDChol\nMultivariateMoments.lowrankchol"
 },
 
 ]}
