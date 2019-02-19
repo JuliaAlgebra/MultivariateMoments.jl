@@ -148,12 +148,12 @@ function lowrankchol(M::AbstractMatrix, dec::SVDChol, ranktol)
 end
 
 """
-    MultivariateMoments.computesupport!(ν::MatMeasure, ranktol, [dec])
+    MultivariateMoments.computesupport!(ν::MomentMatrix, ranktol, [dec])
 
 Computes the `support` field of `ν`.
 The `ranktol` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
 """
-function computesupport!(μ::MatMeasure, ranktol::Real, dec::LowRankChol=SVDChol())
+function computesupport!(μ::MomentMatrix, ranktol::Real, dec::LowRankChol=SVDChol())
     # We reverse the ordering so that the first columns corresponds to low order monomials
     # so that we have more chance that low order monomials are in β and then more chance
     # v[i] * β to be in μ.x
@@ -168,12 +168,12 @@ function computesupport!(μ::MatMeasure, ranktol::Real, dec::LowRankChol=SVDChol
 end
 
 """
-    extractatoms(ν::MatMeasure, ranktol, [dec])
+    extractatoms(ν::MomentMatrix, ranktol, [dec])
 
 Return an `AtomicMeasure` with the atoms of `ν` if it is atomic or `nothing` if `ν` is not atomic.
 The `ranktol` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
 """
-function extractatoms(ν::MatMeasure{T}, ranktol, args...) where T
+function extractatoms(ν::MomentMatrix{T}, ranktol, args...) where T
     computesupport!(ν, ranktol, args...)
     supp = ν.support
     if !iszerodimensional(supp)

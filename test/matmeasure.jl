@@ -1,9 +1,9 @@
-@testset "MatMeasure" begin
+@testset "MomentMatrix" begin
     Mod.@polyvar x y
-    @test_throws ArgumentError matmeasure(measure([1], [x]), [y])
+    @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
     μ = measure(1:3, [x^2, x*y, y^2])
     X = [x, y]
-    for ν in (matmeasure(μ, X), matmeasure((i, j) -> i + j - 1, X))
+    for ν in (moment_matrix(μ, X), moment_matrix((i, j) -> i + j - 1, X))
         @test ν.Q[1:4] == [1, 2, 2, 3]
         @test ν.Q[1, 1] == 1
         @test ν.Q[1, 2] == 2
@@ -13,7 +13,7 @@
         @test variables(ν)[2] == y
         @test nvariables(ν) == 2
     end
-    @test_throws ArgumentError matmeasure(measure([1], [x]), [y])
+    @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
 end
 
 # [HL05] Henrion, D. & Lasserre, J-B.
@@ -23,7 +23,7 @@ end
     Mod.@polyvar x y
     η = AtomicMeasure([x, y], WeightedDiracMeasure.([[1, 2], [2, 2], [2, 3]], [0.4132, 0.3391, 0.2477]))
     μ = measure(η, [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
-    ν = matmeasure(μ, [1, x, y, x^2, x*y, y^2])
+    ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-14))
         atoms = extractatoms(ν, 1e-4, lrc)
         @test atoms !== nothing
@@ -62,7 +62,7 @@ end
     η = AtomicMeasure([x, y], WeightedDiracMeasure.([[-s3, -s3], [-s3, s3], [s3, -s3], [s3, s3]], [0.25, 0.25, 0.25, 0.25]))
     μ = measure([1/9,     0,     1/9,     0, 1/9,   0,     0,     0,   0, 1/3,   0, 1/3, 0, 0, 1],
                 [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
-    ν = matmeasure(μ, [1, x, y, x^2, x*y, y^2])
+    ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-16))
         atoms = extractatoms(ν, 1e-16, lrc)
         @test atoms !== nothing
@@ -75,7 +75,7 @@ end
     η = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.], 2.)])
     μ = measure([2., 0.0, 1e-6],
                 monomials(x, 2))
-    ν = matmeasure(μ, monomials(x, 1))
+    ν = moment_matrix(μ, monomials(x, 1))
     # All singular values will be at least 1e-6 > 1e-12 it won't eliminate any row
     @test extractatoms(ν, 1e-12, ShiftChol(1e-6)) === nothing
     # The following tests that the method does not error if ranktol eliminates everything
@@ -90,7 +90,7 @@ end
 @testset "[LJP17] Example ?" begin
     Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.], 2.53267)])
-    ν = matmeasure([2.53267 -0.0 -5.36283e-19; -0.0 -5.36283e-19 -0.0; -5.36283e-19 -0.0 7.44133e-6], monomials(x, 2))
+    ν = moment_matrix([2.53267 -0.0 -5.36283e-19; -0.0 -5.36283e-19 -0.0; -5.36283e-19 -0.0 7.44133e-6], monomials(x, 2))
     atoms = extractatoms(ν, 1e-5)
     @test atoms !== nothing
     @test atoms ≈ η
@@ -109,7 +109,7 @@ end
                            WeightedDiracMeasure([1., -0.2808541188399676], 9.72284626287903e-5),
                            WeightedDiracMeasure([1., 0.22799858558381308], 14.781765717198045),
                            WeightedDiracMeasure([1., 0.12343866254667915], 0.02765476684449834)])
-    ν = matmeasure([14.8107 3.37426 0.769196 0.175447 0.0400656 0.00917416 0.00211654; 3.37426 0.769196 0.175447 0.0400656 0.00917416 0.00211654 0.000498924; 0.769196 0.175447 0.0400656 0.00917416 0.00211654 0.000498924 0.000125543; 0.175447 0.0400656 0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5; 0.0400656 0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5; 0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5 1.07817e-5; 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5 1.07817e-5 1.10658e-5], monomials(x, 6))
+    ν = moment_matrix([14.8107 3.37426 0.769196 0.175447 0.0400656 0.00917416 0.00211654; 3.37426 0.769196 0.175447 0.0400656 0.00917416 0.00211654 0.000498924; 0.769196 0.175447 0.0400656 0.00917416 0.00211654 0.000498924 0.000125543; 0.175447 0.0400656 0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5; 0.0400656 0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5; 0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5 1.07817e-5; 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5 1.07817e-5 1.10658e-5], monomials(x, 6))
     for (ranktol, η) in ((1e-3, η1), (1e-4, η1), (1e-5, η2), (1e-6, η3), (1e-7, η4), (1e-8, η5))
         # With 1e-3 and 1e-4, the rank is detected to be 1
         # With 1e-5, the rank is detected to be 2
@@ -128,7 +128,7 @@ end
 @testset "[LJP17] applied to [JCG14] Example 6.1" begin
     Mod.@polyvar x[1:4]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1.0, 4.78736282579504, 1.24375738760842, -1.4231836829978], 0.039112791390926646)])
-    ν = matmeasure([0.0397951 0.187094 0.0489553 -0.0551816; 0.187094 0.896353 0.232962 -0.265564; 0.0489553 0.232962 0.0614682 -0.0676226; -0.0551816 -0.265564 -0.0676226 0.0837186], monomials(x, 1))
+    ν = moment_matrix([0.0397951 0.187094 0.0489553 -0.0551816; 0.187094 0.896353 0.232962 -0.265564; 0.0489553 0.232962 0.0614682 -0.0676226; -0.0551816 -0.265564 -0.0676226 0.0837186], monomials(x, 1))
     atoms = extractatoms(ν, 6e-3)
     @test atoms !== nothing
     @test atoms ≈ η

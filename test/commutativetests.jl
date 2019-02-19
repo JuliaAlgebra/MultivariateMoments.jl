@@ -1,4 +1,4 @@
 include("measure.jl")
 include("expectation.jl")
-include("matmeasure.jl")
+include("moment_matrix.jl")
 include("atomic.jl")

@@ -1,4 +1,4 @@
-export SymMatrix, MatMeasure, getmat, matmeasure
+export SymMatrix, MomentMatrix, getmat, moment_matrix
 
 using SemialgebraicSets
 
@@ -36,7 +36,7 @@ Base.getindex(Q::SymMatrix, I::Tuple) = Q[I...]
 Base.getindex(Q::SymMatrix, I::CartesianIndex) = Q[I.I]
 
 """
-    mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
+    mutable struct MomentMatrix{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
         Q::SymMatrix{T}
         x::MVT
         support::Union{Nothing, AlgebraicSet}
@@ -45,33 +45,33 @@ Base.getindex(Q::SymMatrix, I::CartesianIndex) = Q[I.I]
 Measure ``\\nu`` represented by the moments of the monomial matrix ``x x^\\top`` in the symmetric matrix `Q`.
 The set of points that are zeros of all the polynomials ``p`` such that ``\\mathbb{E}_{\\nu}[p] = 0`` is stored in the field `support` when it is computed.
 """
-mutable struct MatMeasure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
+mutable struct MomentMatrix{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
     Q::SymMatrix{T}
     x::MVT
     support::Union{Nothing, AlgebraicSet}
 end
-MatMeasure{T, MT, MVT}(Q::SymMatrix{T}, x::MVT) where {T, MT, MVT} = MatMeasure{T, MT, MVT}(Q, x, nothing)
+MomentMatrix{T, MT, MVT}(Q::SymMatrix{T}, x::MVT) where {T, MT, MVT} = MomentMatrix{T, MT, MVT}(Q, x, nothing)
 
-MP.variables(μ::MatMeasure) = variables(μ.x)
-MP.nvariables(μ::MatMeasure) = nvariables(μ.x)
+MP.variables(μ::MomentMatrix) = variables(μ.x)
+MP.nvariables(μ::MomentMatrix) = nvariables(μ.x)
 
-function MatMeasure{T}(f::Function, x::AbstractVector{MT}, σ) where {T, MT<:AbstractMonomial}
-    MatMeasure{T, MT, monovectype(x)}(trimat(T, f, length(x), σ), x)
+function MomentMatrix{T}(f::Function, x::AbstractVector{MT}, σ) where {T, MT<:AbstractMonomial}
+    MomentMatrix{T, MT, monovectype(x)}(trimat(T, f, length(x), σ), x)
 end
-MatMeasure{T}(f::Function, x::AbstractVector, σ) where T = MatMeasure{T}(f, monomial.(x), σ)
-function MatMeasure{T}(f::Function, x::AbstractVector) where T
+MomentMatrix{T}(f::Function, x::AbstractVector, σ) where T = MomentMatrix{T}(f, monomial.(x), σ)
+function MomentMatrix{T}(f::Function, x::AbstractVector) where T
     σ, X = sortmonovec(x)
-    MatMeasure{T}(f, X, σ)
+    MomentMatrix{T}(f, X, σ)
 end
-MatMeasure(f::Function, x) = MatMeasure{Base.promote_op(f, Int, Int)}(f, x)
-matmeasure(f::Function, x) = MatMeasure(f, x)
+MomentMatrix(f::Function, x) = MomentMatrix{Base.promote_op(f, Int, Int)}(f, x)
+moment_matrix(f::Function, x) = MomentMatrix(f, x)
 
 """
-    matmeasure(μ::Measure, x)
+    moment_matrix(μ::Measure, x)
 
 Creates a matrix the moment matrix for the moment matrix  ``x x^\\top`` using the moments of `μ`.
 """
-function matmeasure(μ::Measure{T}, X) where T
+function moment_matrix(μ::Measure{T}, X) where T
     function getmom(i, j)
         x = X[i] * X[j]
         for m in moments(μ)
@@ -81,23 +81,23 @@ function matmeasure(μ::Measure{T}, X) where T
         end
         throw(ArgumentError("μ does not have the moment $(x)"))
     end
-    MatMeasure{T}(getmom, X)
+    MomentMatrix{T}(getmom, X)
 end
 
-function MatMeasure(Q::AbstractMatrix{T}, x, σ) where T
-    MatMeasure{T}((i,j) -> Q[σ[i], σ[j]], x)
+function MomentMatrix(Q::AbstractMatrix{T}, x, σ) where T
+    MomentMatrix{T}((i,j) -> Q[σ[i], σ[j]], x)
 end
-function MatMeasure(Q::AbstractMatrix, x)
+function MomentMatrix(Q::AbstractMatrix, x)
     σ, X = sortmonovec(x)
-    MatMeasure(Q, X, σ)
+    MomentMatrix(Q, X, σ)
 end
-matmeasure(Q::AbstractMatrix, x) = MatMeasure(Q, x)
+moment_matrix(Q::AbstractMatrix, x) = MomentMatrix(Q, x)
 
-function getmat(μ::MatMeasure)
+function getmat(μ::MomentMatrix)
     Matrix(μ.Q)
 end
 
-function measure(ν::MatMeasure)
+function measure(ν::MomentMatrix)
     n = length(ν.x)
     measure(ν.Q.Q, [ν.x[i] * ν.x[j] for i in 1:n for j in 1:i])
 end
