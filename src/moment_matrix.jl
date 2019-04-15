@@ -1,4 +1,4 @@
-export SymMatrix, MomentMatrix, getmat, moment_matrix
+export SymMatrix, MomentMatrix, getmat, moment_matrix, symmetric_setindex!
 
 using SemialgebraicSets
 
@@ -29,8 +29,17 @@ end
 
 Base.size(Q::SymMatrix) = (Q.n, Q.n)
 
+"""
+    symmetric_setindex!(Q::SymMatrix, value, i::Integer, j::Integer)
+
+Set `Q[i, j]` and `Q[j, i]` to the value `value`.
+"""
+function symmetric_setindex!(Q::SymMatrix, value, i::Integer, j::Integer)
+    Q.Q[trimap(max(i, j), min(i, j))] = value
+end
+
 function Base.getindex(Q::SymMatrix, i::Integer, j::Integer)
-    Q.Q[trimap(max(i, j), min(i, j))]
+    return Q.Q[trimap(max(i, j), min(i, j))]
 end
 Base.getindex(Q::SymMatrix, I::Tuple) = Q[I...]
 Base.getindex(Q::SymMatrix, I::CartesianIndex) = Q[I.I]
