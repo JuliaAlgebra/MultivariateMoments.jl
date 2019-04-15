@@ -5,6 +5,8 @@
 ```@docs
 MomentMatrix
 moment_matrix
+SymMatrix
+symmetric_setindex!
 ```
 
 ## Atomic measure
