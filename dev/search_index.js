@@ -177,11 +177,27 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "atoms/#MultivariateMoments.SymMatrix",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.SymMatrix",
+    "category": "type",
+    "text": "struct SymMatrix{T} <: AbstractMatrix{T}\n    Q::Vector{T}\n    n::Int\nend\n\nSymmetric n times n matrix storing the vectorized upper triangular part of the matrix in the Q vector (this corresponds to the vectorized form of MathOptInterface.PositiveSemidefiniteConeTriangle). It implement the AbstractMatrix interface except for setindex! as it might break its symmetry. The symmetric_setindex! function should be used instead.\n\n\n\n\n\n"
+},
+
+{
+    "location": "atoms/#MultivariateMoments.symmetric_setindex!",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.symmetric_setindex!",
+    "category": "function",
+    "text": "symmetric_setindex!(Q::SymMatrix, value, i::Integer, j::Integer)\n\nSet Q[i, j] and Q[j, i] to the value value.\n\n\n\n\n\n"
+},
+
+{
     "location": "atoms/#Moment-matrix-1",
     "page": "Atoms extraction",
     "title": "Moment matrix",
     "category": "section",
-    "text": "MomentMatrix\nmoment_matrix"
+    "text": "MomentMatrix\nmoment_matrix\nSymMatrix\nsymmetric_setindex!"
 },
 
 {
