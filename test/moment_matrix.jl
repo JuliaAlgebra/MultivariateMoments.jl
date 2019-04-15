@@ -1,3 +1,13 @@
+@testset "SymMatrix" begin
+    Q = SymMatrix([1, 2, 3], 2)
+    symmetric_setindex!(Q, 4, 1, 1)
+    @test Q.Q == [4, 2, 3]
+    symmetric_setindex!(Q, 5, 1, 2)
+    @test Q.Q == [4, 5, 3]
+    symmetric_setindex!(Q, 6, 2, 2)
+    @test Q.Q == [4, 5, 6]
+end
+
 @testset "MomentMatrix" begin
     Mod.@polyvar x y
     @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
