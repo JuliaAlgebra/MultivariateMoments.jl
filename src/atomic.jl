@@ -8,19 +8,20 @@ export AtomicMeasure, WeightedDiracMeasure
 
 Represents a weighted dirac measure with centered at `center` and with weight `weight`.
 """
-struct WeightedDiracMeasure{T} # Cannot subtype AbstractMeasureLike, since it does not contain the variables corresponding to the coefficients of the center
-    center::Vector{T}
+struct WeightedDiracMeasure{T, AT<:AbstractVector{T}} # Cannot subtype AbstractMeasureLike, since it does not contain the variables corresponding to the coefficients of the center
+    center::AT
     weight::T
 end
-function WeightedDiracMeasure(center::Vector{S}, weight::T) where {S, T}
+function WeightedDiracMeasure(center::AbstractVector{S}, weight::T) where {S, T}
     U = promote_type(S, T)
-    WeightedDiracMeasure(convert(Vector{U}, center), convert(U, weight))
+    return WeightedDiracMeasure(convert(AbstractVector{U}, center),
+                                convert(U, weight))
 end
 
 """
-    struct AtomicMeasure{T, V} <: AbstractMeasureLike{T}
+    struct AtomicMeasure{T, AT, V} <: AbstractMeasureLike{T}
         variables::V                           # Vector/Tuple of variables
-        atoms::Vector{WeightedDiracMeasure{T}} # Atoms of the measure
+        atoms::Vector{WeightedDiracMeasure{T, AT}} # Atoms of the measure
     end
 
 An measure is said to be *atomic* if it is a sum of weighted dirac measures.
@@ -29,9 +30,9 @@ That is, ``\\mathbb{E}_{\\eta}[p] = 2p(1, 0) + 3p(1/2, 1/2)``.
 
 The `AtomicMeasure` struct stores an atomic measure where `variables` contains the variables and `atoms` contains atoms of the measure.
 """
-struct AtomicMeasure{T, V} <: AbstractMeasureLike{T}
+struct AtomicMeasure{T, AT, V} <: AbstractMeasureLike{T}
     variables::V                           # Vector/Tuple of variables
-    atoms::Vector{WeightedDiracMeasure{T}} # Atoms of the measure
+    atoms::Vector{WeightedDiracMeasure{T, AT}} # Atoms of the measure
 end
 
 function Base.show(io::IO, η::AtomicMeasure)
