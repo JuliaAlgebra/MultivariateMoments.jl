@@ -2,9 +2,8 @@ using MultivariateMoments
 using MultivariatePolynomials
 using SemialgebraicSets
 
-using Compat
-using Compat.Test
-using Compat.LinearAlgebra
+using Test
+using LinearAlgebra
 
 # Taken from JuMP/test/solvers.jl
 function try_import(name::Symbol)
