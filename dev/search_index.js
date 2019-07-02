@@ -213,7 +213,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "MultivariateMoments.AtomicMeasure",
     "category": "type",
-    "text": "struct AtomicMeasure{T, V} <: AbstractMeasureLike{T}\n    variables::V                           # Vector/Tuple of variables\n    atoms::Vector{WeightedDiracMeasure{T}} # Atoms of the measure\nend\n\nAn measure is said to be atomic if it is a sum of weighted dirac measures. For instance, eta = 2 delta_(1 0) + 3 delta_(12 12) is an atomic measure since it is a sum of the diracs centered at (1 0) and (12 12) and weighted respectively by 2 and 3. That is, mathbbE_etap = 2p(1 0) + 3p(12 12).\n\nThe AtomicMeasure struct stores an atomic measure where variables contains the variables and atoms contains atoms of the measure.\n\n\n\n\n\n"
+    "text": "struct AtomicMeasure{T, AT, V} <: AbstractMeasureLike{T}\n    variables::V                           # Vector/Tuple of variables\n    atoms::Vector{WeightedDiracMeasure{T, AT}} # Atoms of the measure\nend\n\nAn measure is said to be atomic if it is a sum of weighted dirac measures. For instance, eta = 2 delta_(1 0) + 3 delta_(12 12) is an atomic measure since it is a sum of the diracs centered at (1 0) and (12 12) and weighted respectively by 2 and 3. That is, mathbbE_etap = 2p(1 0) + 3p(12 12).\n\nThe AtomicMeasure struct stores an atomic measure where variables contains the variables and atoms contains atoms of the measure.\n\n\n\n\n\n"
 },
 
 {
