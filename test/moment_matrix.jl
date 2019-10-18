@@ -145,3 +145,10 @@ end
     atoms = extractatoms(ν, 8e-4)
     @test atoms === nothing
 end
+
+@testset "Large norm" begin
+    # If the norm of `M` is given to `rref!` instead of `√||M||`, `extractatoms` will error.
+    Mod.@polyvar x[1:2]
+    ν = moment_matrix([2749.376669556701 -800.152792847183; -800.152792847183 586.8034549325414], monomials(x, 1))
+    @test nothing === extractatoms(ν, 1e-2)
+end
