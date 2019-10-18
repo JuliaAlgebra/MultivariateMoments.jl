@@ -10,8 +10,8 @@ RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
 SemialgebraicSets = "8e049039-38e8-557d-ae3a-bc521ccf6204"
 
 [compat]
-MultivariatePolynomials = "≥ 0.1.0"
-SemialgebraicSets = "≥ 0.0.1"
+MultivariatePolynomials = "0.3"
+SemialgebraicSets = "0.2"
 julia = "1"
 
 [extras]
