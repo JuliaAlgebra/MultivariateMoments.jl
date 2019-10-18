@@ -112,11 +112,7 @@ function lowrankchol end
 
 function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
     m = LinearAlgebra.checksquare(M)
-    if VERSION >= v"0.7-"
-        U = cholesky(M + dec.shift * I).U
-    else
-        U = chol(M + dec.shift * I)
-    end
+    U = cholesky(M + dec.shift * I).U
     σs = map(i -> (U[i, i])^2, 1:m)
     nM = maximum(σs)
     tol = nM * ranktol
@@ -124,16 +120,12 @@ function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
     if isempty(rm)
         cM = ranktol
     else
-        cM = maximum(σs[rm])
+        cM = maximum(σs[rm]) / nM
     end
     nM, cM, U[σs .> tol, :]
 end
 function lowrankchol(M::AbstractMatrix, dec::SVDChol, ranktol)
-    if VERSION >= v"0.7-"
-        F = svd(M)
-    else
-        F = svdfact(M)
-    end
+    F = svd(M)
     nM = F.S[1] # norm of M
     tol = nM * ranktol
     r = something(findfirst(σ2 -> σ2 <= tol, F.S), 0)
@@ -162,9 +154,11 @@ function computesupport!(μ::MomentMatrix, ranktol::Real, dec::LowRankChol=SVDCh
     M = M[m:-1:1, m:-1:1]
     nM, cM, U = lowrankchol(M, dec, ranktol)
     W = Matrix(U)
-    rref!(W, nM * cM / sqrt(m))
+    # If M is multiplied by λ, W is multiplied by √λ
+    # so we take √||M|| = √nM
+    rref!(W, √(nM) * cM / sqrt(m))
     #r, vals = solve_system(U', μ.x)
-    μ.support = build_system(W, μ.x, sqrt(cM)) # TODO determine what is better between ranktol and sqrt(ranktol) here
+    μ.support = build_system(W, μ.x, √cM) # TODO determine what is better between ranktol and sqrt(ranktol) here
 end
 
 """
