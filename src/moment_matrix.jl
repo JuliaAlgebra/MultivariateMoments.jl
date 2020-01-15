@@ -1,6 +1,9 @@
-export SymMatrix, MomentMatrix, getmat, moment_matrix, symmetric_setindex!
+export SymMatrix, AbstractMomentMatrix, MomentMatrix, SparseMomentMatrix
+export getmat, moment_matrix, symmetric_setindex!
 
 using SemialgebraicSets
+
+abstract type AbstractMomentMatrix{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T} end
 
 """
     mutable struct MomentMatrix{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
@@ -12,7 +15,7 @@ using SemialgebraicSets
 Measure ``\\nu`` represented by the moments of the monomial matrix ``x x^\\top`` in the symmetric matrix `Q`.
 The set of points that are zeros of all the polynomials ``p`` such that ``\\mathbb{E}_{\\nu}[p] = 0`` is stored in the field `support` when it is computed.
 """
-mutable struct MomentMatrix{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}
+mutable struct MomentMatrix{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMomentMatrix{T, MT, MVT}
     Q::SymMatrix{T}
     x::MVT
     support::Union{Nothing, AlgebraicSet}
@@ -67,4 +70,8 @@ end
 function measure(ν::MomentMatrix)
     n = length(ν.x)
     measure(ν.Q.Q, [ν.x[i] * ν.x[j] for i in 1:n for j in 1:i])
+end
+
+struct SparseMomentMatrix{T, MT <: MP.AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMomentMatrix{T, MT, MVT}
+    sub_moment_matrices::Vector{MomentMatrix{T, MT, MVT}}
 end
