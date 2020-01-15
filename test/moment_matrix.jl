@@ -13,7 +13,9 @@ end
     @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
     μ = measure(1:3, [x^2, x*y, y^2])
     X = [x, y]
-    for ν in (moment_matrix(μ, X), moment_matrix((i, j) -> i + j - 1, X))
+    ν1 = moment_matrix(μ, X)
+    ν2 = moment_matrix((i, j) -> i + j - 1, X)
+    for ν in (ν1, ν2)
         @test ν.Q[1:4] == [1, 2, 2, 3]
         @test ν.Q[1, 1] == 1
         @test ν.Q[1, 2] == 2
@@ -24,6 +26,8 @@ end
         @test nvariables(ν) == 2
     end
     @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
+    sparse_ν = SparseMomentMatrix([ν1, ν2])
+    @test sparse_ν isa SparseMomentMatrix{Int,eltype(ν1.x),typeof(ν1.x)}
 end
 
 # [HL05] Henrion, D. & Lasserre, J-B.
