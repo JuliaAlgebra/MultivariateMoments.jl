@@ -1,5 +1,7 @@
-using MultivariateMoments
 using MultivariatePolynomials
+import MultivariateBases
+const MB = MultivariateBases
+using MultivariateMoments
 using SemialgebraicSets
 
 using Test
