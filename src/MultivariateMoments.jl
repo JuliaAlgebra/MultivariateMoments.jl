@@ -5,6 +5,9 @@ using LinearAlgebra
 using MultivariatePolynomials
 const MP = MultivariatePolynomials
 
+import MultivariateBases
+const MB = MultivariateBases
+
 export AbstractMeasureLike, AbstractMomentLike
 abstract type AbstractMeasureLike{T} end
 abstract type AbstractMomentLike{T} <: AbstractMeasureLike{T} end

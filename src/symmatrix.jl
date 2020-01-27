@@ -16,6 +16,9 @@ struct SymMatrix{T} <: AbstractMatrix{T}
     n::Int
 end
 
+Base.copy(Q::SymMatrix) = SymMatrix(copy(Q.Q), Q.n)
+Base.map(f::Function, Q::SymMatrix) = SymMatrix(map(f, Q.Q), Q.n)
+
 # i <= j
 #function trimap(i, j, n) # It was used when Q was the lower triangular part
 #    div(n*(n+1), 2) - div((n-i+1)*(n-i+2), 2) + j-i+1

@@ -4,8 +4,15 @@
     @test Q.Q == [4, 2, 3]
     symmetric_setindex!(Q, 5, 1, 2)
     @test Q.Q == [4, 5, 3]
-    symmetric_setindex!(Q, 6, 2, 2)
-    @test Q.Q == [4, 5, 6]
+    P = copy(Q)
+    @test P.n == 2
+    symmetric_setindex!(P, 6, 2, 2)
+    @test Q.Q == [4, 5, 3]
+    @test P.n == 2
+    @test P.Q == [4, 5, 6]
+    R = map(i -> i - 1, P)
+    @test R.n == 2
+    @test R.Q == [3, 4, 5]
 end
 
 @testset "MomentMatrix" begin
@@ -14,7 +21,7 @@ end
     μ = measure(1:3, [x^2, x*y, y^2])
     X = [x, y]
     ν1 = moment_matrix(μ, X)
-    ν2 = moment_matrix((i, j) -> i + j - 1, X)
+    ν2 = MomentMatrix{Int}((i, j) -> i + j - 1, X)
     for ν in (ν1, ν2)
         @test ν.Q[1:4] == [1, 2, 2, 3]
         @test ν.Q[1, 1] == 1
@@ -27,7 +34,7 @@ end
     end
     @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
     sparse_ν = SparseMomentMatrix([ν1, ν2])
-    @test sparse_ν isa SparseMomentMatrix{Int,eltype(ν1.x),typeof(ν1.x)}
+    @test sparse_ν isa SparseMomentMatrix{Int,typeof(ν1.basis)}
 end
 
 # [HL05] Henrion, D. & Lasserre, J-B.
@@ -65,7 +72,7 @@ end
     # β will be [z, y, x, y*z, x*z, x*y]
     x = monovec([z, y, x, z^2, y*z, y^2, x*z, x*y, x^2])
     # x*β contains x*y*z, x^2*z, x^2*y which are not present so it show fail
-    V = MultivariateMoments.build_system(U', x, sqrt(eps(Float64)))
+    V = MultivariateMoments.build_system(U', MB.MonomialBasis(x), sqrt(eps(Float64)))
     @test iszerodimensional(V)
     testelements(V, [[2.0, 2.0, 2.0], [2.0, 2.0, 0.0], [2.0, 0.0, 2.0], [0.0, 2.0, 2.0], [2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0], [0.0, 0.0, 0.0]], 1e-11)
 end

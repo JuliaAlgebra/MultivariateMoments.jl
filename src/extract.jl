@@ -45,13 +45,13 @@ using SemialgebraicSets
 #    r, vals
 #end
 
-function build_system(U::AbstractMatrix, mv::AbstractVector, ztol)
+function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol)
     # System is
     # y = [U 0] * y
     # where y = x[end:-1:1]
     # which is
     # y = U * β
-    m = length(mv)
+    m = length(basis)
     r = size(U, 1)
     pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i in 1:r]
     if any(pivots .== 0)
@@ -60,7 +60,8 @@ function build_system(U::AbstractMatrix, mv::AbstractVector, ztol)
         r = length(pivots)
         U = U[keep, :]
     end
-    β = monovec(mv[m + 1 .- pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
+    monos = basis.monomials
+    β = monovec(monos[m + 1 .- pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
     function equation(i)
         if iszero(r) # sum throws ArgumentError: reducing over an empty collection is not allowed, if r is zero
             z = zero(eltype(β)) * zero(eltype(U))
@@ -68,11 +69,11 @@ function build_system(U::AbstractMatrix, mv::AbstractVector, ztol)
         else
             s = sum(j -> β[r+1-j] * U[j, i], 1:r)
         end
-        s - mv[m+1-i]
+        s - monos[m+1-i]
     end
-    system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(mv)))
+    system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(monos)))
     # Type instability here :(
-    if mindegree(mv) == maxdegree(mv) # Homogeneous
+    if mindegree(monos) == maxdegree(monos) # Homogeneous
         projectivealgebraicset(system, Buchberger(ztol))
     else
         algebraicset(system, Buchberger(ztol))
@@ -158,7 +159,7 @@ function computesupport!(μ::MomentMatrix, ranktol::Real, dec::LowRankChol=SVDCh
     # so we take √||M|| = √nM
     rref!(W, √(nM) * cM / sqrt(m))
     #r, vals = solve_system(U', μ.x)
-    μ.support = build_system(W, μ.x, √cM) # TODO determine what is better between ranktol and sqrt(ranktol) here
+    μ.support = build_system(W, μ.basis, √cM) # TODO determine what is better between ranktol and sqrt(ranktol) here
 end
 
 """
