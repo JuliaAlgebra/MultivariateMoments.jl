@@ -165,7 +165,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "MultivariateMoments.MomentMatrix",
     "category": "type",
-    "text": "mutable struct MomentMatrix{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasureLike{T}\n    Q::SymMatrix{T}\n    x::MVT\n    support::Union{Nothing, AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n\n\n"
+    "text": "mutable struct MomentMatrix{T, B<:MultivariateBases.AbstractPolynomialBasis} <: AbstractMeasureLike{T}\n    Q::SymMatrix{T}\n    basis::B\n    support::Union{Nothing, AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n\n\n"
 },
 
 {
