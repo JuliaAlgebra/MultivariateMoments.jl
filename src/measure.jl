@@ -1,17 +1,22 @@
 export measure, dirac
-export variables, monomials, moments
+export variables, base_functions, moments
 
 # If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
-struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasure{T}
+struct Measure{T, B<:MB.AbstractPolynomialBasis} <: AbstractMeasure{T}
     a::Vector{T}
-    x::MVT
-
-    function Measure{T, MT, MVT}(a::Vector{T}, x::MVT) where {T, MT, MVT}
+    x::B
+    function Measure(a::Vector{T}, x::B) where {T, B<:MB.AbstractPolynomialBasis}
         @assert length(a) == length(x)
-        new(a, x)
+        new{T, B}(a, x)
     end
 end
-Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike} = Measure{T, monomialtype(TT), monovectype(x)}(monovec(a, x)...)
+
+basis_functions_type(::Measure{T, BT}) where {T,BT} = BT
+
+function Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike}
+    b, y = monovec(a, x)
+    return Measure(b, MB.MonomialBasis(y))
+end
 
 """
     measure(a, X::AbstractVector{<:AbstractMonomial})
@@ -33,6 +38,14 @@ MP.variables(μ::Measure) = variables(μ.x)
 Returns an iterator over the monomials of `μ` sorted in the decreasing order.
 """
 MP.monomials(μ::Measure) = μ.x
+
+"""
+    base_functions(μ::AbstractMeasureLike)
+
+Returns an iterator over the base_functions of `μ` sorted in the decreasing order.
+"""
+base_functions(μ::Measure) = μ.x
+
 
 """
     moments(μ::AbstractMeasureLike)

@@ -60,7 +60,7 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol)
         r = length(pivots)
         U = U[keep, :]
     end
-    monos = basis.monomials
+    monos = basis.elements
     β = monovec(monos[m + 1 .- pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
     function equation(i)
         if iszero(r) # sum throws ArgumentError: reducing over an empty collection is not allowed, if r is zero
@@ -181,7 +181,7 @@ function extractatoms(ν::MomentMatrix{T}, ranktol, args...) where T
     vars = variables(μ)
     A = Matrix{T}(undef, length(μ.x), r)
     for i in 1:r
-        A[:, i] = dirac(μ.x, vars => centers[i]).a
+        A[:, i] = dirac(μ.x.elements, vars => centers[i]).a
     end
     weights = A \ μ.a
     isf = isfinite.(weights)
