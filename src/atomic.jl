@@ -45,7 +45,7 @@ end
 
 measure(η::AtomicMeasure, x) = Measure(η, x)
 function Measure(η::AtomicMeasure{T}, x::AbstractVector{TT}) where {T, TT}
-    Measure{T, MB.MonomialBasis}(η, x)
+    Measure{T, MB.MonomialBasis{monomialtype(TT), monovectype(x)}}(η, x)
 end
 function Measure{T, BT}(η::AtomicMeasure{T}, x) where {T, BT}
     X = monovec(x)
