@@ -8,10 +8,10 @@
     @test MultivariateMoments.moment_value.(moments(μ)) == [2, 1, 0, 3]
     @test all(nvariables.(moments(μ)) .== 2)
     @test degree.(moments(μ)) == [4, 4, 3, 3]
-    @test μ.a == [2, 1, 0, 3]
-    @test (-μ).a == [-2, -1, 0, -3]
-    @test (2 * μ).a == [4, 2, 0, 6]
-    @test (μ * 3).a == [6, 3, 0, 9]
+    @test μ.values == [2, 1, 0, 3]
+    @test (-μ).values == [-2, -1, 0, -3]
+    @test (2 * μ).values == [4, 2, 0, 6]
+    @test (μ * 3).values == [6, 3, 0, 9]
     #@test_throws ArgumentError measure([1], [x]) + measure([1], [y])
 
     @testset "Measure MB" begin
@@ -24,10 +24,10 @@
         @test MultivariateMoments.moment_value.(moments(μ)) == [1, 0, 2, 3, 0, 4]
         @test all(nvariables.(moments(μ)) .== 2)
         @test degree.(moments(μ)) == [2, 2, 2, 1, 1, 0]
-        @test μ.a == [1, 0, 2, 3, 0, 4]
-        @test (-μ).a == -[1, 0, 2, 3, 0, 4]
-        @test (2 * μ).a == [1, 0, 2, 3, 0, 4].*2
-        @test (μ * 3).a == [1, 0, 2, 3, 0, 4].*3
+        @test μ.values == [1, 0, 2, 3, 0, 4]
+        @test (-μ).values == -[1, 0, 2, 3, 0, 4]
+        @test (2 * μ).values == [1, 0, 2, 3, 0, 4].*2
+        @test (μ * 3).values == [1, 0, 2, 3, 0, 4].*3
 
     end
 end

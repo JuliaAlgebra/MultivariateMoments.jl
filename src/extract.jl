@@ -179,11 +179,11 @@ function extractatoms(ν::MomentMatrix{T}, ranktol, args...) where T
     # Determine weights
     μ = measure(ν)
     vars = variables(μ)
-    A = Matrix{T}(undef, length(μ.x), r)
+    A = Matrix{T}(undef, length(μ.basis), r)
     for i in 1:r
-        A[:, i] = dirac(μ.x.elements, vars => centers[i]).a
+        A[:, i] = dirac(μ.basis.elements, vars => centers[i]).values
     end
-    weights = A \ μ.a
+    weights = A \ μ.values
     isf = isfinite.(weights)
     weights = weights[isf]
     centers = centers[isf]

@@ -5,14 +5,14 @@ function _expectation(μ::Measure{T, BT}, p::APL, f) where {T, BT}
     s = 0
     basis = MB.basis_covering_monomials(BT, monomials(p))
     for (c, m) in zip(coefficients(p, basis), basis)
-        while i <= length(μ.x) && m != μ.x[i]
+        while i <= length(μ.basis) && m != μ.basis[i]
             i += 1
         end
-        if i > length(μ.x)
+        if i > length(μ.basis)
             error("The base function $m has a non-zero multiplier $c in $p, 
                   but its expectation is not known in $μ")
         end
-        s += f(μ.a[i], c)
+        s += f(μ.values[i], c)
         i += 1
     end
     s
