@@ -1,3 +1,5 @@
+export SymMatrix
+
 """
     struct SymMatrix{T} <: AbstractMatrix{T}
         Q::Vector{T}
@@ -26,7 +28,7 @@ Base.map(f::Function, Q::SymMatrix) = SymMatrix(map(f, Q.Q), Q.n)
 
 # j <= i
 function trimap(i, j)
-    div((i-1)*i, 2) + j
+    div((i - 1) * i, 2) + j
 end
 
 function trimat(::Type{T}, f, n, σ) where {T}

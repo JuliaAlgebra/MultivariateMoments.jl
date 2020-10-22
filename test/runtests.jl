@@ -7,6 +7,9 @@ using SemialgebraicSets
 using Test
 using LinearAlgebra
 
+include("symmatrix.jl")
+include("hermitian_matrix.jl")
+
 # Taken from JuMP/test/solvers.jl
 function try_import(name::Symbol)
     try
