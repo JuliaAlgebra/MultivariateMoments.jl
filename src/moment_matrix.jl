@@ -20,7 +20,8 @@ mutable struct MomentMatrix{T, B<:MB.AbstractPolynomialBasis, MT<:AbstractMatrix
     basis::B
     support::Union{Nothing, AlgebraicSet}
 end
-MomentMatrix{T, B}(Q::SymMatrix{T}, basis::MB.AbstractPolynomialBasis) where {T, B} = MomentMatrix{T, B}(Q, basis, nothing)
+MomentMatrix{T, B, MT}(Q::MT, basis::MB.AbstractPolynomialBasis) where {T, B, MT} = MomentMatrix{T, B, MT}(Q, basis, nothing)
+MomentMatrix{T, B}(Q::AbstractMatrix{T}, basis::MB.AbstractPolynomialBasis) where {T, B} = MomentMatrix{T, B, typeof(Q)}(Q, basis)
 function MomentMatrix(Q::SymMatrix{T}, basis::MB.AbstractPolynomialBasis) where T
     return MomentMatrix{T, typeof(basis)}(Q, basis)
 end
@@ -71,6 +72,6 @@ function measure(ν::MomentMatrix{T, <:MB.MonomialBasis, SymMatrix{T}}) where T
     measure(ν.Q.Q, [monos[i] * monos[j] for i in 1:n for j in 1:i])
 end
 
-struct SparseMomentMatrix{T, B <: MB.AbstractPolynomialBasis} <: AbstractMomentMatrix{T, B}
-    sub_moment_matrices::Vector{MomentMatrix{T, B}}
+struct SparseMomentMatrix{T, B <: MB.AbstractPolynomialBasis, MT} <: AbstractMomentMatrix{T, B}
+    sub_moment_matrices::Vector{MomentMatrix{T, B, MT}}
 end

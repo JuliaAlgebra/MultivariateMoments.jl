@@ -2,7 +2,8 @@ using Test
 using MultivariateMoments
 
 @testset "VectorizedHermitianMatrix" begin
-    Q = VectorizedHermitianMatrix([1, 2, 3, -1], 2)
+    Q = MultivariateMoments.vectorized_hermitian_matrix(Int, (i, j) -> i == j ? i * 2 - 1 : 2 - im, 2, 1:2)
+    @test eltype(Q) == Complex{Int}
     @test 1 == @inferred Q[1, 1]
     @test 2 - im == @inferred Q[1, 2]
     @test 2 + im == @inferred Q[2, 1]

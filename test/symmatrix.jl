@@ -3,6 +3,7 @@ using MultivariateMoments
 
 @testset "SymMatrix" begin
     Q = SymMatrix([1, 2, 3], 2)
+    @test eltype(Q) == Int
     symmetric_setindex!(Q, 4, 1, 1)
     @test Q.Q == [4, 2, 3]
     symmetric_setindex!(Q, 5, 1, 2)

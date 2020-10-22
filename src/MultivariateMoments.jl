@@ -2,6 +2,9 @@ module MultivariateMoments
 
 using LinearAlgebra
 
+import MutableArithmetics
+const MA = MutableArithmetics
+
 using MultivariatePolynomials
 const MP = MultivariatePolynomials
 

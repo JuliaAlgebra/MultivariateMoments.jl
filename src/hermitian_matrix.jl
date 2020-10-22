@@ -1,7 +1,7 @@
 export VectorizedHermitianMatrix
 
 """
-    struct VectorizedHermitianMatrix{T} <: AbstractMatrix{T}
+    struct VectorizedHermitianMatrix{T} <: AbstractMatrix{Complex{T}}
         Q::Vector{T}
         n::Int
     end
@@ -14,9 +14,18 @@ It implement the `AbstractMatrix` interface except for `setindex!` as it might
 break its symmetry. The [`symmetric_setindex!`](@ref) function should be used
 instead.
 """
-struct VectorizedHermitianMatrix{T} <: AbstractMatrix{T}
+struct VectorizedHermitianMatrix{T, U} <: AbstractMatrix{U}
     Q::Vector{T}
     n::Int
+end
+function VectorizedHermitianMatrix{T}(Q::Vector{T}, n) where T
+    # `typeof(im)` is `Complex{Bool}`
+    S = MA.promote_operation(*, Complex{Bool}, T)
+    U = MA.promote_operation(+, T, S)
+    VectorizedHermitianMatrix{T, U}(Q, n)
+end
+function VectorizedHermitianMatrix(Q::Vector{T}, n) where T
+    return VectorizedHermitianMatrix{T}(Q, n)
 end
 
 Base.copy(Q::VectorizedHermitianMatrix) = VectorizedHermitianMatrix(copy(Q.Q), Q.n)
@@ -43,8 +52,8 @@ end
 imag_map(n, i, j) = trimap(n, n) + trimap(i, j - 1)
 imag_map(Q::VectorizedHermitianMatrix, i, j) = imag_map(Q.n, i, j)
 
-function trimat(::Type{T}, f, n, σ) where {T}
-    Q = Vector{T}(undef, N + trimap(n - 1, n - 1))
+function vectorized_hermitian_matrix(::Type{T}, f, n, σ) where {T}
+    Q = Vector{T}(undef, trimap(n, n) + trimap(n - 1, n - 1))
     for i in 1:n
         for j in 1:i
             x = f(σ[i], σ[j])
@@ -79,14 +88,14 @@ function symmetric_setindex!(Q::VectorizedHermitianMatrix, value, i::Integer, j:
     end
 end
 
-function Base.getindex(Q::VectorizedHermitianMatrix, i::Integer, j::Integer)
+function Base.getindex(Q::VectorizedHermitianMatrix{T, U}, i::Integer, j::Integer) where {T, U}
     I, J = max(i, j), min(i, j)
     r = Q.Q[trimap(I, J)]
     if i == j
-        return Complex(r)
+        return convert(U, r)
     else
         c = Q.Q[imag_map(Q, I, J)]
-        return Complex(r, i < j ? c : -c)
+        return r + im * (i < j ? c : -c)
     end
 end
 Base.getindex(Q::VectorizedHermitianMatrix, I::Tuple) = Q[I...]
