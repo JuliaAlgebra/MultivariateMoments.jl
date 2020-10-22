@@ -6,8 +6,8 @@ using SemialgebraicSets
 abstract type AbstractMomentMatrix{T, B<:MB.AbstractPolynomialBasis} <: AbstractMeasureLike{T} end
 
 """
-    mutable struct MomentMatrix{T, B<:MultivariateBases.AbstractPolynomialBasis} <: AbstractMeasureLike{T}
-        Q::SymMatrix{T}
+    mutable struct MomentMatrix{T, B<:MultivariateBases.AbstractPolynomialBasis, MT<:AbstractMatrix{T}} <: AbstractMeasureLike{T}
+        Q::MT
         basis::B
         support::Union{Nothing, AlgebraicSet}
     end
@@ -15,8 +15,8 @@ abstract type AbstractMomentMatrix{T, B<:MB.AbstractPolynomialBasis} <: Abstract
 Measure ``\\nu`` represented by the moments of the monomial matrix ``x x^\\top`` in the symmetric matrix `Q`.
 The set of points that are zeros of all the polynomials ``p`` such that ``\\mathbb{E}_{\\nu}[p] = 0`` is stored in the field `support` when it is computed.
 """
-mutable struct MomentMatrix{T, B<:MB.AbstractPolynomialBasis} <: AbstractMomentMatrix{T, B}
-    Q::SymMatrix{T}
+mutable struct MomentMatrix{T, B<:MB.AbstractPolynomialBasis, MT<:AbstractMatrix{T}} <: AbstractMomentMatrix{T, B}
+    Q::MT
     basis::B
     support::Union{Nothing, AlgebraicSet}
 end
@@ -63,11 +63,9 @@ function MomentMatrix(Q::AbstractMatrix, monos::AbstractVector)
 end
 moment_matrix(Q::AbstractMatrix, monos) = MomentMatrix(Q, monos)
 
-function getmat(μ::MomentMatrix)
-    Matrix(μ.Q)
-end
+getmat(μ::MomentMatrix) = Matrix(μ.Q)
 
-function measure(ν::MomentMatrix{T, <:MB.MonomialBasis}) where T
+function measure(ν::MomentMatrix{T, <:MB.MonomialBasis, SymMatrix{T}}) where T
     n = length(ν.basis)
     monos = ν.basis.monomials
     measure(ν.Q.Q, [monos[i] * monos[j] for i in 1:n for j in 1:i])
