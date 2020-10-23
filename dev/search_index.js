@@ -165,7 +165,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "MultivariateMoments.MomentMatrix",
     "category": "type",
-    "text": "mutable struct MomentMatrix{T, B<:MultivariateBases.AbstractPolynomialBasis} <: AbstractMeasureLike{T}\n    Q::SymMatrix{T}\n    basis::B\n    support::Union{Nothing, AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n\n\n"
+    "text": "mutable struct MomentMatrix{T, B<:MultivariateBases.AbstractPolynomialBasis, MT<:AbstractMatrix{T}} <: AbstractMeasureLike{T}\n    Q::MT\n    basis::B\n    support::Union{Nothing, AlgebraicSet}\nend\n\nMeasure nu represented by the moments of the monomial matrix x x^top in the symmetric matrix Q. The set of points that are zeros of all the polynomials p such that mathbbE_nup = 0 is stored in the field support when it is computed.\n\n\n\n\n\n"
 },
 
 {
@@ -185,11 +185,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "atoms/#MultivariateMoments.VectorizedHermitianMatrix",
+    "page": "Atoms extraction",
+    "title": "MultivariateMoments.VectorizedHermitianMatrix",
+    "category": "type",
+    "text": "struct VectorizedHermitianMatrix{T} <: AbstractMatrix{Complex{T}}\n    Q::Vector{T}\n    n::Int\nend\n\nHermitian n times n matrix storing the vectorized upper triangular real part of the matrix followed by the vectorized upper triangular imaginary part in the Q vector (this corresponds to the vectorized form of ComplexOptInterface.HermitianPositiveSemidefiniteConeTriangle). It implement the AbstractMatrix interface except for setindex! as it might break its symmetry. The symmetric_setindex! function should be used instead.\n\n\n\n\n\n"
+},
+
+{
     "location": "atoms/#MultivariateMoments.symmetric_setindex!",
     "page": "Atoms extraction",
     "title": "MultivariateMoments.symmetric_setindex!",
     "category": "function",
-    "text": "symmetric_setindex!(Q::SymMatrix, value, i::Integer, j::Integer)\n\nSet Q[i, j] and Q[j, i] to the value value.\n\n\n\n\n\n"
+    "text": "symmetric_setindex!(Q::SymMatrix, value, i::Integer, j::Integer)\n\nSet Q[i, j] and Q[j, i] to the value value.\n\n\n\n\n\nsymmetric_setindex!(Q::VectorizedHermitianMatrix, value, i::Integer, j::Integer)\n\nSet Q[i, j] to the value value and Q[j, i] to the value -value.\n\n\n\n\n\n"
 },
 
 {
@@ -197,7 +205,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Atoms extraction",
     "title": "Moment matrix",
     "category": "section",
-    "text": "MomentMatrix\nmoment_matrix\nSymMatrix\nsymmetric_setindex!"
+    "text": "MomentMatrix\nmoment_matrix\nSymMatrix\nVectorizedHermitianMatrix\nsymmetric_setindex!"
 },
 
 {
