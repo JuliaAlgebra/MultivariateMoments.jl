@@ -26,15 +26,13 @@ Base.map(f::Function, Q::SymMatrix) = SymMatrix(map(f, Q.Q), Q.n)
 #    div(n*(n+1), 2) - div((n-i+1)*(n-i+2), 2) + j-i+1
 #end
 
-# j <= i
-function trimap(i, j)
-    div((i - 1) * i, 2) + j
-end
+# i <= j
+trimap(i, j) = div(j * (j - 1), 2) + i
 
 function trimat(::Type{T}, f, n, σ) where {T}
     Q = Vector{T}(undef, trimap(n, n))
-    for i in 1:n
-        for j in 1:i
+    for j in 1:n
+        for i in 1:j
             Q[trimap(i, j)] = f(σ[i], σ[j])
         end
     end
@@ -49,11 +47,11 @@ Base.size(Q::SymMatrix) = (Q.n, Q.n)
 Set `Q[i, j]` and `Q[j, i]` to the value `value`.
 """
 function symmetric_setindex!(Q::SymMatrix, value, i::Integer, j::Integer)
-    Q.Q[trimap(max(i, j), min(i, j))] = value
+    Q.Q[trimap(min(i, j), max(i, j))] = value
 end
 
 function Base.getindex(Q::SymMatrix, i::Integer, j::Integer)
-    return Q.Q[trimap(max(i, j), min(i, j))]
+    return Q.Q[trimap(min(i, j), max(i, j))]
 end
 Base.getindex(Q::SymMatrix, I::Tuple) = Q[I...]
 Base.getindex(Q::SymMatrix, I::CartesianIndex) = Q[I.I]
