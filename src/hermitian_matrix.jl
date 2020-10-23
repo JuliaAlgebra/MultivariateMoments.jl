@@ -14,15 +14,18 @@ It implement the `AbstractMatrix` interface except for `setindex!` as it might
 break its symmetry. The [`symmetric_setindex!`](@ref) function should be used
 instead.
 """
-struct VectorizedHermitianMatrix{T, U} <: AbstractMatrix{U}
+struct VectorizedHermitianMatrix{T, S, U} <: AbstractMatrix{U}
     Q::Vector{T}
     n::Int
 end
+function VectorizedHermitianMatrix{T, S}(Q::Vector{T}, n) where {T, S}
+    V = MA.promote_operation(*, Complex{S}, T)
+    U = MA.promote_operation(+, T, V)
+    VectorizedHermitianMatrix{T, S, U}(Q, n)
+end
 function VectorizedHermitianMatrix{T}(Q::Vector{T}, n) where T
     # `typeof(im)` is `Complex{Bool}`
-    S = MA.promote_operation(*, Complex{Bool}, T)
-    U = MA.promote_operation(+, T, S)
-    VectorizedHermitianMatrix{T, U}(Q, n)
+    return VectorizedHermitianMatrix{T, Bool}(Q, n)
 end
 function VectorizedHermitianMatrix(Q::Vector{T}, n) where T
     return VectorizedHermitianMatrix{T}(Q, n)
@@ -54,8 +57,8 @@ imag_map(Q::VectorizedHermitianMatrix, i, j) = imag_map(Q.n, i, j)
 
 function vectorized_hermitian_matrix(::Type{T}, f, n, σ) where {T}
     Q = Vector{T}(undef, trimap(n, n) + trimap(n - 1, n - 1))
-    for i in 1:n
-        for j in 1:i
+    for j in 1:n
+        for i in 1:j
             x = f(σ[i], σ[j])
             Q[trimap(i, j)] = real(x)
             if i != j
@@ -88,14 +91,16 @@ function symmetric_setindex!(Q::VectorizedHermitianMatrix, value, i::Integer, j:
     end
 end
 
-function Base.getindex(Q::VectorizedHermitianMatrix{T, U}, i::Integer, j::Integer) where {T, U}
-    I, J = max(i, j), min(i, j)
+function Base.getindex(Q::VectorizedHermitianMatrix{T, S, U}, i::Integer, j::Integer) where {T, S, U}
+    I, J = min(i, j), max(i, j)
     r = Q.Q[trimap(I, J)]
     if i == j
         return convert(U, r)
     else
         c = Q.Q[imag_map(Q, I, J)]
-        return r + im * (i < j ? c : -c)
+        # If `c` is `MathOptInterface.SingleVariable`, `-c` is not defined so
+        # we prefer calling `-one(S)`.
+        return r + ((i < j ? one(S) : -one(S)) * im) * c
     end
 end
 Base.getindex(Q::VectorizedHermitianMatrix, I::Tuple) = Q[I...]

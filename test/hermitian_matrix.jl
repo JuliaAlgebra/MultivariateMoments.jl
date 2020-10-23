@@ -26,4 +26,14 @@ using MultivariateMoments
     @test S.n == 2
     @test S.Q == [3, 4, 5, 2]
     @test_throws ErrorException symmetric_setindex!(S, im, 1, 1)
+    M = [1       2 + 3im 4 + 5im
+         2 - 3im 6       7 + 8im
+         4 - 5im 7 - 8im 9]
+    N = MultivariateMoments.vectorized_hermitian_matrix(Int, (i, j) -> M[i, j], 3, 3:-1:1)
+    @test Matrix(N) == M[3:-1:1, 3:-1:1]
+    symmetric_setindex!(N, 4 - 5im, 3, 1)
+    @test Matrix(N) != M[3:-1:1, 3:-1:1]
+    M[3, 1] = 4 + 5im
+    M[1, 3] = 4 - 5im
+    @test Matrix(N) == M[3:-1:1, 3:-1:1]
 end
