@@ -6,6 +6,7 @@
 MomentMatrix
 moment_matrix
 SymMatrix
+VectorizedHermitianMatrix
 symmetric_setindex!
 ```
 
