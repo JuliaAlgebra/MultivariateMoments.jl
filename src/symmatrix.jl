@@ -18,6 +18,13 @@ struct SymMatrix{T} <: AbstractMatrix{T}
     n::Int
 end
 
+_undef_sym(T::Type, n) = Vector{T}(undef, trimap(n, n))
+function SymMatrix{T}(::UndefInitializer, dims::Dims{2}) where T
+    dims[1] != dims[2] && error("Expected same dimension for `SymMatrix`, got `$(dims)`.")
+    n = dims[1]
+    return SymMatrix(_undef_sym(T, n), n)
+end
+Base.similar(Q::SymMatrix, T::Type, dims::Dims{2}) = similar(SymMatrix{T}, dims)
 Base.copy(Q::SymMatrix) = SymMatrix(copy(Q.Q), Q.n)
 Base.map(f::Function, Q::SymMatrix) = SymMatrix(map(f, Q.Q), Q.n)
 
@@ -30,13 +37,13 @@ Base.map(f::Function, Q::SymMatrix) = SymMatrix(map(f, Q.Q), Q.n)
 trimap(i, j) = div(j * (j - 1), 2) + i
 
 function trimat(::Type{T}, f, n, σ) where {T}
-    Q = Vector{T}(undef, trimap(n, n))
+    Q = _undef_sym(T, n)
     for j in 1:n
         for i in 1:j
             Q[trimap(i, j)] = f(σ[i], σ[j])
         end
     end
-    SymMatrix{T}(Q, n)
+    return SymMatrix(Q, n)
 end
 
 Base.size(Q::SymMatrix) = (Q.n, Q.n)

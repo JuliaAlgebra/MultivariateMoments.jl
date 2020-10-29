@@ -36,4 +36,14 @@ using MultivariateMoments
     M[3, 1] = 4 + 5im
     M[1, 3] = 4 - 5im
     @test Matrix(N) == M[3:-1:1, 3:-1:1]
+    for QQ in [similar(N, (2, 2)), similar(N, 2, 2), similar(typeof(N), (2, 2)), similar(typeof(N), 2, 2)]
+        @test typeof(QQ) == typeof(N)
+        symmetric_setindex!(QQ, 2, 1, 1)
+        @test QQ[1, 1] == 2
+        symmetric_setindex!(QQ, 3 + 4im, 1, 2)
+        @test QQ[1, 2] == 3 + 4im
+        @test QQ[2, 1] == 3 - 4im
+        symmetric_setindex!(QQ, 5, 2, 2)
+        @test QQ[2, 2] == 5
+    end
 end

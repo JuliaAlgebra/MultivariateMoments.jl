@@ -17,4 +17,10 @@ using MultivariateMoments
     R = map(i -> i - 1, P)
     @test R.n == 2
     @test R.Q == [3, 4, 5]
+    for S in [similar(Q, 1, 1), similar(Q, (1, 1)),
+              similar(typeof(Q), 1, 1), similar(typeof(Q), (1, 1))]
+        @test typeof(S) == typeof(Q)
+        symmetric_setindex!(S, 2, 1, 1)
+        @test S[1, 1] == 2
+    end
 end

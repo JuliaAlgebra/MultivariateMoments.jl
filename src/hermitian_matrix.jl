@@ -31,6 +31,14 @@ function VectorizedHermitianMatrix(Q::Vector{T}, n) where T
     return VectorizedHermitianMatrix{T}(Q, n)
 end
 
+_undef_herm(T::Type, n) = Vector{T}(undef, trimap(n, n) + trimap(n - 1, n - 1))
+function VectorizedHermitianMatrix{T, S, U}(::UndefInitializer, dims::Dims{2}) where {T, S, U}
+    dims[1] != dims[2] && error("Expected same dimension for `VectorizedHermitianMatrix`, got `$(dims)`.")
+    n = dims[1]
+    return VectorizedHermitianMatrix(_undef_herm(T, n), n)
+end
+Base.similar(Q::VectorizedHermitianMatrix, dims::Dims{2}) = similar(typeof(Q), dims)
+Base.similar(Q::VectorizedHermitianMatrix, dims::Integer...) = similar(Q, dims)
 Base.copy(Q::VectorizedHermitianMatrix) = VectorizedHermitianMatrix(copy(Q.Q), Q.n)
 function Base.map(f::Function, Q::VectorizedHermitianMatrix)
     if Q.n <= 1
