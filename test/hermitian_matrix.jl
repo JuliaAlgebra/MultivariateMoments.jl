@@ -3,6 +3,16 @@ using MultivariateMoments
 
 @testset "VectorizedHermitianMatrix" begin
     Q = MultivariateMoments.vectorized_hermitian_matrix(Int, (i, j) -> i == j ? i * 2 - 1 : 2 - im, 2, 1:2)
+    @test Q[1:2, 1:2] isa Matrix{Complex{Int}}
+    @test Q[1:2, 1:2] == [1 2 - im; 2 + im 3]
+    @test square_getindex(Q, 1:2) isa VectorizedHermitianMatrix{Int, Bool, Complex{Int}}
+    @test square_getindex(Q, 1:2).Q == [1, 2, 3, -1]
+    @test square_getindex(Q, 2:-1:1) isa VectorizedHermitianMatrix{Int, Bool, Complex{Int}}
+    @test square_getindex(Q, 2:-1:1).Q == [3, 2, 1, -1]
+    @test square_getindex(Q, 1:1) isa VectorizedHermitianMatrix{Int, Bool, Complex{Int}}
+    @test square_getindex(Q, 1:1).Q == [1]
+    @test square_getindex(Q, 2:2) isa VectorizedHermitianMatrix{Int, Bool, Complex{Int}}
+    @test square_getindex(Q, 2:2).Q == [3]
     @test eltype(Q) == Complex{Int}
     @test 1 == @inferred Q[1, 1]
     @test 2 - im == @inferred Q[1, 2]

@@ -3,6 +3,17 @@ using MultivariateMoments
 
 @testset "SymMatrix" begin
     Q = SymMatrix([1, 2, 3], 2)
+    @test Q[1:2, 1:2] isa Matrix{Int}
+    @test Q[1:2, 1:2] == [1 2; 2 3]
+    @test square_getindex(Q, 1:2) isa SymMatrix{Int}
+    @test square_getindex(Q, 1:2).Q == [1, 2, 3]
+    @test square_getindex(Q, 2:-1:1) isa SymMatrix{Int}
+    @test square_getindex(Q, 2:-1:1).Q == [3, 2, 1]
+    @test square_getindex(Q, 1:1) isa SymMatrix{Int}
+    @test square_getindex(Q, 1:1).Q == [1]
+    @test square_getindex(Q, 2:2) isa SymMatrix{Int}
+    @test square_getindex(Q, 2:2).Q == [3]
+    @test similar(Q, Float64, (Base.OneTo(2), Base.OneTo(2))) isa Matrix{Float64}
     @test eltype(Q) == Int
     symmetric_setindex!(Q, 4, 1, 1)
     @test Q.Q == [4, 2, 3]
