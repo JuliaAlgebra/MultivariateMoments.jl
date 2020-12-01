@@ -1,5 +1,5 @@
 export SymMatrix, AbstractMomentMatrix, MomentMatrix, SparseMomentMatrix
-export getmat, moment_matrix, symmetric_setindex!
+export getmat, moment_matrix
 
 using SemialgebraicSets
 

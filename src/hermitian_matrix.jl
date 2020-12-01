@@ -80,6 +80,33 @@ end
 Base.size(Q::VectorizedHermitianMatrix) = (Q.n, Q.n)
 
 """
+    square_getindex!(Q::VectorizedHermitianMatrix, I)
+
+Return the `VectorizedHermitianMatrix` corresponding to `Q[I, I]`.
+"""
+function square_getindex(Q::VectorizedHermitianMatrix{T, S, U}, I) where {T, S, U}
+    n = length(I)
+    q = _undef_herm(T, n)
+    N = trimap(n, n)
+    k_real = 0
+    k_imag = 0
+    for (j, Ij) in enumerate(I)
+        for (i, Ii) in enumerate(I)
+            i > j && break
+            k_real += 1
+            row, col = min(Ii, Ij), max(Ii, Ij)
+            q[k_real] = _real_getindex(Q, row, col)
+            if i < j
+                k_imag += 1
+                q[N + k_imag] = _imag_getindex(Q, row, col)
+            end
+        end
+    end
+    return VectorizedHermitianMatrix{T, S, U}(q, n)
+end
+
+
+"""
     symmetric_setindex!(Q::VectorizedHermitianMatrix, value, i::Integer, j::Integer)
 
 Set `Q[i, j]` to the value `value` and `Q[j, i]` to the value `-value`.
@@ -99,13 +126,15 @@ function symmetric_setindex!(Q::VectorizedHermitianMatrix, value, i::Integer, j:
     end
 end
 
+_real_getindex(Q::VectorizedHermitianMatrix, i, j) = Q.Q[trimap(i, j)]
+_imag_getindex(Q::VectorizedHermitianMatrix, i, j) = Q.Q[imag_map(Q, i, j)]
 function Base.getindex(Q::VectorizedHermitianMatrix{T, S, U}, i::Integer, j::Integer) where {T, S, U}
     I, J = min(i, j), max(i, j)
-    r = Q.Q[trimap(I, J)]
+    r = _real_getindex(Q, I, J)
     if i == j
         return convert(U, r)
     else
-        c = Q.Q[imag_map(Q, I, J)]
+        c = _imag_getindex(Q, I, J)
         # If `c` is `MathOptInterface.SingleVariable`, `-c` is not defined so
         # we prefer calling `-one(S)`.
         return r + ((i < j ? one(S) : -one(S)) * im) * c

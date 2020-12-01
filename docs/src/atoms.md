@@ -1,13 +1,19 @@
 # Atoms extration
 
+## Vectorized matrix
+
+```@docs
+SymMatrix
+VectorizedHermitianMatrix
+square_getindex
+symmetric_setindex!
+```
+
 ## Moment matrix
 
 ```@docs
 MomentMatrix
 moment_matrix
-SymMatrix
-VectorizedHermitianMatrix
-symmetric_setindex!
 ```
 
 ## Atomic measure

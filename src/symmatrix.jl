@@ -1,4 +1,5 @@
 export SymMatrix
+export square_getindex, symmetric_setindex!
 
 """
     struct SymMatrix{T} <: AbstractMatrix{T}
@@ -24,6 +25,8 @@ function SymMatrix{T}(::UndefInitializer, dims::Dims{2}) where T
     n = dims[1]
     return SymMatrix(_undef_sym(T, n), n)
 end
+Base.similar(Q::SymMatrix{T}, dims::Tuple{Base.OneTo, Vararg{Base.OneTo}}) where {T} = similar(Matrix{T}, dims)
+Base.similar(Q::SymMatrix, T::Type, dims::Tuple{Base.OneTo, Vararg{Base.OneTo}}) = similar(Matrix{T}, dims)
 Base.similar(Q::SymMatrix, T::Type, dims::Dims{2}) = similar(SymMatrix{T}, dims)
 Base.copy(Q::SymMatrix) = SymMatrix(copy(Q.Q), Q.n)
 Base.map(f::Function, Q::SymMatrix) = SymMatrix(map(f, Q.Q), Q.n)
@@ -47,6 +50,25 @@ function trimat(::Type{T}, f, n, σ) where {T}
 end
 
 Base.size(Q::SymMatrix) = (Q.n, Q.n)
+
+"""
+    square_getindex!(Q::SymMatrix, I)
+
+Return the `SymMatrix` corresponding to `Q[I, I]`.
+"""
+function square_getindex(Q::SymMatrix{T}, I) where T
+    n = length(I)
+    q = _undef_sym(T, n)
+    k = 0
+    for (j, Ij) in enumerate(I)
+        for (i, Ii) in enumerate(I)
+            i > j && break
+            k += 1
+            q[k] = Q[Ii, Ij]
+        end
+    end
+    return SymMatrix(q, n)
+end
 
 """
     symmetric_setindex!(Q::SymMatrix, value, i::Integer, j::Integer)
