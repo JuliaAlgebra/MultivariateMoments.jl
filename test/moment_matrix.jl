@@ -1,7 +1,12 @@
 using Test
 
-import HomotopyContinuation
-const HC = HomotopyContinuation
+struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
+function SemialgebraicSets.solvealgebraicequations(
+    ::SemialgebraicSets.AlgebraicSet,
+    ::DummySolver,
+)
+    error("Dummy solver")
+end
 
 @testset "MomentMatrix" begin
     Mod.@polyvar x y
@@ -37,11 +42,10 @@ const DEFAULT_SOLVER = SemialgebraicSets.defaultalgebraicsolver([1.0x - 1.0x])
     μ = measure(η, [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-14))
-        for solver in (HC.SemialgebraicSetsHCSolver(; compile = false), DEFAULT_SOLVER)
-            atoms = extractatoms(ν, 1e-4, lrc, solver)
-            @test atoms !== nothing
-            @test atoms ≈ η
-        end
+        @test_throws ErrorException("Dummy solver") extractatoms(ν, 1e-4, lrc, DummySolver())
+        atoms = extractatoms(ν, 1e-4, lrc, DEFAULT_SOLVER)
+        @test atoms !== nothing
+        @test atoms ≈ η
     end
 end
 
@@ -78,11 +82,9 @@ end
                 [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-16))
-        for solver in (HC.SemialgebraicSetsHCSolver(; compile = false), DEFAULT_SOLVER)
-            atoms = extractatoms(ν, 1e-16, lrc, solver)
-            @test atoms !== nothing
-            @test atoms ≈ η
-        end
+        atoms = extractatoms(ν, 1e-16, lrc)
+        @test atoms !== nothing
+        @test atoms ≈ η
     end
 end
 
@@ -107,11 +109,10 @@ end
     Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.], 2.53267)])
     ν = moment_matrix([2.53267 -0.0 -5.36283e-19; -0.0 -5.36283e-19 -0.0; -5.36283e-19 -0.0 7.44133e-6], monomials(x, 2))
-    for solver in (HC.SemialgebraicSetsHCSolver(; compile = false), DEFAULT_SOLVER)
-        atoms = extractatoms(ν, 1e-5, solver)
-        @test atoms !== nothing
-        @test atoms ≈ η
-    end
+    @test_throws ErrorException("Dummy solver") extractatoms(ν, 1e-5, DummySolver())
+    atoms = extractatoms(ν, 1e-5, DEFAULT_SOLVER)
+    @test atoms !== nothing
+    @test atoms ≈ η
 end
 
 @testset "[LJP17] Example ?" begin
