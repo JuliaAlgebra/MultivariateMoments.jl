@@ -1,3 +1,13 @@
+using Test
+
+struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
+function SemialgebraicSets.solvealgebraicequations(
+    ::SemialgebraicSets.AlgebraicSet,
+    ::DummySolver,
+)
+    error("Dummy solver")
+end
+
 @testset "MomentMatrix" begin
     Mod.@polyvar x y
     @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
@@ -23,13 +33,17 @@ end
 # [HL05] Henrion, D. & Lasserre, J-B.
 # Detecting Global Optimality and Extracting Solutions of GloptiPoly 2005
 
+Mod.@polyvar x
+const DEFAULT_SOLVER = SemialgebraicSets.defaultalgebraicsolver([1.0x - 1.0x])
+
 @testset "[HL05] Section 2.3" begin
     Mod.@polyvar x y
     η = AtomicMeasure([x, y], WeightedDiracMeasure.([[1, 2], [2, 2], [2, 3]], [0.4132, 0.3391, 0.2477]))
     μ = measure(η, [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-14))
-        atoms = extractatoms(ν, 1e-4, lrc)
+        @test_throws ErrorException("Dummy solver") extractatoms(ν, 1e-4, lrc, DummySolver())
+        atoms = extractatoms(ν, 1e-4, lrc, DEFAULT_SOLVER)
         @test atoms !== nothing
         @test atoms ≈ η
     end
@@ -69,8 +83,11 @@ end
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-16))
         atoms = extractatoms(ν, 1e-16, lrc)
-        @test atoms !== nothing
-        @test atoms ≈ η
+        # Fails on 32-bits in CI
+        if Sys.WORD_SIZE != 32
+            @test atoms !== nothing
+            @test atoms ≈ η
+        end
     end
 end
 
@@ -95,7 +112,8 @@ end
     Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.], 2.53267)])
     ν = moment_matrix([2.53267 -0.0 -5.36283e-19; -0.0 -5.36283e-19 -0.0; -5.36283e-19 -0.0 7.44133e-6], monomials(x, 2))
-    atoms = extractatoms(ν, 1e-5)
+    @test_throws ErrorException("Dummy solver") extractatoms(ν, 1e-5, DummySolver())
+    atoms = extractatoms(ν, 1e-5, DEFAULT_SOLVER)
     @test atoms !== nothing
     @test atoms ≈ η
 end

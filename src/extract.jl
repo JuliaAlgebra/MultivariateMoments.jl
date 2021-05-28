@@ -45,7 +45,7 @@ using SemialgebraicSets
 #    r, vals
 #end
 
-function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol)
+function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     # System is
     # y = [U 0] * y
     # where y = x[end:-1:1]
@@ -74,9 +74,9 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol)
     system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(monos)))
     # Type instability here :(
     if mindegree(monos) == maxdegree(monos) # Homogeneous
-        projectivealgebraicset(system, Buchberger(ztol))
+        projectivealgebraicset(system, Buchberger(ztol), args...)
     else
-        algebraicset(system, Buchberger(ztol))
+        algebraicset(system, Buchberger(ztol), args...)
     end
 end
 
@@ -146,7 +146,7 @@ end
 Computes the `support` field of `ν`.
 The `ranktol` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
 """
-function computesupport!(μ::MomentMatrix, ranktol::Real, dec::LowRankChol=SVDChol())
+function computesupport!(μ::MomentMatrix, ranktol::Real, dec::LowRankChol, args...)
     # We reverse the ordering so that the first columns corresponds to low order monomials
     # so that we have more chance that low order monomials are in β and then more chance
     # v[i] * β to be in μ.x
@@ -159,14 +159,34 @@ function computesupport!(μ::MomentMatrix, ranktol::Real, dec::LowRankChol=SVDCh
     # so we take √||M|| = √nM
     rref!(W, √(nM) * cM / sqrt(m))
     #r, vals = solve_system(U', μ.x)
-    μ.support = build_system(W, μ.basis, √cM) # TODO determine what is better between ranktol and sqrt(ranktol) here
+    μ.support = build_system(W, μ.basis, √cM, args...) # TODO determine what is better between ranktol and sqrt(ranktol) here
+end
+
+function computesupport!(μ::MomentMatrix, ranktol::Real, args...)
+    return computesupport!(μ::MomentMatrix, ranktol::Real, SVDChol(), args...)
 end
 
 """
-    extractatoms(ν::MomentMatrix, ranktol, [dec])
+    extractatoms(ν::MomentMatrix, ranktol, [dec::LowRankChol], [solver::SemialgebraicSets.AbstractAlgebraicSolver])
 
-Return an `AtomicMeasure` with the atoms of `ν` if it is atomic or `nothing` if `ν` is not atomic.
-The `ranktol` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
+Return an `AtomicMeasure` with the atoms of `ν` if it is atomic or `nothing` if
+`ν` is not atomic. The `ranktol` and `dec` parameters are passed as is to the
+[`lowrankchol`](@ref) function. By default, `dec` is an instance of
+[`SVDChol`](@ref). The extraction relies on the solution of a system of
+algebraic equations. using `solver`. For instance, given a
+[`MomentMatrix`](@ref), `μ`, the following extract atoms using a `ranktol` of
+`1e-4` for the low-rank decomposition and homotopy continuation to solve the
+obtained system of algebraic equations.
+```julia
+using HomotopyContinuation
+solver = SemialgebraicSetsHCSolver(; compile = false)
+atoms = extractatoms(ν, 1e-4, solver)
+```
+If no solver is given, the default solver of SemialgebraicSets is used which
+currently computes the Gröbner basis, then the multiplication matrices and
+then the Schur decomposition of a random combination of these matrices.
+For floating point arithmetics, homotopy continuation is recommended as it is
+more numerically stable than Gröbner basis computation.
 """
 function extractatoms(ν::MomentMatrix{T}, ranktol, args...) where T
     computesupport!(ν, ranktol, args...)
