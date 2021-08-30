@@ -1,5 +1,5 @@
 using MultivariatePolynomials
-import MultivariateBases
+using  MultivariateBases
 const MB = MultivariateBases
 using MultivariateMoments
 using SemialgebraicSets

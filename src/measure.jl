@@ -1,17 +1,22 @@
 export measure, dirac
-export variables, monomials, moments
+export variables, base_functions, moments
 
-# If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
-struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasure{T}
-    a::Vector{T}
-    x::MVT
-
-    function Measure{T, MT, MVT}(a::Vector{T}, x::MVT) where {T, MT, MVT}
-        @assert length(a) == length(x)
-        new(a, x)
+# If a monomial is not in basis, it does not mean that the moment is zero, it means that it is unknown/undefined
+struct Measure{T, B<:MB.AbstractPolynomialBasis} <: AbstractMeasure{T}
+    values::Vector{T}
+    basis::B
+    function Measure(values::Vector{T}, basis::B) where {T, B<:MB.AbstractPolynomialBasis}
+        @assert length(values) == length(basis)
+        new{T, B}(values, basis)
     end
 end
-Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike} = Measure{T, monomialtype(TT), monovectype(x)}(monovec(a, x)...)
+
+basis_functions_type(::Measure{T, BT}) where {T, BT} = BT
+
+function Measure(values::AbstractVector{T}, basis::AbstractVector{TT}) where {T, TT <: AbstractTermLike}
+    b, y = monovec(values, basis)
+    return Measure(b, MB.MonomialBasis(y))
+end
 
 """
     measure(a, X::AbstractVector{<:AbstractMonomial})
@@ -25,28 +30,36 @@ measure(a, X) = Measure(a, X)
 
 Returns the variables of `μ` in decreasing order. Just like in MultivariatePolynomials, it could contain variables of zero degree in every monomial.
 """
-MP.variables(μ::Measure) = variables(μ.x)
+MP.variables(μ::Measure) = variables(μ.basis)
 
 """
     monomials(μ::AbstractMeasureLike)
 
 Returns an iterator over the monomials of `μ` sorted in the decreasing order.
 """
-MP.monomials(μ::Measure) = μ.x
+MP.monomials(μ::Measure) = μ.basis
+
+"""
+    base_functions(μ::AbstractMeasureLike)
+
+Returns an iterator over the base_functions of `μ` sorted in the decreasing order.
+"""
+base_functions(μ::Measure) = μ.basis
+
 
 """
     moments(μ::AbstractMeasureLike)
 
 Returns an iterator over the moments of `μ` sorted in decreasing order of monomial.
 """
-moments(μ::Measure) = map((α, x) -> moment(α, x), μ.a, μ.x)
+moments(μ::Measure) = map((α, x) -> moment(α, x), μ.values, μ.basis)
 
-Base.:(*)(α, μ::Measure) = measure(α * μ.a, μ.x)
-Base.:(*)(μ::Measure, α) = measure(μ.a * α, μ.x)
-Base.:(-)(μ::Measure) = measure(-μ.a, μ.x)
+Base.:(*)(α, μ::Measure) = measure(α * μ.values, μ.basis)
+Base.:(*)(μ::Measure, α) = measure(μ.values * α, μ.basis)
+Base.:(-)(μ::Measure) = measure(-μ.values, μ.basis)
 function Base.:(+)(μ::Measure, ν::Measure)
-    @assert μ.x == ν.x
-    measure(μ.a + ν.a, μ.x)
+    @assert μ.basis == ν.basis
+    measure(μ.values + ν.values, μ.basis)
 end
 
 """

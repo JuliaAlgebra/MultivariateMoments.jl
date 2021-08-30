@@ -1,16 +1,18 @@
 const APL = AbstractPolynomialLike
 
-function _expectation(μ::Measure, p::APL, f)
+function _expectation(μ::Measure{T, BT}, p::APL, f) where {T, BT}
     i = 1
     s = 0
-    for t in terms(p)
-        while i <= length(μ.x) && monomial(t) != μ.x[i]
+    basis = MB.basis_covering_monomials(BT, monomials(p))
+    for (c, m) in zip(coefficients(p, basis), basis)
+        while i <= length(μ.basis) && m != μ.basis[i]
             i += 1
         end
-        if i > length(μ.x)
-            error("The polynomial $p has a nonzero term $t with monomial $(t.x) for which the expectation is not known in $μ")
+        if i > length(μ.basis)
+            error("The base function $m has a non-zero multiplier $c in $p, 
+                  but its expectation is not known in $μ")
         end
-        s += f(μ.a[i], coefficient(t))
+        s += f(μ.values[i], c)
         i += 1
     end
     s

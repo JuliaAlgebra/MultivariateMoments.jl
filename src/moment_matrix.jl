@@ -68,7 +68,7 @@ getmat(μ::MomentMatrix) = Matrix(μ.Q)
 
 function measure(ν::MomentMatrix{T, <:MB.MonomialBasis, SymMatrix{T}}) where T
     n = length(ν.basis)
-    monos = ν.basis.monomials
+    monos = ν.basis.elements
     measure(ν.Q.Q, [monos[i] * monos[j] for i in 1:n for j in 1:i])
 end
 

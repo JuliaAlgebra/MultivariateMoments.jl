@@ -45,9 +45,9 @@ end
 
 measure(η::AtomicMeasure, x) = Measure(η, x)
 function Measure(η::AtomicMeasure{T}, x::AbstractVector{TT}) where {T, TT}
-    Measure{T, monomialtype(TT), monovectype(x)}(η, x)
+    Measure{T, MB.MonomialBasis{monomialtype(TT), monovectype(x)}}(η, x)
 end
-function Measure{T, MT, MVT}(η::AtomicMeasure{T}, x) where {T, MT, MVT}
+function Measure{T, BT}(η::AtomicMeasure{T}, x) where {T, BT}
     X = monovec(x)
     sum(atom.weight * dirac(X, η.variables => atom.center) for atom in η.atoms)
 end
