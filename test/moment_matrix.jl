@@ -38,14 +38,15 @@ const DEFAULT_SOLVER = SemialgebraicSets.defaultalgebraicsolver([1.0x - 1.0x])
 
 @testset "[HL05] Section 2.3" begin
     Mod.@polyvar x y
-    η = AtomicMeasure([x, y], WeightedDiracMeasure.([[1, 2], [2, 2], [2, 3]], [0.4132, 0.3391, 0.2477]))
-    μ = measure(η, [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
+    η1 = AtomicMeasure([x, y], WeightedDiracMeasure.([[1, 2], [2, 2], [2, 3]], [0.4132, 0.3391, 0.2477]))
+    η2 = AtomicMeasure([x, y], WeightedDiracMeasure.([[2, 3], [2, 2], [1, 2]], [0.1344, 0.7852, 0.6679]))
+    μ = measure(η1, [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-14))
         @test_throws ErrorException("Dummy solver") extractatoms(ν, 1e-4, lrc, DummySolver())
         atoms = extractatoms(ν, 1e-4, lrc, DEFAULT_SOLVER)
         @test atoms !== nothing
-        @test atoms ≈ η
+        @test atoms ≈ η1 || atoms ≈ η2
     end
 end
 
