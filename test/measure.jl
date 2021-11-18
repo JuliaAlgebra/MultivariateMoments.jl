@@ -12,5 +12,10 @@
     @test (-μ).a == [-2, -1, 0, -3]
     @test (2 * μ).a == [4, 2, 0, 6]
     @test (μ * 3).a == [6, 3, 0, 9]
+    μ = measure([1, 1], [x, x])
+    @test monomials(μ) == [x]
+    @test MultivariateMoments.moment_value.(moments(μ)) == [1]
+    err = ErrorException("The monomial `x` is occurs twice with different values: `1` and `2`")
+    @test_throws err measure([1, 2], [x, x])
     #@test_throws ArgumentError measure([1], [x]) + measure([1], [y])
 end
