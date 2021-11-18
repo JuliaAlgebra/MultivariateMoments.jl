@@ -31,22 +31,27 @@ end
 end
 
 # [HL05] Henrion, D. & Lasserre, J-B.
-# Detecting Global Optimality and Extracting Solutions of GloptiPoly 2005
+# Detecting Global Optimality and Extracting Solutions of GloptiPoly
+# 2005
+#
+# [LPJ20] Legat, B. & Parrilo, P. A. & Jungers, R.
+# Certifying unstability of switched systems using sum of squares programming
+# SIAM Journal on Control and Optimization, 2020
 
 Mod.@polyvar x
 const DEFAULT_SOLVER = SemialgebraicSets.defaultalgebraicsolver([1.0x - 1.0x])
 
 @testset "[HL05] Section 2.3" begin
     Mod.@polyvar x y
-    η1 = AtomicMeasure([x, y], WeightedDiracMeasure.([[1, 2], [2, 2], [2, 3]], [0.4132, 0.3391, 0.2477]))
-    η2 = AtomicMeasure([x, y], WeightedDiracMeasure.([[2, 3], [2, 2], [1, 2]], [0.1344, 0.7852, 0.6679]))
-    μ = measure(η1, [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
+    η = AtomicMeasure([x, y], WeightedDiracMeasure.([[1, 2], [2, 2], [2, 3]], [0.4132, 0.3391, 0.2477]))
+    monos = [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1]
+    μ = measure(η, monos)
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     for lrc in (SVDChol(), ShiftChol(1e-14))
         @test_throws ErrorException("Dummy solver") extractatoms(ν, 1e-4, lrc, DummySolver())
         atoms = extractatoms(ν, 1e-4, lrc, DEFAULT_SOLVER)
         @test atoms !== nothing
-        @test atoms ≈ η1 || atoms ≈ η2
+        @test atoms ≈ η
     end
 end
 
@@ -92,7 +97,7 @@ end
     end
 end
 
-@testset "[LJP17] Example ?" begin
+@testset "[LPJ20] Example ?" begin
     Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.], 2.)])
     μ = measure([2., 0.0, 1e-6],
@@ -109,7 +114,7 @@ end
     @test atoms ≈ η
 end
 
-@testset "[LJP17] Example ?" begin
+@testset "[LPJ20] Example 3.8" begin
     Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.], 2.53267)])
     ν = moment_matrix([2.53267 -0.0 -5.36283e-19; -0.0 -5.36283e-19 -0.0; -5.36283e-19 -0.0 7.44133e-6], monomials(x, 2))
@@ -119,7 +124,7 @@ end
     @test atoms ≈ η
 end
 
-@testset "[LJP17] Example ?" begin
+@testset "[LPJ20] Example ?" begin
     Mod.@polyvar x[1:2]
     # η1 is slightly closer to ν than η2
     η1 = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.2278331868065880], 14.81069999810012)])
@@ -148,7 +153,7 @@ end
     @test atoms === nothing
 end
 
-@testset "[LJP17] applied to [JCG14] Example 6.1" begin
+@testset "[LPJ20] applied to [JCG14] Example 6.1" begin
     Mod.@polyvar x[1:4]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1.0, 4.78736282579504, 1.24375738760842, -1.4231836829978], 0.039112791390926646)])
     ν = moment_matrix([0.0397951 0.187094 0.0489553 -0.0551816; 0.187094 0.896353 0.232962 -0.265564; 0.0489553 0.232962 0.0614682 -0.0676226; -0.0551816 -0.265564 -0.0676226 0.0837186], monomials(x, 1))

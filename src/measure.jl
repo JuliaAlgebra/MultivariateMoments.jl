@@ -11,7 +11,27 @@ struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: Abstract
         new(a, x)
     end
 end
-Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike} = Measure{T, monomialtype(TT), monovectype(x)}(monovec(a, x)...)
+function Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike}
+    # cannot use `monovec(a, x)` as it would sum the entries
+    # corresponding to the same monomial.
+    if length(a) != length(x)
+        throw(ArgumentError("There should be as many coefficient than monomials"))
+    end
+    σ, X = sortmonovec(x)
+    b = a[σ]
+    if length(x) > length(X)
+        rev = Dict(X[j] => j for j in eachindex(σ))
+        for i in eachindex(x)
+            j = rev[x[i]]
+            if i != σ[j]
+                if !isapprox(b[j], a[i])
+                    error("The monomial `$(x[i])` is occurs twice with different values: `$(a[i])` and `$(b[j])`")
+                end
+            end
+        end
+    end
+    return Measure{T, monomialtype(TT), typeof(X)}(b, X)
+end
 
 """
     measure(a, X::AbstractVector{<:AbstractMonomial})
