@@ -66,10 +66,15 @@ moment_matrix(Q::AbstractMatrix, monos) = MomentMatrix(Q, monos)
 
 getmat(μ::MomentMatrix) = Matrix(μ.Q)
 
-function measure(ν::MomentMatrix{T, <:MB.MonomialBasis, SymMatrix{T}}) where T
-    n = length(ν.basis)
+function vectorized_basis(ν::MomentMatrix{T,<:MB.MonomialBasis}) where {T}
     monos = ν.basis.monomials
-    measure(ν.Q.Q, [monos[i] * monos[j] for i in 1:n for j in 1:i])
+    n = length(monos)
+    return MB.MonomialBasis([monos[i] * monos[j] for i in 1:n for j in 1:i])
+end
+
+function measure(ν::MomentMatrix; kws...) where T
+    n = length(ν.basis)
+    measure(ν.Q.Q, vectorized_basis(ν); kws...)
 end
 
 struct SparseMomentMatrix{T, B <: MB.AbstractPolynomialBasis, MT} <: AbstractMomentMatrix{T, B}

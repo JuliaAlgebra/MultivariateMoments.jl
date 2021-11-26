@@ -11,7 +11,7 @@ struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: Abstract
         new(a, x)
     end
 end
-function Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: AbstractTermLike}
+function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, TT <: AbstractTermLike}
     # cannot use `monovec(a, x)` as it would sum the entries
     # corresponding to the same monomial.
     if length(a) != length(x)
@@ -24,7 +24,7 @@ function Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: Ab
         for i in eachindex(x)
             j = rev[x[i]]
             if i != σ[j]
-                if !isapprox(b[j], a[i])
+                if !isapprox(b[j], a[i]; kws...)
                     error("The monomial `$(x[i])` is occurs twice with different values: `$(a[i])` and `$(b[j])`")
                 end
             end
@@ -34,11 +34,14 @@ function Measure(a::AbstractVector{T}, x::AbstractVector{TT}) where {T, TT <: Ab
 end
 
 """
-    measure(a, X::AbstractVector{<:AbstractMonomial})
+    measure(a::AbstractVector{T}, X::AbstractVector{<:AbstractMonomial}; rtol=Base.rtoldefault(T), atol=zero(T))
 
 Creates a measure with moments `moment(a[i], X[i])` for each `i`.
+An error is thrown if there exists `i` and `j` such that `X[i] == X[j]` but
+`!isapprox(a[i], a[j]; rtol=rtol, atol=atol)`.
 """
-measure(a, X) = Measure(a, X)
+measure(a, X; kws...) = Measure(a, X; kws...)
+measure(a, basis::MB.MonomialBasis; kws...) = measure(a, basis.monomials; kws...)
 
 """
     variables(μ::AbstractMeasureLike)

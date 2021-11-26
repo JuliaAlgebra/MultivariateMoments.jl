@@ -1,4 +1,5 @@
 using Test
+using Random
 
 struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
 function SemialgebraicSets.solvealgebraicequations(
@@ -52,6 +53,16 @@ const DEFAULT_SOLVER = SemialgebraicSets.defaultalgebraicsolver([1.0x - 1.0x])
         atoms = extractatoms(ν, 1e-4, lrc, DEFAULT_SOLVER)
         @test atoms !== nothing
         @test atoms ≈ η
+        if !(lrc isa ShiftChol) # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
+            Random.seed!(0)
+            ν2 = MomentMatrix(SymMatrix(ν.Q.Q + rand(length(ν.Q.Q)) * 1e-6, ν.Q.n), ν.basis)
+            @test_throws ErrorException extractatoms(ν2, 1e-4, lrc, DEFAULT_SOLVER, weight_solver = MomentVectorWeightSolver())
+            for solver in [MomentMatrixWeightSolver(), MomentVectorWeightSolver(rtol=1e-5), MomentVectorWeightSolver(atol=1e-5)]
+                atoms = extractatoms(ν2, 1e-4, lrc, DEFAULT_SOLVER, weight_solver = solver)
+                @test atoms !== nothing
+                @test atoms ≈ η rtol=1e-4
+            end
+        end
     end
 end
 
@@ -144,7 +155,7 @@ end
         # With 1e-6, the rank is detected to be 3
         # With 1e-7, the rank is detected to be 5
         # With 1e-8, the rank is detected to be 6
-        atoms = extractatoms(ν, ranktol)
+        atoms = extractatoms(ν, ranktol, weight_solver=MomentVectorWeightSolver())
         @test atoms !== nothing
         @test atoms ≈ η
     end
