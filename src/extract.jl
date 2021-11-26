@@ -169,16 +169,6 @@ end
 
 # Determines weight
 
-function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSolver) where {T}
-    μ = measure(ν; rtol=solver.rtol, atol=solver.atol)
-    vars = variables(μ)
-    A = Matrix{T}(undef, length(μ.x), length(centers))
-    for i in eachindex(centers)
-        A[:, i] = dirac(μ.x, vars => centers[i]).a
-    end
-    return A \ μ.a
-end
-
 """
     struct MomentMatrixWeightSolver
         rtol::T
@@ -239,6 +229,16 @@ function MomentVectorWeightSolver(; rtol=nothing, atol=nothing)
     else
         return MomentVectorWeightSolver{typeof(atol)}(; atol=atol)
     end
+end
+
+function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSolver) where {T}
+    μ = measure(ν; rtol=solver.rtol, atol=solver.atol)
+    vars = variables(μ)
+    A = Matrix{T}(undef, length(μ.x), length(centers))
+    for i in eachindex(centers)
+        A[:, i] = dirac(μ.x, vars => centers[i]).a
+    end
+    return A \ μ.a
 end
 
 """
