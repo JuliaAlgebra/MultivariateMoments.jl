@@ -75,3 +75,20 @@ end
 struct SparseMomentMatrix{T, B <: MB.AbstractPolynomialBasis, MT} <: AbstractMomentMatrix{T, B}
     sub_moment_matrices::Vector{MomentMatrix{T, B, MT}}
 end
+
+
+function reverse_degree_matrix(ν::MomentMatrix{M,<:MB.MonomialBasis}) where M
+    monos = ν.basis.monomials
+    I = zeros(Int, length(monos))
+    cur = 0
+    last = length(monos)
+    for i in length(monos):-1:1
+        if i == 1 || MP.degree(monos[i]) != MP.degree(monos[i - 1])
+            n = last - i + 1
+            I[cur .+ (1:n)] = i:last
+            cur += n
+            last = i - 1
+        end
+    end
+    return square_getindex(ν.Q, I)
+end

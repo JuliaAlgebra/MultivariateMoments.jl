@@ -1,4 +1,17 @@
 using Test
+using MultivariateMoments
+
+# Taken from https://jump.dev/SumOfSquares.jl/latest/generated/Polynomial%20Optimization/polynomial_optimization/
+@testset "Polynomial Optimization" begin
+    @polyvar x y
+    μ = measure(
+        [0.5020672659784615, 0.00047774569153832185, 0.0005509745734521045, 0.00047774569474048174, 0.5020672459259369, 0.5000000103513812, 4.6107132266234204e-10, 4.6107130499931537e-10, 0.49999999030784936, 0.5000000100548688, 3.2592193536078463e-10, 0.49999999001133694, 0.5000000101882243, 0.4999999901446925, 1.0000000001016],
+        [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1],
+    )
+    @show MultivariateMoments.truncate(μ, 3)
+    ν = moment_matrix(μ, monomials([x, y], 0:1))
+    display(ν.Q)
+end
 
 struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
 function SemialgebraicSets.solvealgebraicequations(

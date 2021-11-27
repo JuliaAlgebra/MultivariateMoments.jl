@@ -61,3 +61,8 @@ Calling `dirac([x*y, x*y^2], x=>3, y=>2)` should the measure with moment `x*y` o
 function dirac(x::AbstractVector{MT}, s::MP.AbstractSubstitution...) where {MT <: AbstractMonomial}
     Measure([m(s...) for m in x], x)
 end
+
+#function truncate(μ::Measure, deg::Integer)
+#    I = MP.degree.(μ.x) .<= deg
+#    return Measure(μ.a[I], μ.x[I])
+#end
