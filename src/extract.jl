@@ -1,5 +1,6 @@
 export extractatoms
 export LowRankChol, ShiftChol, SVDChol
+export MomentMatrixWeightSolver, MomentVectorWeightSolver
 
 using RowEchelon
 using SemialgebraicSets
@@ -166,6 +167,80 @@ function computesupport!(μ::MomentMatrix, ranktol::Real, args...)
     return computesupport!(μ::MomentMatrix, ranktol::Real, SVDChol(), args...)
 end
 
+# Determines weight
+
+"""
+    struct MomentMatrixWeightSolver
+        rtol::T
+        atol::T
+    end
+
+Given a moment matrix `ν` and the atom centers,
+determine the weights by solving a linear system over all the moments
+of the moment matrix, keeping duplicates (e.g., entries corresponding to the same monomial).
+
+If the moment values corresponding to the same monomials are known to be equal
+prefer [`MomentVectorWeightSolver`](@ref) instead.
+"""
+struct MomentMatrixWeightSolver
+end
+
+function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentMatrixWeightSolver) where {T}
+    vars = variables(ν)
+    A = Matrix{T}(undef, length(ν.Q.Q), length(centers))
+    vbasis = vectorized_basis(ν)
+    for i in eachindex(centers)
+        η = dirac(vbasis.monomials, vars => centers[i])
+        A[:, i] = moment_matrix(η, ν.basis.monomials).Q.Q
+    end
+    return A \ ν.Q.Q
+end
+
+"""
+    struct MomentVectorWeightSolver{T}
+        rtol::T
+        atol::T
+    end
+
+Given a moment matrix `ν` and the atom centers, first convert the moment matrix
+to a vector of moments, using [`measure(ν; rtol=rtol, atol=atol)`](@ref measure)
+and then determine the weights by solving a linear system over the monomials obtained.
+
+If the moment values corresponding to the same monomials can have small differences,
+[`measure`](@ref) can throw an error if `rtol` and `atol` are not small enough.
+Alternatively to tuning these tolerances [`MomentVectorWeightSolver`](@ref) can be used instead.
+"""
+struct MomentVectorWeightSolver{T}
+    rtol::T
+    atol::T
+end
+function MomentVectorWeightSolver{T}(; rtol=Base.rtoldefault(T), atol=zero(T)) where {T}
+    return MomentVectorWeightSolver{T}(rtol, atol)
+end
+function MomentVectorWeightSolver(; rtol=nothing, atol=nothing)
+    if rtol === nothing && atol === nothing
+        return MomentVectorWeightSolver{Float64}()
+    elseif rtol !== nothing
+        if atol === nothing
+            return MomentVectorWeightSolver{typeof(rtol)}(; rtol=rtol)
+        else
+            return MomentVectorWeightSolver{typeof(rtol)}(; rtol=rtol, atol=atol)
+        end
+    else
+        return MomentVectorWeightSolver{typeof(atol)}(; atol=atol)
+    end
+end
+
+function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSolver) where {T}
+    μ = measure(ν; rtol=solver.rtol, atol=solver.atol)
+    vars = variables(μ)
+    A = Matrix{T}(undef, length(μ.x), length(centers))
+    for i in eachindex(centers)
+        A[:, i] = dirac(μ.x, vars => centers[i]).a
+    end
+    return A \ μ.a
+end
+
 """
     extractatoms(ν::MomentMatrix, ranktol, [dec::LowRankChol], [solver::SemialgebraicSets.AbstractAlgebraicSolver])
 
@@ -188,7 +263,7 @@ then the Schur decomposition of a random combination of these matrices.
 For floating point arithmetics, homotopy continuation is recommended as it is
 more numerically stable than Gröbner basis computation.
 """
-function extractatoms(ν::MomentMatrix{T}, ranktol, args...) where T
+function extractatoms(ν::MomentMatrix{T}, ranktol, args...; weight_solver = MomentMatrixWeightSolver()) where T
     computesupport!(ν, ranktol, args...)
     supp = ν.support
     if !iszerodimensional(supp)
@@ -196,20 +271,13 @@ function extractatoms(ν::MomentMatrix{T}, ranktol, args...) where T
     end
     centers = collect(supp)
     r = length(centers)
-    # Determine weights
-    μ = measure(ν)
-    vars = variables(μ)
-    A = Matrix{T}(undef, length(μ.x), r)
-    for i in 1:r
-        A[:, i] = dirac(μ.x, vars => centers[i]).a
-    end
-    weights = A \ μ.a
+    weights = solve_weight(ν, centers, weight_solver)
     isf = isfinite.(weights)
     weights = weights[isf]
     centers = centers[isf]
     if isempty(centers)
         nothing
     else
-        AtomicMeasure(vars, WeightedDiracMeasure.(centers, weights))
+        AtomicMeasure(variables(ν), WeightedDiracMeasure.(centers, weights))
     end
 end

@@ -45,3 +45,13 @@ ShiftChol
 SVDChol
 MultivariateMoments.lowrankchol
 ```
+
+Once the center of the atoms are determined, a linear system is solved to determine
+the weights corresponding to each dirac.
+By default, [`MomentMatrixWeightSolver`](@ref) is used by [`extractatoms`](@ref) so that if there are small differences between moment values corresponding to the same monomial in the matrix
+(which can happen if these moments were computed numerically by a semidefinite proramming solvers, e.g., with [SumOfSquares](https://github.com/jump-dev/SumOfSquares.jl)),
+the linear system handles that automatically.
+```@docs
+MomentMatrixWeightSolver
+MomentVectorWeightSolver
+```
