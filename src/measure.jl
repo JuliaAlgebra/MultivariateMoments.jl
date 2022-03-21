@@ -25,7 +25,7 @@ function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, 
             j = rev[x[i]]
             if i != σ[j]
                 if !isapprox(b[j], a[i]; kws...)
-                    error("The monomial `$(x[i])` is occurs twice with different values: `$(a[i])` and `$(b[j])`")
+                    error("The monomial `$(x[i])` occurs twice with different values: `$(a[i])` and `$(b[j])`")
                 end
             end
         end
