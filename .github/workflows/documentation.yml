@@ -14,6 +14,11 @@ jobs:
         with:
           # Build documentation on Julia 1.0
           version: '1.0'
+      - name: SemialgebraicSets#master
+        shell: julia --project=@. {0}
+        run: |
+          using Pkg
+          Pkg.add(PackageSpec(name="SemialgebraicSets", rev="master"))
       - name: Install dependencies
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Build and deploy
