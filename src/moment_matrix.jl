@@ -72,7 +72,7 @@ function vectorized_basis(ν::MomentMatrix{T,<:MB.MonomialBasis}) where {T}
     return MB.MonomialBasis([monos[i] * monos[j] for i in 1:n for j in 1:i])
 end
 
-function measure(ν::MomentMatrix; kws...) where T
+function measure(ν::MomentMatrix; kws...)
     n = length(ν.basis)
     measure(ν.Q.Q, vectorized_basis(ν); kws...)
 end
