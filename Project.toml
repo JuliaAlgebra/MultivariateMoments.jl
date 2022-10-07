@@ -1,7 +1,7 @@
 name = "MultivariateMoments"
 uuid = "f4abf1af-0426-5881-a0da-e2f168889b5e"
 repo = "https://github.com/JuliaAlgebra/MultivariateMoments.jl.git"
-version = "0.3.9"
+version = "0.3.10"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
