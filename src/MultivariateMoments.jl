@@ -26,6 +26,7 @@ include("symmatrix.jl")
 include("hermitian_matrix.jl")
 include("moment_matrix.jl")
 include("atomic.jl")
+include("rank.jl")
 include("extract.jl")
 
 end # module
