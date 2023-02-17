@@ -1,5 +1,4 @@
 export extractatoms
-export LowRankChol, ShiftChol, SVDChol
 export MomentMatrixWeightSolver, MomentVectorWeightSolver
 
 using RowEchelon
@@ -82,89 +81,29 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
 end
 
 """
-    LowRankChol
-
-Method for computing a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`` psd matrix `Q` such that `Q = U'U`.
-"""
-abstract type LowRankChol end
-
-"""
-    ShiftChol <: LowRankChol
-
-Shift the matrix by `shift` times the identity matrix before cholesky.
-"""
-struct ShiftChol{T} <: LowRankChol
-    shift::T
-end
-
-"""
-    SVDChol <: LowRankChol
-
-Use SVD decomposition.
-"""
-struct SVDChol <: LowRankChol end
-
-"""
-    MultivariateMoments.lowrankchol(Q::AbstractMatrix, dec::LowRankChol, ranktol)
-
-Returns a ``r \\times n`` matrix ``U`` of a ``n \\times n`` rank ``r`` positive semidefinite matrix ``Q`` such that ``Q = U^\\top U``.
-The rank of ``Q`` is the number of singular values larger than `ranktol```{} \\cdot \\sigma_1`` where ``\\sigma_1`` is the largest singular value.
-"""
-function lowrankchol end
-
-function lowrankchol(M::AbstractMatrix, dec::ShiftChol, ranktol)
-    m = LinearAlgebra.checksquare(M)
-    U = cholesky(M + dec.shift * I).U
-    σs = map(i -> (U[i, i])^2, 1:m)
-    nM = maximum(σs)
-    tol = nM * ranktol
-    rm = findall(σs .<= tol)
-    if isempty(rm)
-        cM = ranktol
-    else
-        cM = maximum(σs[rm]) / nM
-    end
-    nM, cM, U[σs .> tol, :]
-end
-function lowrankchol(M::AbstractMatrix, dec::SVDChol, ranktol)
-    F = svd(M)
-    nM = F.S[1] # norm of M
-    tol = nM * ranktol
-    r = something(findfirst(σ2 -> σ2 <= tol, F.S), 0)
-    if iszero(r)
-        cM = ranktol
-        r = length(F.S)
-    else
-        cM = F.S[r] / nM
-        r -= 1
-    end
-    nM, cM, (F.U[:, 1:r] * Diagonal(sqrt.(F.S[1:r])))'
-end
-
-"""
-    MultivariateMoments.computesupport!(ν::MomentMatrix, ranktol, [dec])
+    MultivariateMoments.computesupport!(ν::MomentMatrix, rank_check, [dec])
 
 Computes the `support` field of `ν`.
-The `ranktol` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
+The `rank_check` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
 """
-function computesupport!(μ::MomentMatrix, ranktol::Real, dec::LowRankChol, args...)
+function computesupport!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankChol, args...)
     # We reverse the ordering so that the first columns corresponds to low order monomials
     # so that we have more chance that low order monomials are in β and then more chance
     # v[i] * β to be in μ.x
     M = getmat(μ)
     m = LinearAlgebra.checksquare(M)
     M = M[m:-1:1, m:-1:1]
-    nM, cM, U = lowrankchol(M, dec, ranktol)
+    nM, cM, U = lowrankchol(M, dec, rank_check)
     W = Matrix(U)
     # If M is multiplied by λ, W is multiplied by √λ
     # so we take √||M|| = √nM
     rref!(W, √(nM) * cM / sqrt(m))
     #r, vals = solve_system(U', μ.x)
-    μ.support = build_system(W, μ.basis, √cM, args...) # TODO determine what is better between ranktol and sqrt(ranktol) here
+    μ.support = build_system(W, μ.basis, √cM, args...) # TODO determine what is better between rank_check and sqrt(rank_check) here
 end
 
-function computesupport!(μ::MomentMatrix, ranktol::Real, args...)
-    return computesupport!(μ::MomentMatrix, ranktol::Real, SVDChol(), args...)
+function computesupport!(μ::MomentMatrix, rank_check::RankCheck, args...)
+    return computesupport!(μ::MomentMatrix, rank_check::RankCheck, SVDChol(), args...)
 end
 
 # Determines weight
@@ -242,14 +181,14 @@ function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSo
 end
 
 """
-    extractatoms(ν::MomentMatrix, ranktol, [dec::LowRankChol], [solver::SemialgebraicSets.AbstractAlgebraicSolver])
+    extractatoms(ν::MomentMatrix, rank_check::RankCheck, [dec::LowRankChol], [solver::SemialgebraicSets.AbstractAlgebraicSolver])
 
 Return an `AtomicMeasure` with the atoms of `ν` if it is atomic or `nothing` if
-`ν` is not atomic. The `ranktol` and `dec` parameters are passed as is to the
+`ν` is not atomic. The `rank_check` and `dec` parameters are passed as is to the
 [`lowrankchol`](@ref) function. By default, `dec` is an instance of
 [`SVDChol`](@ref). The extraction relies on the solution of a system of
 algebraic equations. using `solver`. For instance, given a
-[`MomentMatrix`](@ref), `μ`, the following extract atoms using a `ranktol` of
+[`MomentMatrix`](@ref), `μ`, the following extract atoms using a `rank_check` of
 `1e-4` for the low-rank decomposition and homotopy continuation to solve the
 obtained system of algebraic equations.
 ```julia
@@ -263,8 +202,8 @@ then the Schur decomposition of a random combination of these matrices.
 For floating point arithmetics, homotopy continuation is recommended as it is
 more numerically stable than Gröbner basis computation.
 """
-function extractatoms(ν::MomentMatrix{T}, ranktol, args...; weight_solver = MomentMatrixWeightSolver()) where T
-    computesupport!(ν, ranktol, args...)
+function extractatoms(ν::MomentMatrix, rank_check::RankCheck, args...; weight_solver = MomentMatrixWeightSolver())
+    computesupport!(ν, rank_check, args...)
     supp = ν.support
     if !iszerodimensional(supp)
         return nothing
@@ -280,4 +219,8 @@ function extractatoms(ν::MomentMatrix{T}, ranktol, args...; weight_solver = Mom
     else
         AtomicMeasure(variables(ν), WeightedDiracMeasure.(centers, weights))
     end
+end
+
+function extractatoms(ν::MomentMatrix, ranktol, args...; kws...)
+    return extractatoms(ν, LeadingRelativeRankTol(ranktol), args...; kws...)
 end
