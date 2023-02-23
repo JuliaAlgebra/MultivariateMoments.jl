@@ -1,3 +1,5 @@
+# The content of this file is heavily inspired from MultivariateSeries.jl
+
 export FlatExtension, IterativeDiagonalization
 
 struct ZeroDimensionalVariety{T} <: AbstractAlgebraicSet
@@ -86,7 +88,6 @@ function SemialgebraicSets.solvemultiplicationmatrices(M::Vector{Matrix{C}}, sol
     return [[D[j+1][i,i] / D[1][i,i] for j in 1:n] for i in 1:r]
 end
 
-# Inspired from MultivariateSeries.jl
 # Decomposition of the pencil of matrices
 function decompose(
     H::Vector{Matrix{T}},

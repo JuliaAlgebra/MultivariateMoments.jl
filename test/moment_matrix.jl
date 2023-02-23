@@ -2,7 +2,11 @@ using Test
 
 @testset "MomentMatrix" begin
     Mod.@polyvar x y
-    @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
+    μ = measure([1], [x])
+    for mono in [x^0, x, y]
+        err = ArgumentError("`$μ` does not have the moment `$(mono^2)`")
+        @test_throws err moment_matrix(μ, [mono])
+    end
     μ = measure(1:3, [x^2, x*y, y^2])
     X = [x, y]
     ν1 = moment_matrix(μ, X)
