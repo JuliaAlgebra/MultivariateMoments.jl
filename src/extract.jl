@@ -124,7 +124,7 @@ prefer [`MomentVectorWeightSolver`](@ref) instead.
 struct MomentMatrixWeightSolver
 end
 
-function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentMatrixWeightSolver) where {T}
+function solve_weight(ν::MomentMatrix{T}, centers, ::MomentMatrixWeightSolver) where {T}
     vars = variables(ν)
     A = Matrix{T}(undef, length(ν.Q.Q), length(centers))
     vbasis = vectorized_basis(ν)

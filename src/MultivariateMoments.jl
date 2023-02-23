@@ -28,5 +28,6 @@ include("moment_matrix.jl")
 include("atomic.jl")
 include("rank.jl")
 include("extract.jl")
+include("flat.jl")
 
 end # module

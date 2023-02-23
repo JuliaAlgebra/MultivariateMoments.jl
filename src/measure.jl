@@ -72,6 +72,14 @@ function Base.:(+)(μ::Measure, ν::Measure)
     measure(μ.a + ν.a, μ.x)
 end
 
+function moment_value(μ, mono)
+    i = searchsortedlast(μ.x, mono, rev=true)
+    if !(i in eachindex(μ.x)) || mono != μ.x[i]
+        throw(ArgumentError("`$μ` does not have the moment `$mono`"))
+    end
+    return μ.a[i]
+end
+
 """
     dirac(X::AbstractVector{<:AbstractMoment}, s::AbstractSubstitution...)
 

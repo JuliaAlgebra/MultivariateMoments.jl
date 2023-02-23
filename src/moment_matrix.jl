@@ -18,7 +18,7 @@ The set of points that are zeros of all the polynomials ``p`` such that ``\\math
 mutable struct MomentMatrix{T, B<:MB.AbstractPolynomialBasis, MT<:AbstractMatrix{T}} <: AbstractMomentMatrix{T, B}
     Q::MT
     basis::B
-    support::Union{Nothing, AlgebraicSet}
+    support::Union{Nothing, AbstractAlgebraicSet}
 end
 MomentMatrix{T, B, MT}(Q::MT, basis::MB.AbstractPolynomialBasis) where {T, B, MT} = MomentMatrix{T, B, MT}(Q, basis, nothing)
 MomentMatrix{T, B}(Q::AbstractMatrix{T}, basis::MB.AbstractPolynomialBasis) where {T, B} = MomentMatrix{T, B, typeof(Q)}(Q, basis)
@@ -43,16 +43,7 @@ end
 Creates a matrix the moment matrix for the moment matrix  ``x x^\\top`` using the moments of `μ`.
 """
 function moment_matrix(μ::Measure{T}, X) where T
-    function getmom(i, j)
-        x = X[i] * X[j]
-        for m in moments(μ)
-            if monomial(m) == x
-                return moment_value(m)
-            end
-        end
-        throw(ArgumentError("μ does not have the moment $(x)"))
-    end
-    return MomentMatrix{T}(getmom, X)
+    return MomentMatrix{T}((i, j) -> moment_value(μ, X[i] * X[j]), X)
 end
 
 function MomentMatrix(Q::AbstractMatrix{T}, basis::MB.AbstractPolynomialBasis, σ) where T
