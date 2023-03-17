@@ -45,6 +45,14 @@ using SemialgebraicSets
 #    r, vals
 #end
 
+"""
+    border(β, monos)
+
+Given monomials `β`, determines whether it is an order ideal and the border.
+"""
+function border(β, basis)
+end
+
 function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     # System is
     # y = [U 0] * y
@@ -54,24 +62,16 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     m = length(basis)
     r = size(U, 1)
     pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i in 1:r]
-    if any(pivots .== 0)
-        keep = pivots .> 0
+    if any(isnothing, pivots)
+        keep = map(!isnothing, pivots)
         pivots = pivots[keep]
         r = length(pivots)
         U = U[keep, :]
     end
     monos = basis.monomials
-    β = monovec(monos[m + 1 .- pivots]) # monovec makes sure it stays sorted, TypedPolynomials wouldn't let it sorted
-    function equation(i)
-        if iszero(r) # sum throws ArgumentError: reducing over an empty collection is not allowed, if r is zero
-            z = zero(eltype(β)) * zero(eltype(U))
-            s = z + z # For type stability
-        else
-            s = sum(j -> β[r+1-j] * U[j, i], 1:r)
-        end
-        s - monos[m+1-i]
-    end
-    system = filter(p -> maxdegree(p) > 0, map(equation, 1:length(monos)))
+    β = monos[pivots]
+    system = [MA.operate(dot, β, U[:, i]) - monos[i] for i in eachindex(monos)]
+    filter!(!isconstant, system)
     # Type instability here :(
     if mindegree(monos) == maxdegree(monos) # Homogeneous
         projectivealgebraicset(system, Buchberger(ztol), args...)
@@ -87,19 +87,23 @@ Computes the `support` field of `ν`.
 The `rank_check` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
 """
 function computesupport!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankChol, args...)
-    # We reverse the ordering so that the first columns corresponds to low order monomials
-    # so that we have more chance that low order monomials are in β and then more chance
-    # v[i] * β to be in μ.x
+    # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
+    # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
+    # but maybe it's sufficient due to the shift structure of the matrix.
+    #
+    # [LLR08] Lasserre, Jean Bernard and Monique Laurent, and Philipp Rostalski.
+    # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
+    # Foundations of Computational Mathematics 8 (2008): 607-647.
     M = getmat(μ)
     m = LinearAlgebra.checksquare(M)
-    M = M[m:-1:1, m:-1:1]
     nM, cM, U = lowrankchol(M, dec, rank_check)
     W = Matrix(U)
     # If M is multiplied by λ, W is multiplied by √λ
     # so we take √||M|| = √nM
     rref!(W, √(nM) * cM / sqrt(m))
     #r, vals = solve_system(U', μ.x)
-    μ.support = build_system(W, μ.basis, √cM, args...) # TODO determine what is better between rank_check and sqrt(rank_check) here
+    # TODO determine what is better between rank_check and sqrt(rank_check) here
+    μ.support = build_system(W, μ.basis, √cM, args...)
 end
 
 function computesupport!(μ::MomentMatrix, rank_check::RankCheck, args...)

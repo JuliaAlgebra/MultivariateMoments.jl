@@ -73,7 +73,7 @@ function Base.:(+)(μ::Measure, ν::Measure)
 end
 
 function moment_value(μ, mono)
-    i = searchsortedlast(μ.x, mono, rev=true)
+    i = searchsortedlast(μ.x, mono)
     if !(i in eachindex(μ.x)) || mono != μ.x[i]
         throw(ArgumentError("`$μ` does not have the moment `$mono`"))
     end
