@@ -135,7 +135,7 @@ end
 function lpj20_3_8_0(rank_check, lrc, ok::Bool=true)
     Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1., 0.], 2.)])
-    μ = measure([2., 0.0, 1e-6],
+    μ = measure([1e-6, 0.0, 2],
                 monomials(x, 2))
     ν = moment_matrix(μ, monomials(x, 1))
     atoms = extractatoms(ν, rank_check, lrc)
@@ -158,7 +158,7 @@ function lpj20_3_8(rank_check, solver)
     ν = moment_matrix(
         [ 2.53267 -0.0 -5.36283e-19
          -0.0 -5.36283e-19 -0.0
-         -5.36283e-19 -0.0 7.44133e-6],
+         -5.36283e-19 -0.0 7.44133e-6][3:-1:1, 3:-1:1],
         monomials(x, 2),
     )
     atoms = extractatoms(ν, rank_check, solver)
@@ -182,7 +182,7 @@ function lpj20_3_9(rank_check, sol=1)
         0.0400656 0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5
         0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5 1.07817e-5
         0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5 1.07817e-5 1.10658e-5
-    ], monomials(x, 6))
+    ][7:-1:1, 7:-1:1], monomials(x, 6))
     atoms = extractatoms(ν, rank_check, weight_solver=MomentVectorWeightSolver())
     if sol == 0
         @test atoms === nothing
@@ -214,7 +214,7 @@ function jcg14_6_1(rank_check, ok::Bool=true)
         [ 0.0397951 0.187094 0.0489553 -0.0551816
           0.187094 0.896353 0.232962 -0.265564
           0.0489553 0.232962 0.0614682 -0.0676226
-         -0.0551816 -0.265564 -0.0676226 0.0837186],
+         -0.0551816 -0.265564 -0.0676226 0.0837186][4:-1:1, 4:-1:1],
         monomials(x, 1),
     )
     atoms = extractatoms(ν, rank_check)
@@ -229,7 +229,11 @@ end
 function large_norm(rank_check)
     # If the norm of `M` is given to `rref!` instead of `√||M||`, `extractatoms` will error.
     Mod.@polyvar x[1:2]
-    ν = moment_matrix([2749.376669556701 -800.152792847183; -800.152792847183 586.8034549325414], monomials(x, 1))
+    Q = [
+        586.8034549325414 -800.152792847183
+       -800.152792847183  2749.376669556701
+    ]
+    ν = moment_matrix(Q, monomials(x, 1))
     @test nothing === extractatoms(ν, rank_check)
 end
 
@@ -239,49 +243,49 @@ function test_extract()
         atoms_1(1e-10, solver)
         atoms_2(1e-10, solver)
     end
-     for lrc in (SVDChol(), ShiftChol(1e-14))
-         perturb = !(lrc isa ShiftChol) # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
-         hl05_2_3(1e-4, lrc, default_solver, perturb)
-         @test_throws ErrorException("Dummy solver") hl05_2_3(1e-4, lrc, DummySolver())
-     end
-     hl05_3_3_1()
-     # Fails on 32-bits in CI
-     if Sys.WORD_SIZE != 32
-         for lrc in (SVDChol(), ShiftChol(1e-16))
-             hl05_4(1e-16, lrc)
-         end
-     end
-     # All singular values will be at least 1e-6 > 1e-12 it won't eliminate any row
-     lpj20_3_8_0(1e-12, ShiftChol(1e-6), false)
-     # The following tests that the method does not error if ranktol eliminates everything
-     # In particular, this tests that the function equation(i) do not call sum when r equal to 0
-     # this that throws an ArgumentError as details in src/extract.jl
-     lpj20_3_8_0(1.0, SVDChol(), false)
-     lpj20_3_8_0(LeadingRelativeRankTol(1e-5), SVDChol())
-     lpj20_3_8_0(AbsoluteRankTol(1e-5), SVDChol())
-     lpj20_3_8_0(DifferentialRankTol(1e-2), SVDChol())
-     lpj20_3_8_0(LargestDifferentialRank(), SVDChol())
-     @test_throws ErrorException("Dummy solver") lpj20_3_8(1e-5, DummySolver())
-     lpj20_3_8(1e-5, default_solver)
-     for ranktol in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7]
-         # With 1e-3 and 1e-4, the rank is detected to be 1
-         # With 1e-5, the rank is detected to be 2
-         # With 1e-6, the rank is detected to be 3
-         # With 1e-7, the rank is detected to be 5
-         lpj20_3_9(ranktol)
-     end
-     for fixed_rank in 1:5
-         lpj20_3_9(FixedRank(fixed_rank))
-     end
-     # With 1e-8, the rank is detected to be 6
-     lpj20_3_9(1e-8, 2)
-     lpj20_3_9(FixedRank(6), 2)
-     # With 1e-9, the rank is detected to be 7
-     lpj20_3_9(1e-9, 0)
-     lpj20_3_9(FixedRank(7), 0)
-     jcg14_6_1(6e-3)
-     jcg14_6_1(8e-4, false)
-     large_norm(1e-2)
+    for lrc in (SVDChol(), ShiftChol(1e-14))
+        perturb = !(lrc isa ShiftChol) # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
+        hl05_2_3(1e-4, lrc, default_solver, perturb)
+        @test_throws ErrorException("Dummy solver") hl05_2_3(1e-4, lrc, DummySolver())
+    end
+    hl05_3_3_1()
+    # Fails on 32-bits in CI
+    if Sys.WORD_SIZE != 32
+        for lrc in (SVDChol(), ShiftChol(1e-16))
+            hl05_4(1e-16, lrc)
+        end
+    end
+    # All singular values will be at least 1e-6 > 1e-12 it won't eliminate any row
+    lpj20_3_8_0(1e-12, ShiftChol(1e-6), false)
+    # The following tests that the method does not error if ranktol eliminates everything
+    # In particular, this tests that the function equation(i) do not call sum when r equal to 0
+    # this that throws an ArgumentError as details in src/extract.jl
+    lpj20_3_8_0(1.0, SVDChol(), false)
+    lpj20_3_8_0(LeadingRelativeRankTol(1e-5), SVDChol())
+    lpj20_3_8_0(AbsoluteRankTol(1e-5), SVDChol())
+    lpj20_3_8_0(DifferentialRankTol(1e-2), SVDChol())
+    lpj20_3_8_0(LargestDifferentialRank(), SVDChol())
+    @test_throws ErrorException("Dummy solver") lpj20_3_8(1e-5, DummySolver())
+    lpj20_3_8(1e-5, default_solver)
+    for ranktol in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7]
+        # With 1e-3 and 1e-4, the rank is detected to be 1
+        # With 1e-5, the rank is detected to be 2
+        # With 1e-6, the rank is detected to be 3
+        # With 1e-7, the rank is detected to be 5
+        lpj20_3_9(ranktol)
+    end
+    for fixed_rank in 1:5
+        lpj20_3_9(FixedRank(fixed_rank))
+    end
+    # With 1e-8, the rank is detected to be 6
+    lpj20_3_9(1e-8, 2)
+    lpj20_3_9(FixedRank(6), 2)
+    # With 1e-9, the rank is detected to be 7
+    lpj20_3_9(1e-9, 0)
+    lpj20_3_9(FixedRank(7), 0)
+    jcg14_6_1(6e-3)
+    jcg14_6_1(8e-4, false)
+    large_norm(1e-2)
 end
 
 @testset "Atom extraction" begin

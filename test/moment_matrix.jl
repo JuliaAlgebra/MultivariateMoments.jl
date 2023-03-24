@@ -12,11 +12,11 @@ using Test
     ν1 = moment_matrix(μ, X)
     ν2 = MomentMatrix{Int}((i, j) -> i + j - 1, X)
     for ν in (ν1, ν2)
-        @test ν.Q[1:4] == [1, 2, 2, 3]
-        @test ν.Q[1, 1] == 1
+        @test ν.Q[1:4] == [3, 2, 2, 1]
+        @test ν.Q[1, 1] == 3
         @test ν.Q[1, 2] == 2
         @test ν.Q[2, 1] == 2
-        @test ν.Q[2, 2] == 3
+        @test ν.Q[2, 2] == 1
         @test variables(ν)[1] == x
         @test variables(ν)[2] == y
         @test nvariables(ν) == 2
