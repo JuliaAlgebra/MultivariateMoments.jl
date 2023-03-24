@@ -14,6 +14,11 @@ jobs:
         with:
           # Build documentation on Julia 1.0
           version: '1.0'
+      - name: MultivariatePolynomials#master
+        shell: julia --project=@. {0}
+        run: |
+          using Pkg
+          Pkg.add(PackageSpec(name="MultivariatePolynomials", rev="master"))
       - name: SemialgebraicSets#master
         shell: julia --project=@. {0}
         run: |
