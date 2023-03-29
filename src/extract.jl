@@ -4,40 +4,13 @@ export MomentMatrixWeightSolver, MomentVectorWeightSolver
 using RowEchelon
 using SemialgebraicSets
 
-function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
-    # System is
-    # y = [U 0] * y
-    # where y = x[end:-1:1]
-    # which is
-    # y = U * β
-    m = length(basis)
-    r = size(U, 1)
-    pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i in 1:r]
-    if any(isnothing, pivots)
-        keep = map(!isnothing, pivots)
-        pivots = pivots[keep]
-        r = length(pivots)
-        U = U[keep, :]
-    end
-    monos = basis.monomials
-    β = monos[pivots]
-    system = [MA.operate(dot, β, U[:, i]) - monos[i] for i in eachindex(monos)]
-    filter!(!isconstant, system)
-    # Type instability here :(
-    if mindegree(monos) == maxdegree(monos) # Homogeneous
-        projectivealgebraicset(system, Buchberger(ztol), args...)
-    else
-        algebraicset(system, Buchberger(ztol), args...)
-    end
-end
-
 """
     MultivariateMoments.computesupport!(ν::MomentMatrix, rank_check, [dec])
 
 Computes the `support` field of `ν`.
 The `rank_check` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
 """
-function computesupport!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankChol, args...)
+function computesupport!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankChol, nullspace_solver=Echelon(), args...)
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
@@ -48,15 +21,9 @@ function computesupport!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankCh
     # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
     # Foundations of Computational Mathematics 8 (2008): 607-647.
     M = getmat(μ)
-    m = LinearAlgebra.checksquare(M)
     nM, cM, U = lowrankchol(M, dec, rank_check)
-    W = Matrix(U)
-    # If M is multiplied by λ, W is multiplied by √λ
-    # so we take √||M|| = √nM
-    rref!(W, √(nM) * cM / sqrt(m))
-    #r, vals = solve_system(U', μ.x)
-    # TODO determine what is better between rank_check and sqrt(rank_check) here
-    μ.support = build_system(W, μ.basis, √cM, args...)
+    @assert size(U, 2) == LinearAlgebra.checksquare(M)
+    μ.support = solve_nullspace(U, μ.basis, nM, cM, nullspace_solver, args...)
 end
 
 function computesupport!(μ::MomentMatrix, rank_check::RankCheck, args...)
@@ -162,8 +129,11 @@ more numerically stable than Gröbner basis computation.
 function extractatoms(ν::MomentMatrix, rank_check::RankCheck, args...; weight_solver = MomentMatrixWeightSolver())
     computesupport!(ν, rank_check, args...)
     supp = ν.support
+    if isnothing(supp)
+        return
+    end
     if !iszerodimensional(supp)
-        return nothing
+        return
     end
     centers = collect(supp)
     r = length(centers)
