@@ -17,7 +17,6 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     end
     monos = basis.monomials
     β = monos[pivots]
-    @show β
     system = [MA.operate(dot, β, U[:, i]) - monos[i] for i in eachindex(monos)]
     filter!(!isconstant, system)
     # Type instability here :(
