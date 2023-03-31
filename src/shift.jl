@@ -54,20 +54,14 @@ struct ShiftNullspace end
 function solve_nullspace(Z, basis::MB.MonomialBasis, nM, cM, ::ShiftNullspace)
     monos = basis.monomials
     Z = Z'
-    @show size(Z)
     n = MP.nvariables(monos)
     d = MP.maxdegree(monos)
-    @show d
     srows = standard_monomials(Z)
-    @show monos[srows]
     gap_zone = gap_zone_standard_monomials(monos[srows], d)
     if isnothing(gap_zone)
         return
     end
     dgap, ma, gapsize = gap_zone
-    @show dgap
-    @show ma
-    @show gapsize
     srows = srows[1:ma]
     if gapsize < 1
         return
