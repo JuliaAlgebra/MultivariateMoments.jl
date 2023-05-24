@@ -125,12 +125,12 @@ end
 
 function computesupport!(ν::MomentMatrix{T}, rank_check::RankCheck, solver::FlatExtension) where T
     μ = measure(ν)
-    d = maxdegree(μ.x)
-    v = variables(μ)
+    d = MP.maxdegree(μ.x)
+    v = MP.variables(μ)
     d0 = div(d - 1, 2)
     d1 = d - 1 - d0
-    B0 = monomials(v, 0:d0)
-    B1 = monomials(v, 0:d1)
+    B0 = MP.monomials(v, 0:d0)
+    B1 = MP.monomials(v, 0:d1)
 
     H = Matrix{T}[hankel(μ, B0, B1)]
     for x in v

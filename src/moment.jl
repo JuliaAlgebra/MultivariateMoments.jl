@@ -1,6 +1,6 @@
 export moment, moment_value, monomial
 
-struct Moment{T, MT <: AbstractMonomial} <: AbstractMoment{T}
+struct Moment{T, MT <: MP.AbstractMonomial} <: AbstractMoment{T}
     α::T
     x::MT
 end
@@ -10,7 +10,7 @@ end
 
 Creates the moment of the monomial `m` of value `α`.
 """
-moment(α, m::AbstractMonomial) = Moment(α, m)
+moment(α, m::MP.AbstractMonomial) = Moment(α, m)
 
 """
     moment_value(m::AbstractMomentLike)
@@ -36,6 +36,6 @@ MP.monomial(m::Moment) = m.x
 
 for f in [:variables, :nvariables, :exponents, :degree, :powers]
     @eval begin
-        MP.$f(m::AbstractMomentLike) = $f(monomial(m))
+        MP.$f(m::AbstractMomentLike) = MP.$f(MP.monomial(m))
     end
 end

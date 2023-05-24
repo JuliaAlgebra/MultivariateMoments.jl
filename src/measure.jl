@@ -2,7 +2,7 @@ export measure, dirac
 export variables, monomials, moments
 
 # If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
-struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasure{T}
+struct Measure{T, MT <: MP.AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasure{T}
     a::Vector{T}
     x::MVT
 
@@ -11,13 +11,13 @@ struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: Abstract
         new(a, x)
     end
 end
-function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, TT <: AbstractTermLike}
+function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, TT <: MP.AbstractTermLike}
     # cannot use `monomial_vector(a, x)` as it would sum the entries
     # corresponding to the same monomial.
     if length(a) != length(x)
         throw(ArgumentError("There should be as many coefficient than monomials"))
     end
-    σ, X = sort_monomial_vector(x)
+    σ, X = MP.sort_monomial_vector(x)
     b = a[σ]
     if length(x) > length(X)
         rev = Dict(X[j] => j for j in eachindex(σ))
@@ -30,7 +30,7 @@ function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, 
             end
         end
     end
-    return Measure{T, monomial_type(TT), typeof(X)}(b, X)
+    return Measure{T, MP.monomial_type(TT), typeof(X)}(b, X)
 end
 
 """
@@ -48,7 +48,7 @@ measure(a, basis::MB.MonomialBasis; kws...) = measure(a, basis.monomials; kws...
 
 Returns the variables of `μ` in decreasing order. Just like in MultivariatePolynomials, it could contain variables of zero degree in every monomial.
 """
-MP.variables(μ::Measure) = variables(μ.x)
+MP.variables(μ::Measure) = MP.variables(μ.x)
 
 """
     monomials(μ::AbstractMeasureLike)
@@ -89,6 +89,6 @@ Creates the dirac measure by evaluating the moments of `X` using `s`.
 
 Calling `dirac([x*y, x*y^2], x=>3, y=>2)` should the measure with moment `x*y` of value `6` and moment `x*y^2` of value `12`.
 """
-function dirac(x::AbstractVector{MT}, s::MP.AbstractSubstitution...) where {MT <: AbstractMonomial}
+function dirac(x::AbstractVector{MT}, s::MP.AbstractSubstitution...) where {MT <: MP.AbstractMonomial}
     Measure([m(s...) for m in x], x)
 end

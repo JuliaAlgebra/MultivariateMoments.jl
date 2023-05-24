@@ -2,14 +2,11 @@ module MultivariateMoments
 
 using LinearAlgebra
 
-import MutableArithmetics
-const MA = MutableArithmetics
+import MutableArithmetics as MA
 
-using MultivariatePolynomials
-const MP = MultivariatePolynomials
+import MultivariatePolynomials as MP
 
-import MultivariateBases
-const MB = MultivariateBases
+import MultivariateBases as MB
 
 export AbstractMeasureLike, AbstractMomentLike
 abstract type AbstractMeasureLike{T} end

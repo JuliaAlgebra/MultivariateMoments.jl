@@ -26,14 +26,14 @@ function MomentMatrix(Q::SymMatrix{T}, basis::MB.AbstractPolynomialBasis) where 
     return MomentMatrix{T, typeof(basis)}(Q, basis)
 end
 
-MP.variables(μ::MomentMatrix) = variables(μ.basis)
-MP.nvariables(μ::MomentMatrix) = nvariables(μ.basis)
+MP.variables(μ::MomentMatrix) = MP.variables(μ.basis)
+MP.nvariables(μ::MomentMatrix) = MP.nvariables(μ.basis)
 
 function MomentMatrix{T}(f::Function, basis::MB.AbstractPolynomialBasis, σ=1:length(basis)) where T
     return MomentMatrix(trimat(T, f, length(basis), σ), basis)
 end
 function MomentMatrix{T}(f::Function, monos::AbstractVector) where T
-    σ, sorted_monos = sort_monomial_vector(monos)
+    σ, sorted_monos = MP.sort_monomial_vector(monos)
     return MomentMatrix{T}(f, MB.MonomialBasis(sorted_monos), σ)
 end
 
