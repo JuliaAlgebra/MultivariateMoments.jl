@@ -1,4 +1,6 @@
 using Documenter, MultivariateMoments
+# Needed because we include docstrings for `monomial`, `variables` and `monomials`
+import MultivariatePolynomials
 
 makedocs(
     sitename = "MultivariateMoments",
@@ -12,8 +14,9 @@ makedocs(
         "Atoms extraction" => "atoms.md"
     ],
     # The following ensures that we only include the docstrings from
-    # this module for functions define in Base that we overwrite.
-    modules = [MultivariateMoments]
+    # this module for functions define in Base and MultivariatePolynomials that
+    # we overwrite.
+    modules = [MultivariateMoments],
 )
 
 deploydocs(
