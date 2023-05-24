@@ -12,14 +12,17 @@ jobs:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@latest
         with:
-          # Build documentation on Julia 1.0
-          version: '1.0'
+          # Build documentation on latest Julia release
+          version: '1'
       - name: Install dependencies
         shell: julia --project=docs/ {0}
         run: |
           using Pkg
-          Pkg.add(PackageSpec(name="SemialgebraicSets", rev="master"))
-          Pkg.add(PackageSpec(name="MultivariatePolynomials", rev="master"))
+          Pkg.add([
+              PackageSpec(name="SemialgebraicSets", rev="master"),
+              PackageSpec(name="MultivariateBases", rev="master"),
+              PackageSpec(name="MultivariatePolynomials", rev="master"),
+          ])
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
       - name: Build and deploy
