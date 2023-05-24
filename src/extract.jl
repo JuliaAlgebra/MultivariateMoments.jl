@@ -1,8 +1,9 @@
 export atomic_measure
-export MomentMatrixWeightSolver, MomentVectorWeightSolver
+export solve, MomentMatrixWeightSolver, MomentVectorWeightSolver
 
 using RowEchelon
 using SemialgebraicSets
+import CommonSolve: solve
 
 """
     struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}

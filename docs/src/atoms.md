@@ -47,6 +47,7 @@ MultivariateMoments.low_rank_ldlt
 MultivariateMoments.LowRankLDLT
 MultivariateMoments.MacaulayNullspace
 MultivariateMoments.accuracy
+MultivariateMoments.rank_from_singular_values
 ```
 
 Once the center of the atoms are determined, a linear system is solved to determine

@@ -3,6 +3,14 @@ export FixedRank, AbsoluteRankTol, LeadingRelativeRankTol, DifferentialRankTol, 
 
 abstract type RankCheck end
 
+"""
+    rank_from_singular_values(σ, check::RankCheck)
+
+Return the rank of a matrix with singular values `σ` (in decreasing order)
+using `check`.
+"""
+function rank_from_singular_values end
+
 function accuracy(σ::Vector{T}, r, check::RankCheck) where {T}
     if iszero(r)
         return zero(T)
