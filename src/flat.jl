@@ -5,7 +5,7 @@ export FlatExtension, IterativeDiagonalization
 struct ZeroDimensionalVariety{T} <: AbstractAlgebraicSet
     elements::Vector{Vector{T}}
 end
-SemialgebraicSets.iszerodimensional(::ZeroDimensionalVariety) = true
+SemialgebraicSets.is_zero_dimensional(::ZeroDimensionalVariety) = true
 Base.length(v::ZeroDimensionalVariety) = length(v.elements)
 Base.iterate(v::ZeroDimensionalVariety, args...) = iterate(v.elements, args...)
 
@@ -56,7 +56,8 @@ end
 # These were the values in MultivariateSeries/diagonalization.jl
 IterativeDiagonalization() = IterativeDiagonalization(10, 1e-3, 5e-2)
 
-function SemialgebraicSets.solvemultiplicationmatrices(M::Vector{Matrix{C}}, solver::IterativeDiagonalization) where C
+function SemialgebraicSets.solve(mult::SemialgebraicSets.MultiplicationMatrices, solver::IterativeDiagonalization)
+    M = mult.matrices
     n  = length(M)
     r  = size(M[1], 1)
 
@@ -65,7 +66,7 @@ function SemialgebraicSets.solvemultiplicationmatrices(M::Vector{Matrix{C}}, sol
 
     F  = inv(E)
     
-    D  = vcat([Matrix{C}(I,r,r)], [F*M[i]*E for i in 1:length(M)])
+    D  = vcat([Matrix{eltype(M[1])}(I,r,r)], [F*M[i]*E for i in 1:length(M)])
     err = sum(norm_off.(D))
     Δ = sum(norm.(D))
 
@@ -104,9 +105,10 @@ function decompose(
     Σi = Diagonal(inv.(σ[1:r]))
 
     M = Matrix{T}[Σi * (U[:,1:r]') * H[i] * (V[:,1:r]) for i in 2:length(H)]
+    mult = SemialgebraicSets.MultiplicationMatrices(M)
 
     if r > 1
-        return SemialgebraicSets.solvemultiplicationmatrices(M, multiplication_matrices_solver)
+        return SemialgebraicSets.solve(mult, multiplication_matrices_solver)
     else
         return [[M[i][end, end] for i in eachindex(M)]]
     end

@@ -23,9 +23,9 @@ function shiftnullspace(Z, dgap, srows, monos)
     S = Z[srows, :]
     Sx = [Z[[findfirst(isequal(monos[row]* x), monos) for row in srows], :] for x in MP.variables(monos)]
     pS = LinearAlgebra.pinv(S)
-    Sx = [pS * S for S in Sx]
-    return MultivariateMoments.SemialgebraicSets.solvemultiplicationmatrices(
-        Sx,
+    mult = SemialgebraicSets.MultiplicationMatrices([pS * S for S in Sx])
+    return MultivariateMoments.SemialgebraicSets.solve(
+        mult,
         MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{Float64}(),
     )
 
@@ -54,7 +54,6 @@ struct ShiftNullspace end
 function solve_nullspace(Z, basis::MB.MonomialBasis, nM, cM, ::ShiftNullspace)
     monos = basis.monomials
     Z = Z'
-    n = MP.nvariables(monos)
     d = MP.maxdegree(monos)
     srows = standard_monomials(Z)
     gap_zone = gap_zone_standard_monomials(monos[srows], d)

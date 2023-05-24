@@ -49,7 +49,7 @@ struct MomentMatrixWeightSolver
 end
 
 function solve_weight(ν::MomentMatrix{T}, centers, ::MomentMatrixWeightSolver) where {T}
-    vars = variables(ν)
+    vars = MP.variables(ν)
     A = Matrix{T}(undef, length(ν.Q.Q), length(centers))
     vbasis = vectorized_basis(ν)
     for i in eachindex(centers)
@@ -132,7 +132,7 @@ function extractatoms(ν::MomentMatrix, rank_check::RankCheck, args...; weight_s
     if isnothing(supp)
         return
     end
-    if !iszerodimensional(supp)
+    if !is_zero_dimensional(supp)
         return
     end
     centers = collect(supp)
