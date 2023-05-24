@@ -25,7 +25,7 @@ end
     MultivariateMoments.compute_support!(ν::MomentMatrix, rank_check, [dec])
 
 Computes the `support` field of `ν`.
-The `rank_check` and `dec` parameters are passed as is to the [`low_rank_cholesky`](@ref) function.
+The `rank_check` and `dec` parameters are passed as is to the [`low_rank_ldlt`](@ref) function.
 """
 function compute_support!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankLDLTAlgorithm, nullspace_solver=Echelon(), args...)
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
@@ -38,13 +38,13 @@ function compute_support!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankL
     # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
     # Foundations of Computational Mathematics 8 (2008): 607-647.
     M = value_matrix(μ)
-    chol = low_rank_cholesky(M, dec, rank_check)
+    chol = low_rank_ldlt(M, dec, rank_check)
     @assert size(chol.L, 1) == LinearAlgebra.checksquare(M)
-    μ.support = solve(MacaulayNullspace(chol.L, μ.basis, recommended_rtol(chol)), nullspace_solver, args...)
+    μ.support = solve(MacaulayNullspace(chol.L, μ.basis, accuracy(chol)), nullspace_solver, args...)
 end
 
 function compute_support!(μ::MomentMatrix, rank_check::RankCheck, args...)
-    return compute_support!(μ::MomentMatrix, rank_check::RankCheck, SVDCholesky(), args...)
+    return compute_support!(μ::MomentMatrix, rank_check::RankCheck, SVDLDLT(), args...)
 end
 
 # Determines weight
@@ -126,8 +126,8 @@ end
 
 Return an `AtomicMeasure` with the atoms of `ν` if it is atomic or `nothing` if
 `ν` is not atomic. The `rank_check` and `dec` parameters are passed as is to the
-[`low_rank_cholesky`](@ref) function. By default, `dec` is an instance of
-[`SVDCholesky`](@ref). The extraction relies on the solution of a system of
+[`low_rank_ldlt`](@ref) function. By default, `dec` is an instance of
+[`SVDLDLT`](@ref). The extraction relies on the solution of a system of
 algebraic equations. using `solver`. For instance, given a
 [`MomentMatrix`](@ref), `μ`, the following extract atoms using a `rank_check` of
 `1e-4` for the low-rank decomposition and homotopy continuation to solve the

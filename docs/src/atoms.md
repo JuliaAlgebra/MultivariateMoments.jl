@@ -42,8 +42,8 @@ This decomposition can either be obtained by a cholesky or SVD decomposition fro
 ```@docs
 LowRankLDLTAlgorithm
 ShiftCholesky
-SVDCholesky
-MultivariateMoments.low_rank_cholesky
+SVDLDLT
+MultivariateMoments.low_rank_ldlt
 MultivariateMoments.LowRankLDLT
 MultivariateMoments.spectral_norm
 MultivariateMoments.recommended_rtol
