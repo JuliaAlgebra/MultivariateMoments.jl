@@ -51,9 +51,9 @@ end
 
 struct ShiftNullspace end
 
-function solve_nullspace(Z, basis::MB.MonomialBasis, nM, cM, ::ShiftNullspace)
-    monos = basis.monomials
-    Z = Z'
+function solve(null::MacaulayNullspace, _, _, ::ShiftNullspace)
+    monos = null.basis.monomials
+    Z = null.matrix
     d = MP.maxdegree(monos)
     srows = standard_monomials(Z)
     gap_zone = gap_zone_standard_monomials(monos[srows], d)

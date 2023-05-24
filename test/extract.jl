@@ -36,7 +36,7 @@ function _atoms(atoms, rank_check, solver)
     monos = monomials(x, 0:(length(atoms) + 2))
     μ = measure(η, monos)
     ν = moment_matrix(μ, monomials(x, 0:(div(length(atoms), 2) + 1)))
-    atoms = extractatoms(ν, rank_check, solver)
+    atoms = atomic_measure(ν, rank_check, solver)
     @test atoms !== nothing
     @test atoms ≈ η
 end
@@ -68,15 +68,15 @@ function hl05_2_3(rank_check, lrc, solver, perturb::Bool=true)
     monos = [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1]
     μ = measure(η, monos)
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
-    atoms = extractatoms(ν, rank_check, lrc, Echelon(), solver)
+    atoms = atomic_measure(ν, rank_check, lrc, Echelon(), solver)
     @test atoms !== nothing
     @test atoms ≈ η
     if perturb # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
         Random.seed!(0)
         ν2 = MomentMatrix(SymMatrix(ν.Q.Q + rand(length(ν.Q.Q)) * 1e-6, ν.Q.n), ν.basis)
-        @test_throws ErrorException extractatoms(ν2, rank_check, lrc, Echelon(), solver, weight_solver = MomentVectorWeightSolver())
+        @test_throws ErrorException atomic_measure(ν2, rank_check, lrc, Echelon(), solver, weight_solver = MomentVectorWeightSolver())
         for weight_solver in [MomentMatrixWeightSolver(), MomentVectorWeightSolver(rtol=1e-5), MomentVectorWeightSolver(atol=1e-5)]
-            atoms = extractatoms(ν2, rank_check, lrc, Echelon(), solver; weight_solver)
+            atoms = atomic_measure(ν2, rank_check, lrc, Echelon(), solver; weight_solver)
             @test atoms !== nothing
             @test atoms ≈ η rtol=1e-4
         end
@@ -119,7 +119,7 @@ function hl05_4(rank_check, lrc)
     μ = measure([1/9,     0,     1/9,     0, 1/9,   0,     0,     0,   0, 1/3,   0, 1/3, 0, 0, 1],
                 [x^4, x^3*y, x^2*y^2, x*y^3, y^4, x^3, x^2*y, x*y^2, y^3, x^2, x*y, y^2, x, y, 1])
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
-    atoms = extractatoms(ν, rank_check, lrc)
+    atoms = atomic_measure(ν, rank_check, lrc)
     @test atoms !== nothing
     if lrc isa LowRankChol
         @test atoms ≈ η
@@ -138,7 +138,7 @@ function lpj20_3_8_0(rank_check, lrc, ok::Bool=true)
     μ = measure([1e-6, 0.0, 2],
                 monomials(x, 2))
     ν = moment_matrix(μ, monomials(x, 1))
-    atoms = extractatoms(ν, rank_check, lrc)
+    atoms = atomic_measure(ν, rank_check, lrc)
     if ok
         @test atoms !== nothing
         @test atoms ≈ η
@@ -161,7 +161,7 @@ function lpj20_3_8(rank_check, solver)
          -5.36283e-19 -0.0 7.44133e-6][3:-1:1, 3:-1:1],
         monomials(x, 2),
     )
-    atoms = extractatoms(ν, rank_check, Echelon(), solver)
+    atoms = atomic_measure(ν, rank_check, Echelon(), solver)
     @test atoms !== nothing
     @test atoms ≈ η
 end
@@ -183,7 +183,7 @@ function lpj20_3_9(rank_check, sol=1)
         0.00917416 0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5 1.07817e-5
         0.00211654 0.000498924 0.000125543 3.76638e-5 1.62883e-5 1.07817e-5 1.10658e-5
     ][7:-1:1, 7:-1:1], monomials(x, 6))
-    atoms = extractatoms(ν, rank_check, weight_solver=MomentVectorWeightSolver())
+    atoms = atomic_measure(ν, rank_check, weight_solver=MomentVectorWeightSolver())
     if sol == 0
         @test atoms === nothing
     else
@@ -217,7 +217,7 @@ function jcg14_6_1(rank_check, ok::Bool=true)
          -0.0551816 -0.265564 -0.0676226 0.0837186][4:-1:1, 4:-1:1],
         monomials(x, 1),
     )
-    atoms = extractatoms(ν, rank_check)
+    atoms = atomic_measure(ν, rank_check)
     if ok
         @test atoms !== nothing
         @test atoms ≈ η
@@ -227,44 +227,44 @@ function jcg14_6_1(rank_check, ok::Bool=true)
 end
 
 function large_norm(rank_check)
-    # If the norm of `M` is given to `rref!` instead of `√||M||`, `extractatoms` will error.
+    # If the norm of `M` is given to `rref!` instead of `√||M||`, `atomic_measure` will error.
     Mod.@polyvar x[1:2]
     Q = [
         586.8034549325414 -800.152792847183
        -800.152792847183  2749.376669556701
     ]
     ν = moment_matrix(Q, monomials(x, 1))
-    @test nothing === extractatoms(ν, rank_check)
+    @test nothing === atomic_measure(ν, rank_check)
 end
 
 function test_extract()
     default_solver = SemialgebraicSets.default_algebraic_solver([1.0x - 1.0x])
-    for solver in [SVDChol(), ShiftChol(1e-15), FlatExtension(), FlatExtension(IterativeDiagonalization()), ShiftNullspace()]
+    for solver in [SVDCholesky(), ShiftCholesky(1e-15), FlatExtension(), FlatExtension(IterativeDiagonalization()), ShiftNullspace()]
         atoms_1(1e-10, solver)
         atoms_2(1e-10, solver)
     end
-    for lrc in (SVDChol(), ShiftChol(1e-14))
-        perturb = !(lrc isa ShiftChol) # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
+    for lrc in (SVDCholesky(), ShiftCholesky(1e-14))
+        perturb = !(lrc isa ShiftCholesky) # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
         hl05_2_3(1e-4, lrc, default_solver, perturb)
         @test_throws ErrorException("Dummy solver") hl05_2_3(1e-4, lrc, DummySolver())
     end
     hl05_3_3_1()
     # Fails on 32-bits in CI
     if Sys.WORD_SIZE != 32
-        for lrc in (SVDChol(), ShiftChol(1e-16))
+        for lrc in (SVDCholesky(), ShiftCholesky(1e-16))
             hl05_4(1e-16, lrc)
         end
     end
     # All singular values will be at least 1e-6 > 1e-12 it won't eliminate any row
-    lpj20_3_8_0(1e-12, ShiftChol(1e-6), false)
+    lpj20_3_8_0(1e-12, ShiftCholesky(1e-6), false)
     # The following tests that the method does not error if ranktol eliminates everything
     # In particular, this tests that the function equation(i) do not call sum when r equal to 0
     # this that throws an ArgumentError as details in src/extract.jl
-    lpj20_3_8_0(1.0, SVDChol(), false)
-    lpj20_3_8_0(LeadingRelativeRankTol(1e-5), SVDChol())
-    lpj20_3_8_0(AbsoluteRankTol(1e-5), SVDChol())
-    lpj20_3_8_0(DifferentialRankTol(1e-2), SVDChol())
-    lpj20_3_8_0(LargestDifferentialRank(), SVDChol())
+    lpj20_3_8_0(1.0, SVDCholesky(), false)
+    lpj20_3_8_0(LeadingRelativeRankTol(1e-5), SVDCholesky())
+    lpj20_3_8_0(AbsoluteRankTol(1e-5), SVDCholesky())
+    lpj20_3_8_0(DifferentialRankTol(1e-2), SVDCholesky())
+    lpj20_3_8_0(LargestDifferentialRank(), SVDCholesky())
     @test_throws ErrorException("Dummy solver") lpj20_3_8(1e-5, DummySolver())
     lpj20_3_8(1e-5, default_solver)
     for ranktol in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7]

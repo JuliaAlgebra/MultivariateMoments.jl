@@ -1,4 +1,4 @@
-export LowRankChol, ShiftChol, SVDChol
+export LowRankChol, ShiftCholesky, SVDCholesky
 export FixedRank, AbsoluteRankTol, LeadingRelativeRankTol, DifferentialRankTol, LargestDifferentialRank
 
 abstract type RankCheck end
@@ -53,52 +53,79 @@ Method for computing a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`
 abstract type LowRankChol end
 
 """
-    ShiftChol <: LowRankChol
+    ShiftCholesky <: LowRankChol
 
 Shift the matrix by `shift` times the identity matrix before cholesky.
 """
-struct ShiftChol{T} <: LowRankChol
+struct ShiftCholesky{T} <: LowRankChol
     shift::T
 end
 
 """
-    SVDChol <: LowRankChol
+    SVDCholesky <: LowRankChol
 
 Use SVD decomposition.
 """
-struct SVDChol <: LowRankChol end
+struct SVDCholesky <: LowRankChol end
 
 """
-    MultivariateMoments.lowrankchol(Q::AbstractMatrix, dec::LowRankChol, ranktol)
+    MultivariateMoments.low_rank_cholesky(Q::AbstractMatrix, dec::LowRankChol, ranktol)
 
 Returns a ``r \\times n`` matrix ``U`` of a ``n \\times n`` rank ``r`` positive semidefinite matrix ``Q`` such that ``Q = U^\\top U``.
 The rank of ``Q`` is the number of singular values larger than `ranktol```{} \\cdot \\sigma_1`` where ``\\sigma_1`` is the largest singular value.
 """
-function lowrankchol end
+function low_rank_cholesky end
 
-# TODO If `r = length(σ)`, we would like to take `rank_check.tol`
-# but some don't have any rank check, we could still use it when there is a tol
-# Also, dividing by `nM` is maybe not the best if we don't use `LeadingRelativeRankTol`
-function _M(σ, r)
-    nM = first(σ)
-    cM = σ[min(length(σ), r + 1)] / nM
-    return nM, cM
+"""
+    struct LowRankCholesky{T}
+        U::Matrix{T}
+        singular_values::Vector{T}
+    end
+
+Low-Rank cholesky decomposition `U` of size `(r, n)` of a `n x n` matrix
+with singular values `singular_values[1] > ... > singular_values[n]`.
+"""
+struct LowRankCholesky{T}
+    U::Matrix{T}
+    singular_values::Vector{T}
 end
 
-function lowrankchol(M::AbstractMatrix, dec::ShiftChol, rank_check::RankCheck)
+"""
+    spectral_norm(chol::LowRankCholesky)
+
+Return the spectral norm of the matrix `chol.U' * chol.U`.
+"""
+spectral_norm(chol::LowRankCholesky) = first(chol.singular_values)
+
+"""
+    recommended_rtol(chol::LowRankCholesky)
+
+Return the ratio `rtol = σ[r+1]/σ[1]` where `σ` is the vector of singular
+values of the matrix for which `chol` is the rank-`r` Cholesky decomposition.
+This is a good relative tolerance to use with the matrix as `σ[r+1]` is the
+first singular value that was discarded.
+"""
+function recommended_rtol(chol::LowRankCholesky)
+    r = size(chol.U, 1)
+    first_dropped = min(length(chol.singular_values), r + 1)
+    # TODO If `r = length(chol.singular_values)`, we would like to take `rank_check.tol`
+    # but some don't have any rank check, we could still use it when there is a tol
+    # Also, dividing by `nM` is maybe not the best if we don't use `LeadingRelativeRankTol`
+    return chol.singular_values[first_dropped] / spectral_norm(chol)
+end
+
+function low_rank_cholesky(M::AbstractMatrix, dec::ShiftCholesky, rank_check::RankCheck)
     m = LinearAlgebra.checksquare(M)
     U = cholesky(M + dec.shift * I).U
     σs = map(i -> (U[i, i])^2, 1:m)
     J = sortperm(σs, rev=true)
     σ_sorted = σs[J]
     r = rank_from_singular_values(σ_sorted, rank_check)
-    nM, cM = _M(σ_sorted, r)
-    return nM, cM, U[J[1:r], :]
+    return LowRankCholesky(U[J[1:r], :], σ_sorted)
 end
 
-function lowrankchol(M::AbstractMatrix, ::SVDChol, rank_check::RankCheck)
+function low_rank_cholesky(M::AbstractMatrix, ::SVDCholesky, rank_check::RankCheck)
     F = svd(M)
     r = rank_from_singular_values(F.S, rank_check)
-    nM, cM = _M(F.S, r)
-    return nM, cM, (F.U[:, 1:r] * Diagonal(sqrt.(F.S[1:r])))'
+    return LowRankCholesky(Diagonal(sqrt.(F.S[1:r])) * F.U[:, 1:r]', F.S)
 end

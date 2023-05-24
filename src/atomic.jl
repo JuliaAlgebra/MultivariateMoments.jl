@@ -55,7 +55,7 @@ end
 expectation(η::AtomicMeasure, p::APL) = sum(δ -> δ.weight * p(η.variables => δ.center), η.atoms)
 expectation(p::APL, η::AtomicMeasure) = expectation(η, p)
 
-function permcomp(f, m)
+function compare_modulo_permutation(f, m)
     picked = BitSet()
     for i in 1:m
         k = 0
@@ -76,5 +76,5 @@ end
 Base.isapprox(η1::WeightedDiracMeasure, η2::WeightedDiracMeasure; kws...) = isapprox(η1.weight, η2.weight; kws...) && isapprox(η1.center, η2.center; kws...)
 function Base.isapprox(η1::AtomicMeasure, η2::AtomicMeasure; kws...)
     m = length(η1.atoms)
-    length(η2.atoms) == m && permcomp((i, j) -> isapprox(η1.atoms[i], η2.atoms[j]; kws...), m)
+    length(η2.atoms) == m && compare_modulo_permutation((i, j) -> isapprox(η1.atoms[i], η2.atoms[j]; kws...), m)
 end
