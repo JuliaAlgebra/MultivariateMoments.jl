@@ -28,7 +28,13 @@ end
 Computes the `support` field of `ν`.
 The `rank_check` and `dec` parameters are passed as is to the [`low_rank_ldlt`](@ref) function.
 """
-function compute_support!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankLDLTAlgorithm, nullspace_solver=Echelon(), args...)
+function compute_support!(
+    μ::MomentMatrix,
+    rank_check::RankCheck,
+    dec::LowRankLDLTAlgorithm,
+    nullspace_solver = Echelon(),
+    args...,
+)
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
@@ -41,11 +47,20 @@ function compute_support!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankL
     M = value_matrix(μ)
     chol = low_rank_ldlt(M, dec, rank_check)
     @assert size(chol.L, 1) == LinearAlgebra.checksquare(M)
-    μ.support = solve(MacaulayNullspace(chol.L, μ.basis, accuracy(chol)), nullspace_solver, args...)
+    return μ.support = solve(
+        MacaulayNullspace(chol.L, μ.basis, accuracy(chol)),
+        nullspace_solver,
+        args...,
+    )
 end
 
 function compute_support!(μ::MomentMatrix, rank_check::RankCheck, args...)
-    return compute_support!(μ::MomentMatrix, rank_check::RankCheck, SVDLDLT(), args...)
+    return compute_support!(
+        μ::MomentMatrix,
+        rank_check::RankCheck,
+        SVDLDLT(),
+        args...,
+    )
 end
 
 # Determines weight
@@ -63,10 +78,13 @@ of the moment matrix, keeping duplicates (e.g., entries corresponding to the sam
 If the moment values corresponding to the same monomials are known to be equal
 prefer [`MomentVectorWeightSolver`](@ref) instead.
 """
-struct MomentMatrixWeightSolver
-end
+struct MomentMatrixWeightSolver end
 
-function solve_weight(ν::MomentMatrix{T}, centers, ::MomentMatrixWeightSolver) where {T}
+function solve_weight(
+    ν::MomentMatrix{T},
+    centers,
+    ::MomentMatrixWeightSolver,
+) where {T}
     vars = MP.variables(ν)
     A = Matrix{T}(undef, length(ν.Q.Q), length(centers))
     vbasis = vectorized_basis(ν)
@@ -95,25 +113,35 @@ struct MomentVectorWeightSolver{T}
     rtol::T
     atol::T
 end
-function MomentVectorWeightSolver{T}(; rtol=Base.rtoldefault(T), atol=zero(T)) where {T}
+function MomentVectorWeightSolver{T}(;
+    rtol = Base.rtoldefault(T),
+    atol = zero(T),
+) where {T}
     return MomentVectorWeightSolver{T}(rtol, atol)
 end
-function MomentVectorWeightSolver(; rtol=nothing, atol=nothing)
+function MomentVectorWeightSolver(; rtol = nothing, atol = nothing)
     if rtol === nothing && atol === nothing
         return MomentVectorWeightSolver{Float64}()
     elseif rtol !== nothing
         if atol === nothing
-            return MomentVectorWeightSolver{typeof(rtol)}(; rtol=rtol)
+            return MomentVectorWeightSolver{typeof(rtol)}(; rtol = rtol)
         else
-            return MomentVectorWeightSolver{typeof(rtol)}(; rtol=rtol, atol=atol)
+            return MomentVectorWeightSolver{typeof(rtol)}(;
+                rtol = rtol,
+                atol = atol,
+            )
         end
     else
-        return MomentVectorWeightSolver{typeof(atol)}(; atol=atol)
+        return MomentVectorWeightSolver{typeof(atol)}(; atol = atol)
     end
 end
 
-function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSolver) where {T}
-    μ = measure(ν; rtol=solver.rtol, atol=solver.atol)
+function solve_weight(
+    ν::MomentMatrix{T},
+    centers,
+    solver::MomentVectorWeightSolver,
+) where {T}
+    μ = measure(ν; rtol = solver.rtol, atol = solver.atol)
     vars = MP.variables(μ)
     A = Matrix{T}(undef, length(μ.x), length(centers))
     for i in eachindex(centers)
@@ -144,7 +172,12 @@ then the Schur decomposition of a random combination of these matrices.
 For floating point arithmetics, homotopy continuation is recommended as it is
 more numerically stable than Gröbner basis computation.
 """
-function atomic_measure(ν::MomentMatrix, rank_check::RankCheck, args...; weight_solver = MomentMatrixWeightSolver())
+function atomic_measure(
+    ν::MomentMatrix,
+    rank_check::RankCheck,
+    args...;
+    weight_solver = MomentMatrixWeightSolver(),
+)
     compute_support!(ν, rank_check, args...)
     supp = ν.support
     if isnothing(supp)

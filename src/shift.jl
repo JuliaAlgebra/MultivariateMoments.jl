@@ -21,12 +21,17 @@ end
 
 function shiftnullspace(Z, dgap, srows, monos)
     S = Z[srows, :]
-    Sx = [Z[[findfirst(isequal(monos[row]* x), monos) for row in srows], :] for x in MP.variables(monos)]
+    Sx = [
+        Z[[findfirst(isequal(monos[row] * x), monos) for row in srows], :]
+        for x in MP.variables(monos)
+    ]
     pS = LinearAlgebra.pinv(S)
     mult = SemialgebraicSets.MultiplicationMatrices([pS * S for S in Sx])
     return MultivariateMoments.SemialgebraicSets.solve(
         mult,
-        MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{Float64}(),
+        MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
+            Float64,
+        }(),
     )
 
     return MultivariateMoments.solve
@@ -37,14 +42,17 @@ end
 function gap_zone_standard_monomials(monos, maxdegree)
     num = zeros(Int, maxdegree + 1)
     for mono in monos
-        num[MP.maxdegree(mono) + 1] += 1
+        num[MP.maxdegree(mono)+1] += 1
     end
     i = findfirst(iszero, num)
     if isnothing(i)
         return
     end
     dgap = i - 2
-    gapsize = something(findfirst(!iszero, @view(num[(i + 1):end])), length(num) - i + 1)
+    gapsize = something(
+        findfirst(!iszero, @view(num[(i+1):end])),
+        length(num) - i + 1,
+    )
     ma = sum(view(num, 1:(i-1)))
     return dgap, ma, gapsize
 end
@@ -66,7 +74,7 @@ function solve(null::MacaulayNullspace, ::ShiftNullspace)
         return
     end
     mb = size(Z, 2)
-    if mb == ma 
+    if mb == ma
         W = Z
     else
         @warn("Column compression not supported yet")

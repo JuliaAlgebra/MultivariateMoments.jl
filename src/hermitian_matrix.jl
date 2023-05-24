@@ -14,32 +14,41 @@ It implement the `AbstractMatrix` interface except for `setindex!` as it might
 break its symmetry. The [`symmetric_setindex!`](@ref) function should be used
 instead.
 """
-struct VectorizedHermitianMatrix{T, S, U} <: AbstractMatrix{U}
+struct VectorizedHermitianMatrix{T,S,U} <: AbstractMatrix{U}
     Q::Vector{T}
     n::Int
 end
-function VectorizedHermitianMatrix{T, S}(Q::Vector{T}, n) where {T, S}
+function VectorizedHermitianMatrix{T,S}(Q::Vector{T}, n) where {T,S}
     V = MA.promote_operation(*, Complex{S}, T)
     U = MA.promote_operation(+, T, V)
-    VectorizedHermitianMatrix{T, S, U}(Q, n)
+    return VectorizedHermitianMatrix{T,S,U}(Q, n)
 end
-function VectorizedHermitianMatrix{T}(Q::Vector{T}, n) where T
+function VectorizedHermitianMatrix{T}(Q::Vector{T}, n) where {T}
     # `typeof(im)` is `Complex{Bool}`
-    return VectorizedHermitianMatrix{T, Bool}(Q, n)
+    return VectorizedHermitianMatrix{T,Bool}(Q, n)
 end
-function VectorizedHermitianMatrix(Q::Vector{T}, n) where T
+function VectorizedHermitianMatrix(Q::Vector{T}, n) where {T}
     return VectorizedHermitianMatrix{T}(Q, n)
 end
 
 _undef_herm(T::Type, n) = Vector{T}(undef, trimap(n, n) + trimap(n - 1, n - 1))
-function VectorizedHermitianMatrix{T, S, U}(::UndefInitializer, dims::Dims{2}) where {T, S, U}
-    dims[1] != dims[2] && error("Expected same dimension for `VectorizedHermitianMatrix`, got `$(dims)`.")
+function VectorizedHermitianMatrix{T,S,U}(
+    ::UndefInitializer,
+    dims::Dims{2},
+) where {T,S,U}
+    dims[1] != dims[2] && error(
+        "Expected same dimension for `VectorizedHermitianMatrix`, got `$(dims)`.",
+    )
     n = dims[1]
     return VectorizedHermitianMatrix(_undef_herm(T, n), n)
 end
-Base.similar(Q::VectorizedHermitianMatrix, dims::Dims{2}) = similar(typeof(Q), dims)
+function Base.similar(Q::VectorizedHermitianMatrix, dims::Dims{2})
+    return similar(typeof(Q), dims)
+end
 Base.similar(Q::VectorizedHermitianMatrix, dims::Integer...) = similar(Q, dims)
-Base.copy(Q::VectorizedHermitianMatrix) = VectorizedHermitianMatrix(copy(Q.Q), Q.n)
+function Base.copy(Q::VectorizedHermitianMatrix)
+    return VectorizedHermitianMatrix(copy(Q.Q), Q.n)
+end
 function Base.map(f::Function, Q::VectorizedHermitianMatrix)
     if Q.n <= 1
         return VectorizedHermitianMatrix(map(f, Q.Q), Q.n)
@@ -84,7 +93,7 @@ Base.size(Q::VectorizedHermitianMatrix) = (Q.n, Q.n)
 
 Return the `VectorizedHermitianMatrix` corresponding to `Q[I, I]`.
 """
-function square_getindex(Q::VectorizedHermitianMatrix{T, S, U}, I) where {T, S, U}
+function square_getindex(Q::VectorizedHermitianMatrix{T,S,U}, I) where {T,S,U}
     n = length(I)
     q = _undef_herm(T, n)
     N = trimap(n, n)
@@ -98,27 +107,33 @@ function square_getindex(Q::VectorizedHermitianMatrix{T, S, U}, I) where {T, S, 
             q[k_real] = _real_getindex(Q, row, col)
             if i < j
                 k_imag += 1
-                q[N + k_imag] = _imag_getindex(Q, row, col)
+                q[N+k_imag] = _imag_getindex(Q, row, col)
             end
         end
     end
-    return VectorizedHermitianMatrix{T, S, U}(q, n)
+    return VectorizedHermitianMatrix{T,S,U}(q, n)
 end
-
 
 """
     symmetric_setindex!(Q::VectorizedHermitianMatrix, value, i::Integer, j::Integer)
 
 Set `Q[i, j]` to the value `value` and `Q[j, i]` to the value `-value`.
 """
-function symmetric_setindex!(Q::VectorizedHermitianMatrix, value, i::Integer, j::Integer)
+function symmetric_setindex!(
+    Q::VectorizedHermitianMatrix,
+    value,
+    i::Integer,
+    j::Integer,
+)
     if i > j
         symmetric_setindex!(Q, conj(value), j, i)
     else
         Q.Q[trimap(i, j)] = real(value)
         if i == j
             if !iszero(imag(value))
-                error("Cannot set diagonal entry ($i, $j) of hermitian matrix with a non-zero imaginary part $(imag(value))")
+                error(
+                    "Cannot set diagonal entry ($i, $j) of hermitian matrix with a non-zero imaginary part $(imag(value))",
+                )
             end
         else
             Q.Q[imag_map(Q, i, j)] = imag(value)
@@ -128,7 +143,11 @@ end
 
 _real_getindex(Q::VectorizedHermitianMatrix, i, j) = Q.Q[trimap(i, j)]
 _imag_getindex(Q::VectorizedHermitianMatrix, i, j) = Q.Q[imag_map(Q, i, j)]
-function Base.getindex(Q::VectorizedHermitianMatrix{T, S, U}, i::Integer, j::Integer) where {T, S, U}
+function Base.getindex(
+    Q::VectorizedHermitianMatrix{T,S,U},
+    i::Integer,
+    j::Integer,
+) where {T,S,U}
     I, J = min(i, j), max(i, j)
     r = _real_getindex(Q, I, J)
     if i == j
