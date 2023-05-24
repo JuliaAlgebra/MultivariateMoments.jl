@@ -21,9 +21,9 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     filter!(!isconstant, system)
     # Type instability here :(
     if mindegree(monos) == maxdegree(monos) # Homogeneous
-        projectivealgebraicset(system, Buchberger(ztol), args...)
+        projective_algebraic_set(system, Buchberger(ztol), args...)
     else
-        algebraicset(system, Buchberger(ztol), args...)
+        projective_algebraic_set(system, Buchberger(ztol), args...)
     end
 end
 

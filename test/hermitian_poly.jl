@@ -18,9 +18,9 @@ using MultivariateMoments
     end
     q = [x, x, x, y]
     Q = VectorizedHermitianMatrix(q, 2)
-    @test eltype(Q) == polynomialtype(x * y, Complex{Int})
+    @test eltype(Q) == polynomial_type(x * y, Complex{Int})
     _tests(Q)
     R = VectorizedHermitianMatrix{eltype(q), Float64}(q, 2)
-    @test eltype(R) == polynomialtype(x * y, Complex{Float64})
+    @test eltype(R) == polynomial_type(x * y, Complex{Float64})
     _tests(R)
 end

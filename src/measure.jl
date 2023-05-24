@@ -12,12 +12,12 @@ struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: Abstract
     end
 end
 function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, TT <: AbstractTermLike}
-    # cannot use `monovec(a, x)` as it would sum the entries
+    # cannot use `monomial_vector(a, x)` as it would sum the entries
     # corresponding to the same monomial.
     if length(a) != length(x)
         throw(ArgumentError("There should be as many coefficient than monomials"))
     end
-    σ, X = sortmonovec(x)
+    σ, X = sort_monomial_vector(x)
     b = a[σ]
     if length(x) > length(X)
         rev = Dict(X[j] => j for j in eachindex(σ))
@@ -30,7 +30,7 @@ function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, 
             end
         end
     end
-    return Measure{T, monomialtype(TT), typeof(X)}(b, X)
+    return Measure{T, monomial_type(TT), typeof(X)}(b, X)
 end
 
 """

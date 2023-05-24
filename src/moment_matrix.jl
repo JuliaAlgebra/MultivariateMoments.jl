@@ -33,7 +33,7 @@ function MomentMatrix{T}(f::Function, basis::MB.AbstractPolynomialBasis, σ=1:le
     return MomentMatrix(trimat(T, f, length(basis), σ), basis)
 end
 function MomentMatrix{T}(f::Function, monos::AbstractVector) where T
-    σ, sorted_monos = sortmonovec(monos)
+    σ, sorted_monos = sort_monomial_vector(monos)
     return MomentMatrix{T}(f, MB.MonomialBasis(sorted_monos), σ)
 end
 
@@ -50,7 +50,7 @@ function MomentMatrix(Q::AbstractMatrix{T}, basis::MB.AbstractPolynomialBasis, �
     return MomentMatrix{T}((i, j) -> Q[σ[i], σ[j]], basis)
 end
 function MomentMatrix(Q::AbstractMatrix, monos::AbstractVector)
-    σ, sorted_monos = MP.sortmonovec(monos)
+    σ, sorted_monos = MP.sort_monomial_vector(monos)
     return MomentMatrix(Q, MB.MonomialBasis(sorted_monos), σ)
 end
 moment_matrix(Q::AbstractMatrix, monos) = MomentMatrix(Q, monos)

@@ -6,7 +6,7 @@ using SemialgebraicSets
 using MultivariateMoments
 
 struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
-function SemialgebraicSets.solvealgebraicequations(
+function SemialgebraicSets.solve(
     ::SemialgebraicSets.AlgebraicSet,
     ::DummySolver,
 )
@@ -100,10 +100,10 @@ function hl05_3_3_1()
          0 0 0 0 0 1;
          0 0 2 0 0 0] # x^2 = 2x
     # β will be [z, y, x, y*z, x*z, x*y]
-    x = monovec([z, y, x, z^2, y*z, y^2, x*z, x*y, x^2])
+    x = monomial_vector([z, y, x, z^2, y*z, y^2, x*z, x*y, x^2])
     # x*β contains x*y*z, x^2*z, x^2*y which are not present so it show fail
     V = MultivariateMoments.build_system(U', MB.MonomialBasis(x), sqrt(eps(Float64)))
-    @test iszerodimensional(V)
+    @test is_zero_dimensional(V)
     testelements(V, [[2.0, 2.0, 2.0], [2.0, 2.0, 0.0], [2.0, 0.0, 2.0], [0.0, 2.0, 2.0], [2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0], [0.0, 0.0, 0.0]], 1e-11)
 end
 
@@ -238,7 +238,7 @@ function large_norm(rank_check)
 end
 
 function test_extract()
-    default_solver = SemialgebraicSets.defaultalgebraicsolver([1.0x - 1.0x])
+    default_solver = SemialgebraicSets.default_algebraic_solver([1.0x - 1.0x])
     for solver in [SVDChol(), ShiftChol(1e-15), FlatExtension(), FlatExtension(IterativeDiagonalization()), ShiftNullspace()]
         atoms_1(1e-10, solver)
         atoms_2(1e-10, solver)
