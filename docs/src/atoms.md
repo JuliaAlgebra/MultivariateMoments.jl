@@ -45,8 +45,8 @@ ShiftCholesky
 SVDLDLT
 MultivariateMoments.low_rank_ldlt
 MultivariateMoments.LowRankLDLT
-MultivariateMoments.spectral_norm
-MultivariateMoments.recommended_rtol
+MultivariateMoments.MacaulayNullspace
+MultivariateMoments.accuracy
 ```
 
 Once the center of the atoms are determined, a linear system is solved to determine

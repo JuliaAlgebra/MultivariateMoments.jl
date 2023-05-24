@@ -109,13 +109,6 @@ struct LowRankLDLT{T,C<:RankCheck}
 end
 
 """
-    spectral_norm(chol::LowRankLDLT)
-
-Return the spectral norm of the matrix `chol.U' * chol.U`.
-"""
-spectral_norm(chol::LowRankLDLT) = first(chol.singular_values)
-
-"""
     accuracy(chol::LowRankLDLT)
 
 Return the ratio `rtol = σ[r+1]/σ[1]` where `σ` is the vector of singular
