@@ -4,11 +4,7 @@ using LinearAlgebra
 
 import MutableArithmetics as MA
 
-#using MultivariatePolynomials
-#const MP = MultivariatePolynomials
 import MultivariatePolynomials as MP
-# It seems to be needed to include the docstring in the docs
-#import MultivariatePolynomials: monomial, variables, monomials
 
 import MultivariateBases as MB
 
