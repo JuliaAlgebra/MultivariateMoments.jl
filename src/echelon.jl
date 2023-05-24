@@ -18,9 +18,9 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     monos = basis.monomials
     β = monos[pivots]
     system = [MA.operate(dot, β, U[:, i]) - monos[i] for i in eachindex(monos)]
-    filter!(!isconstant, system)
+    filter!(!MP.isconstant, system)
     # Type instability here :(
-    if mindegree(monos) == maxdegree(monos) # Homogeneous
+    if MP.mindegree(monos) == MP.maxdegree(monos) # Homogeneous
         projective_algebraic_set(system, Buchberger(ztol), args...)
     else
         algebraic_set(system, Buchberger(ztol), args...)

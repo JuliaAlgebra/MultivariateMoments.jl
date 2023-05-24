@@ -12,7 +12,7 @@ An `AbstractMomentLike` is a type that can act like an `AbstractMoment` (it is s
 that is, it implements the following two functions
 ```@docs
 moment_value
-monomial(::MultivariateMoments.Moment)
+MultivariatePolynomials.monomial(::MultivariateMoments.Moment)
 ```
 
 ## Measure
@@ -28,8 +28,8 @@ However, it acts like a measure when taking its scalar product with a polynomial
 An `AbstractMeasureLike` is a type that can act like an `AbstractMeasure`,
 that is, it implements the following two functions
 ```@docs
-variables(::MultivariateMoments.Measure)
-monomials(::MultivariateMoments.Measure)
+MultivariatePolynomials.variables(::MultivariateMoments.Measure)
+MultivariatePolynomials.monomials(::MultivariateMoments.Measure)
 moments
 ```
 

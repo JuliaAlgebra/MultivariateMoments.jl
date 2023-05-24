@@ -96,7 +96,7 @@ end
 
 function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSolver) where {T}
     μ = measure(ν; rtol=solver.rtol, atol=solver.atol)
-    vars = variables(μ)
+    vars = MP.variables(μ)
     A = Matrix{T}(undef, length(μ.x), length(centers))
     for i in eachindex(centers)
         A[:, i] = dirac(μ.x, vars => centers[i]).a
@@ -144,7 +144,7 @@ function extractatoms(ν::MomentMatrix, rank_check::RankCheck, args...; weight_s
     if isempty(centers)
         nothing
     else
-        AtomicMeasure(variables(ν), WeightedDiracMeasure.(centers, weights))
+        AtomicMeasure(MP.variables(ν), WeightedDiracMeasure.(centers, weights))
     end
 end
 
