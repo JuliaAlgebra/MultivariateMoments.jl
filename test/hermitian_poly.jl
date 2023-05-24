@@ -20,7 +20,7 @@ using MultivariateMoments
     Q = VectorizedHermitianMatrix(q, 2)
     @test eltype(Q) == polynomial_type(x * y, Complex{Int})
     _tests(Q)
-    R = VectorizedHermitianMatrix{eltype(q), Float64}(q, 2)
+    R = VectorizedHermitianMatrix{eltype(q),Float64}(q, 2)
     @test eltype(R) == polynomial_type(x * y, Complex{Float64})
     _tests(R)
 end

@@ -13,7 +13,8 @@ using MultivariateMoments
     @test square_getindex(Q, 1:1).Q == [1]
     @test square_getindex(Q, 2:2) isa SymMatrix{Int}
     @test square_getindex(Q, 2:2).Q == [3]
-    @test similar(Q, Float64, (Base.OneTo(2), Base.OneTo(2))) isa Matrix{Float64}
+    @test similar(Q, Float64, (Base.OneTo(2), Base.OneTo(2))) isa
+          Matrix{Float64}
     @test eltype(Q) == Int
     symmetric_setindex!(Q, 4, 1, 1)
     @test Q.Q == [4, 2, 3]
@@ -28,8 +29,12 @@ using MultivariateMoments
     R = map(i -> i - 1, P)
     @test R.n == 2
     @test R.Q == [3, 4, 5]
-    for S in [similar(Q, 1, 1), similar(Q, (1, 1)),
-              similar(typeof(Q), 1, 1), similar(typeof(Q), (1, 1))]
+    for S in [
+        similar(Q, 1, 1),
+        similar(Q, (1, 1)),
+        similar(typeof(Q), 1, 1),
+        similar(typeof(Q), (1, 1)),
+    ]
         @test typeof(S) == typeof(Q)
         symmetric_setindex!(S, 2, 1, 1)
         @test S[1, 1] == 2
