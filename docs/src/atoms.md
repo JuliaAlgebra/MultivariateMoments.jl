@@ -32,23 +32,27 @@ the algebraic system will only have a finite number of solutions which are the c
 of the diracs of the measure.
 
 ```@docs
-MultivariateMoments.computesupport!
-extractatoms
+MultivariateMoments.compute_support!
+atomic_measure
 ```
 
 This system is obtained from a low rank cholesky decomposition of the moment matrix.
 This decomposition can either be obtained by a cholesky or SVD decomposition from which we remove the rows corresponding to the negligeable eigenvalues/singular values.
 
 ```@docs
-LowRankChol
-ShiftChol
-SVDChol
-MultivariateMoments.lowrankchol
+LowRankLDLTAlgorithm
+ShiftCholesky
+SVDLDLT
+MultivariateMoments.low_rank_ldlt
+MultivariateMoments.LowRankLDLT
+MultivariateMoments.MacaulayNullspace
+MultivariateMoments.accuracy
+MultivariateMoments.rank_from_singular_values
 ```
 
 Once the center of the atoms are determined, a linear system is solved to determine
 the weights corresponding to each dirac.
-By default, [`MomentMatrixWeightSolver`](@ref) is used by [`extractatoms`](@ref) so that if there are small differences between moment values corresponding to the same monomial in the matrix
+By default, [`MomentMatrixWeightSolver`](@ref) is used by [`atomic_measure`](@ref) so that if there are small differences between moment values corresponding to the same monomial in the matrix
 (which can happen if these moments were computed numerically by a semidefinite proramming solvers, e.g., with [SumOfSquares](https://github.com/jump-dev/SumOfSquares.jl)),
 the linear system handles that automatically.
 ```@docs

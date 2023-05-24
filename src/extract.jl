@@ -1,16 +1,34 @@
-export extractatoms
-export MomentMatrixWeightSolver, MomentVectorWeightSolver
+export atomic_measure
+export solve, MomentMatrixWeightSolver, MomentVectorWeightSolver
 
 using RowEchelon
 using SemialgebraicSets
+import CommonSolve: solve
 
 """
-    MultivariateMoments.computesupport!(ν::MomentMatrix, rank_check, [dec])
+    struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}
+        matrix::MT
+        basis::BT
+    end
+
+Right nullspace with rows indexed by `basis` of a Macaulay matrix with columns
+indexed by `basis`.
+The value of `matrix[i, j]` should be interpreted as the value of the `i`th
+element of `basis` for the `j`th generator of the nullspace.
+"""
+struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}
+    matrix::MT
+    basis::BT
+    accuracy::T
+end
+
+"""
+    MultivariateMoments.compute_support!(ν::MomentMatrix, rank_check, [dec])
 
 Computes the `support` field of `ν`.
-The `rank_check` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
+The `rank_check` and `dec` parameters are passed as is to the [`low_rank_ldlt`](@ref) function.
 """
-function computesupport!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankChol, nullspace_solver=Echelon(), args...)
+function compute_support!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankLDLTAlgorithm, nullspace_solver=Echelon(), args...)
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
@@ -20,14 +38,14 @@ function computesupport!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankCh
     # [LLR08] Lasserre, Jean Bernard and Monique Laurent, and Philipp Rostalski.
     # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
     # Foundations of Computational Mathematics 8 (2008): 607-647.
-    M = getmat(μ)
-    nM, cM, U = lowrankchol(M, dec, rank_check)
-    @assert size(U, 2) == LinearAlgebra.checksquare(M)
-    μ.support = solve_nullspace(U, μ.basis, nM, cM, nullspace_solver, args...)
+    M = value_matrix(μ)
+    chol = low_rank_ldlt(M, dec, rank_check)
+    @assert size(chol.L, 1) == LinearAlgebra.checksquare(M)
+    μ.support = solve(MacaulayNullspace(chol.L, μ.basis, accuracy(chol)), nullspace_solver, args...)
 end
 
-function computesupport!(μ::MomentMatrix, rank_check::RankCheck, args...)
-    return computesupport!(μ::MomentMatrix, rank_check::RankCheck, SVDChol(), args...)
+function compute_support!(μ::MomentMatrix, rank_check::RankCheck, args...)
+    return compute_support!(μ::MomentMatrix, rank_check::RankCheck, SVDLDLT(), args...)
 end
 
 # Determines weight
@@ -105,12 +123,12 @@ function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSo
 end
 
 """
-    extractatoms(ν::MomentMatrix, rank_check::RankCheck, [dec::LowRankChol], [solver::SemialgebraicSets.AbstractAlgebraicSolver])
+    atomic_measure(ν::MomentMatrix, rank_check::RankCheck, [dec::LowRankLDLTAlgorithm], [solver::SemialgebraicSets.AbstractAlgebraicSolver])
 
 Return an `AtomicMeasure` with the atoms of `ν` if it is atomic or `nothing` if
 `ν` is not atomic. The `rank_check` and `dec` parameters are passed as is to the
-[`lowrankchol`](@ref) function. By default, `dec` is an instance of
-[`SVDChol`](@ref). The extraction relies on the solution of a system of
+[`low_rank_ldlt`](@ref) function. By default, `dec` is an instance of
+[`SVDLDLT`](@ref). The extraction relies on the solution of a system of
 algebraic equations. using `solver`. For instance, given a
 [`MomentMatrix`](@ref), `μ`, the following extract atoms using a `rank_check` of
 `1e-4` for the low-rank decomposition and homotopy continuation to solve the
@@ -118,7 +136,7 @@ obtained system of algebraic equations.
 ```julia
 using HomotopyContinuation
 solver = SemialgebraicSetsHCSolver(; compile = false)
-atoms = extractatoms(ν, 1e-4, solver)
+atoms = atomic_measure(ν, 1e-4, solver)
 ```
 If no solver is given, the default solver of SemialgebraicSets is used which
 currently computes the Gröbner basis, then the multiplication matrices and
@@ -126,8 +144,8 @@ then the Schur decomposition of a random combination of these matrices.
 For floating point arithmetics, homotopy continuation is recommended as it is
 more numerically stable than Gröbner basis computation.
 """
-function extractatoms(ν::MomentMatrix, rank_check::RankCheck, args...; weight_solver = MomentMatrixWeightSolver())
-    computesupport!(ν, rank_check, args...)
+function atomic_measure(ν::MomentMatrix, rank_check::RankCheck, args...; weight_solver = MomentMatrixWeightSolver())
+    compute_support!(ν, rank_check, args...)
     supp = ν.support
     if isnothing(supp)
         return
@@ -136,7 +154,6 @@ function extractatoms(ν::MomentMatrix, rank_check::RankCheck, args...; weight_s
         return
     end
     centers = collect(supp)
-    r = length(centers)
     weights = solve_weight(ν, centers, weight_solver)
     isf = isfinite.(weights)
     weights = weights[isf]
@@ -148,6 +165,6 @@ function extractatoms(ν::MomentMatrix, rank_check::RankCheck, args...; weight_s
     end
 end
 
-function extractatoms(ν::MomentMatrix, ranktol, args...; kws...)
-    return extractatoms(ν, LeadingRelativeRankTol(ranktol), args...; kws...)
+function atomic_measure(ν::MomentMatrix, ranktol, args...; kws...)
+    return atomic_measure(ν, LeadingRelativeRankTol(ranktol), args...; kws...)
 end

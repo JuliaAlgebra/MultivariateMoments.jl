@@ -4,7 +4,11 @@ using LinearAlgebra
 
 import MutableArithmetics as MA
 
+#using MultivariatePolynomials
+#const MP = MultivariatePolynomials
 import MultivariatePolynomials as MP
+# It seems to be needed to include the docstring in the docs
+#import MultivariatePolynomials: monomial, variables, monomials
 
 import MultivariateBases as MB
 
@@ -25,9 +29,11 @@ include("moment_matrix.jl")
 include("atomic.jl")
 
 include("rank.jl")
-include("echelon.jl")
 include("extract.jl")
+include("echelon.jl")
 include("shift.jl")
 include("flat.jl")
+
+include("deprecate.jl")
 
 end # module

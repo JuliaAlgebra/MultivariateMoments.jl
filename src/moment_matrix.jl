@@ -1,5 +1,5 @@
 export SymMatrix, AbstractMomentMatrix, MomentMatrix, SparseMomentMatrix
-export getmat, moment_matrix
+export value_matrix, moment_matrix
 
 using SemialgebraicSets
 
@@ -30,7 +30,7 @@ MP.variables(μ::MomentMatrix) = MP.variables(μ.basis)
 MP.nvariables(μ::MomentMatrix) = MP.nvariables(μ.basis)
 
 function MomentMatrix{T}(f::Function, basis::MB.AbstractPolynomialBasis, σ=1:length(basis)) where T
-    return MomentMatrix(trimat(T, f, length(basis), σ), basis)
+    return MomentMatrix(vectorized_symmetric_matrix(T, f, length(basis), σ), basis)
 end
 function MomentMatrix{T}(f::Function, monos::AbstractVector) where T
     σ, sorted_monos = MP.sort_monomial_vector(monos)
@@ -55,7 +55,7 @@ function MomentMatrix(Q::AbstractMatrix, monos::AbstractVector)
 end
 moment_matrix(Q::AbstractMatrix, monos) = MomentMatrix(Q, monos)
 
-getmat(μ::MomentMatrix) = Matrix(μ.Q)
+value_matrix(μ::MomentMatrix) = Matrix(μ.Q)
 
 function vectorized_basis(ν::MomentMatrix{T,<:MB.MonomialBasis}) where {T}
     monos = ν.basis.monomials

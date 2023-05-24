@@ -123,7 +123,7 @@ function hankel(μ::Measure{T}, rows, cols) where T
     return T[moment_value(μ, rows[i] * cols[j]) for i in eachindex(rows), j in eachindex(cols)]
 end
 
-function computesupport!(ν::MomentMatrix{T}, rank_check::RankCheck, solver::FlatExtension) where T
+function compute_support!(ν::MomentMatrix{T}, rank_check::RankCheck, solver::FlatExtension) where T
     μ = measure(ν)
     d = MP.maxdegree(μ.x)
     v = MP.variables(μ)

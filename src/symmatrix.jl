@@ -39,7 +39,7 @@ Base.map(f::Function, Q::SymMatrix) = SymMatrix(map(f, Q.Q), Q.n)
 # i <= j
 trimap(i, j) = div(j * (j - 1), 2) + i
 
-function trimat(::Type{T}, f, n, σ) where {T}
+function vectorized_symmetric_matrix(::Type{T}, f, n, σ) where {T}
     Q = _undef_sym(T, n)
     for j in 1:n
         for i in 1:j
