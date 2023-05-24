@@ -23,7 +23,7 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     if mindegree(monos) == maxdegree(monos) # Homogeneous
         projective_algebraic_set(system, Buchberger(ztol), args...)
     else
-        projective_algebraic_set(system, Buchberger(ztol), args...)
+        algebraic_set(system, Buchberger(ztol), args...)
     end
 end
 
