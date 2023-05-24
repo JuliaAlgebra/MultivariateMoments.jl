@@ -121,7 +121,7 @@ function hl05_4(rank_check, lrc)
     ν = moment_matrix(μ, [1, x, y, x^2, x*y, y^2])
     atoms = atomic_measure(ν, rank_check, lrc)
     @test atoms !== nothing
-    if lrc isa LowRankChol
+    if lrc isa LowRankLDLTAlgorithm
         @test atoms ≈ η
     end
     @test measure(atoms, μ.x).a ≈ μ.a rtol=1e-3

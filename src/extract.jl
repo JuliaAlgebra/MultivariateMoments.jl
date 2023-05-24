@@ -18,6 +18,7 @@ element of `basis` for the `j`th generator of the nullspace.
 struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}
     matrix::MT
     basis::BT
+    accuracy::T
 end
 
 """
@@ -26,7 +27,7 @@ end
 Computes the `support` field of `ν`.
 The `rank_check` and `dec` parameters are passed as is to the [`low_rank_cholesky`](@ref) function.
 """
-function compute_support!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankChol, nullspace_solver=Echelon(), args...)
+function compute_support!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankLDLTAlgorithm, nullspace_solver=Echelon(), args...)
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
@@ -38,8 +39,8 @@ function compute_support!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankC
     # Foundations of Computational Mathematics 8 (2008): 607-647.
     M = value_matrix(μ)
     chol = low_rank_cholesky(M, dec, rank_check)
-    @assert size(chol.U, 2) == LinearAlgebra.checksquare(M)
-    μ.support = solve(MacaulayNullspace(chol.U', μ.basis), spectral_norm(chol), recommended_rtol(chol), nullspace_solver, args...)
+    @assert size(chol.L, 1) == LinearAlgebra.checksquare(M)
+    μ.support = solve(MacaulayNullspace(chol.L, μ.basis, recommended_rtol(chol)), nullspace_solver, args...)
 end
 
 function compute_support!(μ::MomentMatrix, rank_check::RankCheck, args...)
@@ -121,7 +122,7 @@ function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSo
 end
 
 """
-    atomic_measure(ν::MomentMatrix, rank_check::RankCheck, [dec::LowRankChol], [solver::SemialgebraicSets.AbstractAlgebraicSolver])
+    atomic_measure(ν::MomentMatrix, rank_check::RankCheck, [dec::LowRankLDLTAlgorithm], [solver::SemialgebraicSets.AbstractAlgebraicSolver])
 
 Return an `AtomicMeasure` with the atoms of `ν` if it is atomic or `nothing` if
 `ν` is not atomic. The `rank_check` and `dec` parameters are passed as is to the
@@ -152,7 +153,6 @@ function atomic_measure(ν::MomentMatrix, rank_check::RankCheck, args...; weight
         return
     end
     centers = collect(supp)
-    r = length(centers)
     weights = solve_weight(ν, centers, weight_solver)
     isf = isfinite.(weights)
     weights = weights[isf]

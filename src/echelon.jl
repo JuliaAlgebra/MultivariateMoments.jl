@@ -29,12 +29,12 @@ end
 
 struct Echelon end
 
-function solve(null::MacaulayNullspace, nM, cM, ::Echelon, args...)
+function solve(null::MacaulayNullspace, ::Echelon, args...)
     # If M is multiplied by λ, W is multiplied by √λ
     # so we take √||M|| = √nM
     Z = Matrix(null.matrix')
-    rref!(Z, √(nM) * cM / sqrt(size(Z, 2)))
+    rref!(Z, null.accuracy / sqrt(size(Z, 2)))
     #r, vals = solve_system(U', μ.x)
     # TODO determine what is better between rank_check and sqrt(rank_check) here
-    return build_system(Z, null.basis, √cM, args...)
+    return build_system(Z, null.basis, √null.accuracy, args...)
 end

@@ -51,7 +51,7 @@ end
 
 struct ShiftNullspace end
 
-function solve(null::MacaulayNullspace, _, _, ::ShiftNullspace)
+function solve(null::MacaulayNullspace, ::ShiftNullspace)
     monos = null.basis.monomials
     Z = null.matrix
     d = MP.maxdegree(monos)

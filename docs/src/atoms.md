@@ -40,11 +40,11 @@ This system is obtained from a low rank cholesky decomposition of the moment mat
 This decomposition can either be obtained by a cholesky or SVD decomposition from which we remove the rows corresponding to the negligeable eigenvalues/singular values.
 
 ```@docs
-LowRankChol
+LowRankLDLTAlgorithm
 ShiftCholesky
 SVDCholesky
 MultivariateMoments.low_rank_cholesky
-MultivariateMoments.LowRankCholesky
+MultivariateMoments.LowRankLDLT
 MultivariateMoments.spectral_norm
 MultivariateMoments.recommended_rtol
 ```
