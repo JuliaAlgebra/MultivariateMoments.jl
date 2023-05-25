@@ -2,16 +2,20 @@ export measure, dirac
 export variables, monomials, moments
 
 # If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
-struct Measure{T, MT <: AbstractMonomial, MVT <: AbstractVector{MT}} <: AbstractMeasure{T}
+struct Measure{T,MT<:AbstractMonomial,MVT<:AbstractVector{MT}} <: AbstractMeasure{T}
     a::Vector{T}
     x::MVT
 
-    function Measure{T, MT, MVT}(a::Vector{T}, x::MVT) where {T, MT, MVT}
+    function Measure{T,MT,MVT}(a::Vector{T}, x::MVT) where {T,MT,MVT}
         @assert length(a) == length(x)
         new(a, x)
     end
 end
-function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, TT <: AbstractTermLike}
+function Measure(
+    a::AbstractVector{T},
+    x::AbstractVector{TT};
+    kws...,
+) where {T,TT<:AbstractTermLike}
     # cannot use `monomial_vector(a, x)` as it would sum the entries
     # corresponding to the same monomial.
     if length(a) != length(x)
@@ -25,12 +29,14 @@ function Measure(a::AbstractVector{T}, x::AbstractVector{TT}; kws...) where {T, 
             j = rev[x[i]]
             if i != σ[j]
                 if !isapprox(b[j], a[i]; kws...)
-                    error("The monomial `$(x[i])` occurs twice with different values: `$(a[i])` and `$(b[j])`")
+                    error(
+                        "The monomial `$(x[i])` occurs twice with different values: `$(a[i])` and `$(b[j])`",
+                    )
                 end
             end
         end
     end
-    return Measure{T, monomial_type(TT), typeof(X)}(b, X)
+    return Measure{T,monomial_type(TT),typeof(X)}(b, X)
 end
 
 """
@@ -89,6 +95,9 @@ Creates the dirac measure by evaluating the moments of `X` using `s`.
 
 Calling `dirac([x*y, x*y^2], x=>3, y=>2)` should the measure with moment `x*y` of value `6` and moment `x*y^2` of value `12`.
 """
-function dirac(x::AbstractVector{MT}, s::MP.AbstractSubstitution...) where {MT <: AbstractMonomial}
+function dirac(
+    x::AbstractVector{MT},
+    s::MP.AbstractSubstitution...,
+) where {MT<:AbstractMonomial}
     Measure([m(s...) for m in x], x)
 end

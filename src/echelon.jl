@@ -8,7 +8,7 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     # y = U * β
     m = length(basis)
     r = size(U, 1)
-    pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i in 1:r]
+    pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i = 1:r]
     if any(isnothing, pivots)
         keep = map(!isnothing, pivots)
         pivots = pivots[keep]

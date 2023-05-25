@@ -1,6 +1,6 @@
 export moment, moment_value, monomial
 
-struct Moment{T, MT <: AbstractMonomial} <: AbstractMoment{T}
+struct Moment{T,MT<:AbstractMonomial} <: AbstractMoment{T}
     α::T
     x::MT
 end

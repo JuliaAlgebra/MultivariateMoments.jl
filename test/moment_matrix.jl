@@ -7,7 +7,7 @@ using Test
         err = ArgumentError("`$μ` does not have the moment `$(mono^2)`")
         @test_throws err moment_matrix(μ, [mono])
     end
-    μ = measure(1:3, [x^2, x*y, y^2])
+    μ = measure(1:3, [x^2, x * y, y^2])
     X = [x, y]
     ν1 = moment_matrix(μ, X)
     ν2 = MomentMatrix{Int}((i, j) -> i + j - 1, X)

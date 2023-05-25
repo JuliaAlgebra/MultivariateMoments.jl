@@ -8,7 +8,9 @@ function _expectation(μ::Measure, p::APL, f)
             i += 1
         end
         if i > length(μ.x)
-            error("The polynomial $p has a nonzero term $t with monomial $(t.x) for which the expectation is not known in $μ")
+            error(
+                "The polynomial $p has a nonzero term $t with monomial $(t.x) for which the expectation is not known in $μ",
+            )
         end
         s += f(μ.a[i], coefficient(t))
         i += 1

@@ -1,5 +1,6 @@
 export LowRankChol, ShiftChol, SVDChol
-export FixedRank, AbsoluteRankTol, LeadingRelativeRankTol, DifferentialRankTol, LargestDifferentialRank
+export FixedRank,
+    AbsoluteRankTol, LeadingRelativeRankTol, DifferentialRankTol, LargestDifferentialRank
 
 abstract type RankCheck end
 
@@ -34,14 +35,14 @@ function rank_from_singular_values(σ, check::DifferentialRankTol)
         if i == 1
             return false
         else
-            return σ[i] ≤ check.tol * σ[i - 1]
+            return σ[i] ≤ check.tol * σ[i-1]
         end
     end
 end
 
 struct LargestDifferentialRank <: RankCheck end
 function rank_from_singular_values(σ, ::LargestDifferentialRank)
-    return argmax(i -> σ[i] / σ[i + 1], 1:(length(σ) - 1))
+    return argmax(i -> σ[i] / σ[i+1], 1:(length(σ)-1))
 end
 
 
@@ -89,7 +90,7 @@ function lowrankchol(M::AbstractMatrix, dec::ShiftChol, rank_check::RankCheck)
     m = LinearAlgebra.checksquare(M)
     U = cholesky(M + dec.shift * I).U
     σs = map(i -> (U[i, i])^2, 1:m)
-    J = sortperm(σs, rev=true)
+    J = sortperm(σs, rev = true)
     σ_sorted = σs[J]
     r = rank_from_singular_values(σ_sorted, rank_check)
     nM, cM = _M(σ_sorted, r)

@@ -10,7 +10,13 @@ using SemialgebraicSets
 Computes the `support` field of `ν`.
 The `rank_check` and `dec` parameters are passed as is to the [`lowrankchol`](@ref) function.
 """
-function computesupport!(μ::MomentMatrix, rank_check::RankCheck, dec::LowRankChol, nullspace_solver=Echelon(), args...)
+function computesupport!(
+    μ::MomentMatrix,
+    rank_check::RankCheck,
+    dec::LowRankChol,
+    nullspace_solver = Echelon(),
+    args...,
+)
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
@@ -45,8 +51,7 @@ of the moment matrix, keeping duplicates (e.g., entries corresponding to the sam
 If the moment values corresponding to the same monomials are known to be equal
 prefer [`MomentVectorWeightSolver`](@ref) instead.
 """
-struct MomentMatrixWeightSolver
-end
+struct MomentMatrixWeightSolver end
 
 function solve_weight(ν::MomentMatrix{T}, centers, ::MomentMatrixWeightSolver) where {T}
     vars = MP.variables(ν)
@@ -77,25 +82,29 @@ struct MomentVectorWeightSolver{T}
     rtol::T
     atol::T
 end
-function MomentVectorWeightSolver{T}(; rtol=Base.rtoldefault(T), atol=zero(T)) where {T}
+function MomentVectorWeightSolver{T}(; rtol = Base.rtoldefault(T), atol = zero(T)) where {T}
     return MomentVectorWeightSolver{T}(rtol, atol)
 end
-function MomentVectorWeightSolver(; rtol=nothing, atol=nothing)
+function MomentVectorWeightSolver(; rtol = nothing, atol = nothing)
     if rtol === nothing && atol === nothing
         return MomentVectorWeightSolver{Float64}()
     elseif rtol !== nothing
         if atol === nothing
-            return MomentVectorWeightSolver{typeof(rtol)}(; rtol=rtol)
+            return MomentVectorWeightSolver{typeof(rtol)}(; rtol = rtol)
         else
-            return MomentVectorWeightSolver{typeof(rtol)}(; rtol=rtol, atol=atol)
+            return MomentVectorWeightSolver{typeof(rtol)}(; rtol = rtol, atol = atol)
         end
     else
-        return MomentVectorWeightSolver{typeof(atol)}(; atol=atol)
+        return MomentVectorWeightSolver{typeof(atol)}(; atol = atol)
     end
 end
 
-function solve_weight(ν::MomentMatrix{T}, centers, solver::MomentVectorWeightSolver) where {T}
-    μ = measure(ν; rtol=solver.rtol, atol=solver.atol)
+function solve_weight(
+    ν::MomentMatrix{T},
+    centers,
+    solver::MomentVectorWeightSolver,
+) where {T}
+    μ = measure(ν; rtol = solver.rtol, atol = solver.atol)
     vars = variables(μ)
     A = Matrix{T}(undef, length(μ.x), length(centers))
     for i in eachindex(centers)
@@ -126,7 +135,12 @@ then the Schur decomposition of a random combination of these matrices.
 For floating point arithmetics, homotopy continuation is recommended as it is
 more numerically stable than Gröbner basis computation.
 """
-function extractatoms(ν::MomentMatrix, rank_check::RankCheck, args...; weight_solver = MomentMatrixWeightSolver())
+function extractatoms(
+    ν::MomentMatrix,
+    rank_check::RankCheck,
+    args...;
+    weight_solver = MomentMatrixWeightSolver(),
+)
     computesupport!(ν, rank_check, args...)
     supp = ν.support
     if isnothing(supp)

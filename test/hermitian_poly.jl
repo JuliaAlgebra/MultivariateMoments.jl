@@ -8,7 +8,7 @@ using MultivariateMoments
 @testset "VectorizedHermitianMatrix with polynomial" begin
     Mod.@polyvar x y
     function _tests(Q)
-        for i in 1:2, j in 1:2
+        for i = 1:2, j = 1:2
             @test (@inferred Q[i, j]) isa eltype(Q)
         end
         @test x == @inferred Q[1, 1]
@@ -20,7 +20,7 @@ using MultivariateMoments
     Q = VectorizedHermitianMatrix(q, 2)
     @test eltype(Q) == polynomial_type(x * y, Complex{Int})
     _tests(Q)
-    R = VectorizedHermitianMatrix{eltype(q), Float64}(q, 2)
+    R = VectorizedHermitianMatrix{eltype(q),Float64}(q, 2)
     @test eltype(R) == polynomial_type(x * y, Complex{Float64})
     _tests(R)
 end

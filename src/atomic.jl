@@ -8,14 +8,13 @@ export AtomicMeasure, WeightedDiracMeasure
 
 Represents a weighted dirac measure with centered at `center` and with weight `weight`.
 """
-struct WeightedDiracMeasure{T, AT<:AbstractVector{T}} # Cannot subtype AbstractMeasureLike, since it does not contain the variables corresponding to the coefficients of the center
+struct WeightedDiracMeasure{T,AT<:AbstractVector{T}} # Cannot subtype AbstractMeasureLike, since it does not contain the variables corresponding to the coefficients of the center
     center::AT
     weight::T
 end
-function WeightedDiracMeasure(center::AbstractVector{S}, weight::T) where {S, T}
+function WeightedDiracMeasure(center::AbstractVector{S}, weight::T) where {S,T}
     U = promote_type(S, T)
-    return WeightedDiracMeasure(convert(AbstractVector{U}, center),
-                                convert(U, weight))
+    return WeightedDiracMeasure(convert(AbstractVector{U}, center), convert(U, weight))
 end
 
 """
@@ -30,13 +29,16 @@ That is, ``\\mathbb{E}_{\\eta}[p] = 2p(1, 0) + 3p(1/2, 1/2)``.
 
 The `AtomicMeasure` struct stores an atomic measure where `variables` contains the variables and `atoms` contains atoms of the measure.
 """
-struct AtomicMeasure{T, AT, V} <: AbstractMeasureLike{T}
+struct AtomicMeasure{T,AT,V} <: AbstractMeasureLike{T}
     variables::V                           # Vector/Tuple of variables
-    atoms::Vector{WeightedDiracMeasure{T, AT}} # Atoms of the measure
+    atoms::Vector{WeightedDiracMeasure{T,AT}} # Atoms of the measure
 end
 
 function Base.show(io::IO, η::AtomicMeasure)
-    print(io, "Atomic measure on the variables $(join(η.variables, ", ")) with $(length(η.atoms)) atoms:")
+    print(
+        io,
+        "Atomic measure on the variables $(join(η.variables, ", ")) with $(length(η.atoms)) atoms:",
+    )
     for atom in η.atoms
         println(io)
         print(io, " at $(atom.center) with weight $(atom.weight)")
@@ -44,22 +46,23 @@ function Base.show(io::IO, η::AtomicMeasure)
 end
 
 measure(η::AtomicMeasure, x) = Measure(η, x)
-function Measure(η::AtomicMeasure{T}, x::AbstractVector{TT}) where {T, TT}
-    Measure{T, monomial_type(TT), monomial_vector_type(x)}(η, x)
+function Measure(η::AtomicMeasure{T}, x::AbstractVector{TT}) where {T,TT}
+    Measure{T,monomial_type(TT),monomial_vector_type(x)}(η, x)
 end
-function Measure{T, MT, MVT}(η::AtomicMeasure{T}, x) where {T, MT, MVT}
+function Measure{T,MT,MVT}(η::AtomicMeasure{T}, x) where {T,MT,MVT}
     X = monomial_vector(x)
     sum(atom.weight * dirac(X, η.variables => atom.center) for atom in η.atoms)
 end
 
-expectation(η::AtomicMeasure, p::APL) = sum(δ -> δ.weight * p(η.variables => δ.center), η.atoms)
+expectation(η::AtomicMeasure, p::APL) =
+    sum(δ -> δ.weight * p(η.variables => δ.center), η.atoms)
 expectation(p::APL, η::AtomicMeasure) = expectation(η, p)
 
 function permcomp(f, m)
     picked = BitSet()
-    for i in 1:m
+    for i = 1:m
         k = 0
-        for j in 1:m
+        for j = 1:m
             if !(j in picked) && f(i, j)
                 k = j
                 break
@@ -73,8 +76,10 @@ function permcomp(f, m)
     true
 end
 
-Base.isapprox(η1::WeightedDiracMeasure, η2::WeightedDiracMeasure; kws...) = isapprox(η1.weight, η2.weight; kws...) && isapprox(η1.center, η2.center; kws...)
+Base.isapprox(η1::WeightedDiracMeasure, η2::WeightedDiracMeasure; kws...) =
+    isapprox(η1.weight, η2.weight; kws...) && isapprox(η1.center, η2.center; kws...)
 function Base.isapprox(η1::AtomicMeasure, η2::AtomicMeasure; kws...)
     m = length(η1.atoms)
-    length(η2.atoms) == m && permcomp((i, j) -> isapprox(η1.atoms[i], η2.atoms[j]; kws...), m)
+    length(η2.atoms) == m &&
+        permcomp((i, j) -> isapprox(η1.atoms[i], η2.atoms[j]; kws...), m)
 end
