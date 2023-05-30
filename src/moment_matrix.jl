@@ -1,6 +1,3 @@
-export SymMatrix, AbstractMomentMatrix, MomentMatrix, SparseMomentMatrix
-export value_matrix, moment_matrix
-
 using SemialgebraicSets
 
 abstract type AbstractMomentMatrix{T,B<:MB.AbstractPolynomialBasis} <:

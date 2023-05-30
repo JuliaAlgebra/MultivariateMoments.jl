@@ -1,6 +1,3 @@
-export atomic_measure
-export solve, MomentMatrixWeightSolver, MomentVectorWeightSolver
-
 using RowEchelon
 using SemialgebraicSets
 import CommonSolve: solve

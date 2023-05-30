@@ -1,5 +1,3 @@
-export AtomicMeasure, WeightedDiracMeasure
-
 """
     struct WeightedDiracMeasure{T}
         center::Vector{T}

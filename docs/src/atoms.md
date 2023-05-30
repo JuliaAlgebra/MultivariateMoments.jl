@@ -41,7 +41,7 @@ This decomposition can either be obtained by a cholesky or SVD decomposition fro
 
 ```@docs
 LowRankLDLTAlgorithm
-ShiftCholesky
+ShiftCholeskyLDLT
 SVDLDLT
 MultivariateMoments.low_rank_ldlt
 MultivariateMoments.LowRankLDLT

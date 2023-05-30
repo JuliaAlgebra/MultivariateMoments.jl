@@ -1,10 +1,3 @@
-export LowRankLDLTAlgorithm, ShiftCholesky, SVDLDLT
-export FixedRank,
-    AbsoluteRankTol,
-    LeadingRelativeRankTol,
-    DifferentialRankTol,
-    LargestDifferentialRank
-
 abstract type RankCheck end
 
 """
@@ -85,11 +78,11 @@ Method for computing a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`
 abstract type LowRankLDLTAlgorithm end
 
 """
-    ShiftCholesky <: LowRankLDLTAlgorithm
+    ShiftCholeskyLDLT <: LowRankLDLTAlgorithm
 
 Shift the matrix by `shift` times the identity matrix before cholesky.
 """
-struct ShiftCholesky{T} <: LowRankLDLTAlgorithm
+struct ShiftCholeskyLDLT{T} <: LowRankLDLTAlgorithm
     shift::T
 end
 
@@ -140,7 +133,7 @@ end
 
 function low_rank_ldlt(
     M::AbstractMatrix,
-    dec::ShiftCholesky,
+    dec::ShiftCholeskyLDLT,
     rank_check::RankCheck,
 )
     m = LinearAlgebra.checksquare(M)
