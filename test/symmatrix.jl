@@ -29,6 +29,7 @@ using MultivariateMoments
     R = map(i -> i - 1, P)
     @test R.n == 2
     @test R.Q == [3, 4, 5]
+    @test MP.similar_type(typeof(Q), Float64) == SymMatrix{Float64}
     for S in [
         similar(Q, 1, 1),
         similar(Q, (1, 1)),

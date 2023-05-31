@@ -39,7 +39,8 @@ function Base.similar(
 )
     return similar(Matrix{T}, dims)
 end
-Base.similar(Q::SymMatrix, T::Type, dims::Dims{2}) = similar(SymMatrix{T}, dims)
+Base.similar(::SymMatrix, T::Type, dims::Dims{2}) = similar(SymMatrix{T}, dims)
+MP.similar_type(::Type{SymMatrix{S}}, ::Type{T}) where {S,T} = SymMatrix{T}
 Base.copy(Q::SymMatrix) = SymMatrix(copy(Q.Q), Q.n)
 Base.map(f::Function, Q::SymMatrix) = SymMatrix(map(f, Q.Q), Q.n)
 
