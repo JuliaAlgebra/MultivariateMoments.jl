@@ -1,6 +1,4 @@
-const APL = MP.AbstractPolynomialLike
-
-function _expectation(μ::Measure, p::APL, f)
+function _expectation(μ::Measure, p::_APL, f)
     i = 1
     s = 0
     for t in MP.terms(p)
@@ -26,8 +24,8 @@ Computes the expectation ``\\mathbb{E}_{\\mu}[p]``.
 """
 function expectation end
 
-expectation(μ::Measure, p::APL) = _expectation(μ, p, (*))
-expectation(p::APL, μ::Measure) = _expectation(μ, p, (a, b) -> b * a) # a and b may be noncommutative
+expectation(μ::Measure, p::_APL) = _expectation(μ, p, (*))
+expectation(p::_APL, μ::Measure) = _expectation(μ, p, (a, b) -> b * a) # a and b may be noncommutative
 
 """
     dot(μ::AbstractMeasureLike, p::AbstractPolynomialLike)
@@ -35,5 +33,5 @@ expectation(p::APL, μ::Measure) = _expectation(μ, p, (a, b) -> b * a) # a and 
 
 See [`expectation`](@ref)
 """
-LinearAlgebra.dot(μ::AbstractMeasureLike, p::APL) = expectation(μ, p)
-LinearAlgebra.dot(p::APL, μ::AbstractMeasureLike) = expectation(p, μ)
+LinearAlgebra.dot(μ::AbstractMeasureLike, p::_APL) = expectation(μ, p)
+LinearAlgebra.dot(p::_APL, μ::AbstractMeasureLike) = expectation(p, μ)

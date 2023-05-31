@@ -57,10 +57,10 @@ function Measure{T,MT,MVT}(η::AtomicMeasure{T}, x) where {T,MT,MVT}
     )
 end
 
-function expectation(η::AtomicMeasure, p::APL)
+function expectation(η::AtomicMeasure, p::_APL)
     return sum(δ -> δ.weight * p(η.variables => δ.center), η.atoms)
 end
-expectation(p::APL, η::AtomicMeasure) = expectation(η, p)
+expectation(p::_APL, η::AtomicMeasure) = expectation(η, p)
 
 function compare_modulo_permutation(f, m)
     picked = BitSet()
