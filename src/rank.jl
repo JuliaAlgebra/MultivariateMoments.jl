@@ -101,6 +101,10 @@ The rank of ``Q`` is the number of singular values larger than `ranktol```{} \\c
 """
 function low_rank_ldlt end
 
+function low_rank_ldlt(M::AbstractMatrix, algo::LowRankLDLTAlgorithm, tol::Real)
+    return low_rank_ldlt(M, algo, LeadingRelativeRankTol(tol))
+end
+
 """
     struct LowRankLDLT{T}
         L::Matrix{T}
