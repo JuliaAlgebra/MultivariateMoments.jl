@@ -1,7 +1,5 @@
 # Inspired from macaulaylab.net
 
-export ShiftNullspace
-
 # TODO implement sieve
 function standard_monomials(Z, tol = 1e-10)
     list = Int[]

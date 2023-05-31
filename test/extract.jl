@@ -372,7 +372,7 @@ function test_extract()
     default_solver = SemialgebraicSets.default_algebraic_solver([1.0x - 1.0x])
     for solver in [
         SVDLDLT(),
-        ShiftCholesky(1e-15),
+        ShiftCholeskyLDLT(1e-15),
         FlatExtension(),
         FlatExtension(IterativeDiagonalization()),
         ShiftNullspace(),
@@ -380,8 +380,8 @@ function test_extract()
         atoms_1(1e-10, solver)
         atoms_2(1e-10, solver)
     end
-    for lrc in (SVDLDLT(), ShiftCholesky(1e-14))
-        perturb = !(lrc isa ShiftCholesky) # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
+    for lrc in (SVDLDLT(), ShiftCholeskyLDLT(1e-14))
+        perturb = !(lrc isa ShiftCholeskyLDLT) # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
         hl05_2_3(1e-4, lrc, default_solver, perturb)
         @test_throws ErrorException("Dummy solver") hl05_2_3(
             1e-4,
@@ -392,12 +392,12 @@ function test_extract()
     hl05_3_3_1()
     # Fails on 32-bits in CI
     if Sys.WORD_SIZE != 32
-        for lrc in (SVDLDLT(), ShiftCholesky(1e-16))
+        for lrc in (SVDLDLT(), ShiftCholeskyLDLT(1e-16))
             hl05_4(1e-16, lrc)
         end
     end
     # All singular values will be at least 1e-6 > 1e-12 it won't eliminate any row
-    lpj20_3_8_0(1e-12, ShiftCholesky(1e-6), false)
+    lpj20_3_8_0(1e-12, ShiftCholeskyLDLT(1e-6), false)
     # The following tests that the method does not error if ranktol eliminates everything
     # In particular, this tests that the function equation(i) do not call sum when r equal to 0
     # this that throws an ArgumentError as details in src/extract.jl

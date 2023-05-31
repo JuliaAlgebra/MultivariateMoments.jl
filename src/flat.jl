@@ -1,7 +1,5 @@
 # The content of this file is heavily inspired from MultivariateSeries.jl
 
-export FlatExtension, IterativeDiagonalization
-
 struct ZeroDimensionalVariety{T} <: AbstractAlgebraicSet
     elements::Vector{Vector{T}}
 end

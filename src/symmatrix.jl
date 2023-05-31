@@ -1,6 +1,3 @@
-export SymMatrix
-export square_getindex, symmetric_setindex!
-
 """
     struct SymMatrix{T} <: AbstractMatrix{T}
         Q::Vector{T}

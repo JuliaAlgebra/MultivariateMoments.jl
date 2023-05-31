@@ -1,5 +1,3 @@
-export VectorizedHermitianMatrix
-
 """
     struct VectorizedHermitianMatrix{T} <: AbstractMatrix{Complex{T}}
         Q::Vector{T}

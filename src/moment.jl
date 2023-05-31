@@ -1,5 +1,3 @@
-export moment, moment_value, monomial
-
 struct Moment{T,MT<:MP.AbstractMonomial} <: AbstractMoment{T}
     α::T
     x::MT

@@ -1,5 +1,3 @@
-export Echelon
-
 function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     # System is
     # y = [U 0] * y
