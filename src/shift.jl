@@ -1,7 +1,10 @@
 # Inspired from macaulaylab.net
 
+# Cannot call it as exported symbol `standard_monomials` as it would
+# collide with `SemialgebraicSets.standard_monomials` and cannot add a method
+# as it would be type piracy
 # TODO implement sieve
-function standard_monomials(Z, tol = 1e-10)
+function _standard_monomials(Z, tol = 1e-10)
     list = Int[]
     old_rank = 0
     for k in axes(Z, 1)
@@ -61,7 +64,7 @@ function solve(null::MacaulayNullspace, ::ShiftNullspace)
     monos = null.basis.monomials
     Z = null.matrix
     d = MP.maxdegree(monos)
-    srows = standard_monomials(Z)
+    srows = _standard_monomials(Z)
     gap_zone = gap_zone_standard_monomials(monos[srows], d)
     if isnothing(gap_zone)
         return
