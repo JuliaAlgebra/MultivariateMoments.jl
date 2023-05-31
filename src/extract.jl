@@ -86,8 +86,8 @@ function solve_weight(
     A = Matrix{T}(undef, length(ν.Q.Q), length(centers))
     vbasis = vectorized_basis(ν)
     for i in eachindex(centers)
-        η = dirac(vbasis.monomials, vars => centers[i])
-        A[:, i] = moment_matrix(η, ν.basis.monomials).Q.Q
+        η = dirac(vbasis, vars => centers[i])
+        A[:, i] = moment_matrix(η, ν.basis).Q.Q
     end
     return A \ ν.Q.Q
 end

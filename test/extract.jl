@@ -6,6 +6,7 @@ using SemialgebraicSets
 using MultivariateMoments
 
 struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
+SemialgebraicSets.promote_for(::Type{T}, ::Type{DummySolver}) where {T} = T
 function SemialgebraicSets.solve(
     ::SemialgebraicSets.AlgebraicSet,
     ::DummySolver,

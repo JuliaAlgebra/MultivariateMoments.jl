@@ -86,7 +86,9 @@ value_matrix(μ::MomentMatrix) = Matrix(μ.Q)
 function vectorized_basis(ν::MomentMatrix{T,<:MB.MonomialBasis}) where {T}
     monos = ν.basis.monomials
     n = length(monos)
-    return MB.MonomialBasis([monos[i] * monos[j] for i in 1:n for j in 1:i])
+    # We don't wrap in `MonomialBasis` as we don't want the monomials
+    # to be `sort`ed and `uniq`ed.
+    return [monos[i] * monos[j] for j in 1:n for i in 1:j]
 end
 
 function measure(ν::MomentMatrix; kws...)
