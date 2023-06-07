@@ -106,9 +106,10 @@ function low_rank_ldlt(M::AbstractMatrix, algo::LowRankLDLTAlgorithm, tol::Real)
 end
 
 """
-    struct LowRankLDLT{T}
+    struct LowRankLDLT{T,Tr,C<:RankCheck}
         L::Matrix{T}
-        singular_values::Vector{T}
+        singular_values::Vector{Tr}
+        rank_check::C
     end
 
 Low-Rank cholesky decomposition `L * Diagonal(singular_values) * L'` of size
@@ -117,9 +118,9 @@ Low-Rank cholesky decomposition `L * Diagonal(singular_values) * L'` of size
 The rank was chosen given `singular_values` using `rank_check` via
 the [`rank_from_singular_values`](@ref) function.
 """
-struct LowRankLDLT{T,C<:RankCheck}
+struct LowRankLDLT{T,Tr,C<:RankCheck}
     L::Matrix{T}
-    singular_values::Vector{T}
+    singular_values::Vector{Tr}
     rank_check::C
 end
 
