@@ -13,6 +13,7 @@ RowEchelon = "af85af4c-bcd5-5d23-b03a-a909639aa875"
 SemialgebraicSets = "8e049039-38e8-557d-ae3a-bc521ccf6204"
 
 [compat]
+CommonSolve = "0.2"
 MultivariateBases = "0.2"
 MultivariatePolynomials = "0.5"
 MutableArithmetics = "1"
