@@ -13,7 +13,7 @@ using Test
     @test sprint(show, ν1) == """
 MomentMatrix with row/column basis:
  MonomialBasis([y, x])
-And entries in a 2×2 SymMatrix{Int64}:
+And entries in a 2×2 SymMatrix{$Int}:
  3  2
  2  1"""
     ν2 = MomentMatrix{Int}((i, j) -> i + j - 1, X)
@@ -34,12 +34,12 @@ And entries in a 2×2 SymMatrix{Int64}:
 BlockDiagonalMomentMatrix with 2 blocks:
 [1] Block with row/column basis:
      MonomialBasis([y, x])
-    And entries in a 2×2 SymMatrix{Int64}:
+    And entries in a 2×2 SymMatrix{$Int}:
      3  2
      2  1
 [2] Block with row/column basis:
      MonomialBasis([y, x])
-    And entries in a 2×2 SymMatrix{Int64}:
+    And entries in a 2×2 SymMatrix{$Int}:
      3  2
      2  1"""
 end
