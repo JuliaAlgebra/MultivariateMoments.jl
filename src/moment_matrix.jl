@@ -70,9 +70,8 @@ end
 
 function Base.show(io::IO, M::MomentMatrix)
     print(io, "MomentMatrix")
-    show_basis_indexed_matrix(io, M)
+    return show_basis_indexed_matrix(io, M)
 end
-
 
 """
     moment_matrix(μ::Measure, x)
@@ -121,7 +120,7 @@ function show_basis_indexed_blocks(io::IO, blocks)
     nd = ndigits(length(blocks))
     for i in eachindex(blocks)
         println(io)
-        print(io, "[", " " ^ (nd - ndigits(i)), i, "] Block")
+        print(io, "[", " "^(nd - ndigits(i)), i, "] Block")
         show_basis_indexed_matrix(io, blocks[i], " "^(nd + 3))
     end
     return
