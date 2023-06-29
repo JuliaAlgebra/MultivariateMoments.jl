@@ -59,6 +59,21 @@ function MomentMatrix{T}(f::Function, monos::AbstractVector) where {T}
     return MomentMatrix{T}(f, MB.MonomialBasis(sorted_monos), σ)
 end
 
+function show_basis_indexed_matrix(io::IO, A, pre = "")
+    println(io, " with row/column basis:")
+    println(io, pre, " ", A.basis)
+    print(io, pre, "And entries in a ", summary(A.Q))
+    isempty(A.Q) && return
+    println(io, ":")
+    return Base.print_matrix(io, A.Q, pre * " ")
+end
+
+function Base.show(io::IO, M::MomentMatrix)
+    print(io, "MomentMatrix")
+    show_basis_indexed_matrix(io, M)
+end
+
+
 """
     moment_matrix(μ::Measure, x)
 
@@ -96,7 +111,24 @@ function measure(ν::MomentMatrix; kws...)
     return measure(ν.Q.Q, vectorized_basis(ν); kws...)
 end
 
-struct SparseMomentMatrix{T,B<:MB.AbstractPolynomialBasis,MT} <:
+struct BlockDiagonalMomentMatrix{T,B<:MB.AbstractPolynomialBasis,MT} <:
        AbstractMomentMatrix{T,B}
-    sub_moment_matrices::Vector{MomentMatrix{T,B,MT}}
+    blocks::Vector{MomentMatrix{T,B,MT}}
+end
+
+function show_basis_indexed_blocks(io::IO, blocks)
+    print(io, " with $(length(blocks)) blocks:")
+    nd = ndigits(length(blocks))
+    for i in eachindex(blocks)
+        println(io)
+        print(io, "[", " " ^ (nd - ndigits(i)), i, "] Block")
+        show_basis_indexed_matrix(io, blocks[i], " "^(nd + 3))
+    end
+    return
+end
+
+function Base.show(io::IO, M::BlockDiagonalMomentMatrix)
+    print(io, "BlockDiagonalMomentMatrix")
+    show_basis_indexed_blocks(io, M.blocks)
+    return
 end

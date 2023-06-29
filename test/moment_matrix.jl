@@ -22,6 +22,6 @@ using Test
         @test nvariables(ν) == 2
     end
     @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
-    sparse_ν = SparseMomentMatrix([ν1, ν2])
-    @test sparse_ν isa SparseMomentMatrix{Int,typeof(ν1.basis)}
+    sparse_ν = BlockDiagonalMomentMatrix([ν1, ν2])
+    @test sparse_ν isa BlockDiagonalMomentMatrix{Int,typeof(ν1.basis)}
 end

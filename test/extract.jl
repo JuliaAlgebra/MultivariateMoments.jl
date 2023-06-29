@@ -375,7 +375,7 @@ function test_extract()
         SVDLDLT(),
         ShiftCholeskyLDLT(1e-15),
         FlatExtension(),
-        FlatExtension(IterativeDiagonalization()),
+        FlatExtension(NewtonTypeDiagonalization()),
         ShiftNullspace(),
     ]
         atoms_1(1e-10, solver)
