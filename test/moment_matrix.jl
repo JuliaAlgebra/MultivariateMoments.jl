@@ -10,6 +10,12 @@ using Test
     μ = measure(1:3, [x^2, x * y, y^2])
     X = [x, y]
     ν1 = moment_matrix(μ, X)
+    @test sprint(show, ν1) == """
+MomentMatrix with row/column basis:
+ MonomialBasis([y, x])
+And entries in a 2×2 SymMatrix{Int64}:
+ 3  2
+ 2  1"""
     ν2 = MomentMatrix{Int}((i, j) -> i + j - 1, X)
     for ν in (ν1, ν2)
         @test ν.Q[1:4] == [3, 2, 2, 1]
@@ -22,6 +28,18 @@ using Test
         @test nvariables(ν) == 2
     end
     @test_throws ArgumentError moment_matrix(measure([1], [x]), [y])
-    sparse_ν = BlockDiagonalMomentMatrix([ν1, ν2])
-    @test sparse_ν isa BlockDiagonalMomentMatrix{Int,typeof(ν1.basis)}
+    block_ν = BlockDiagonalMomentMatrix([ν1, ν2])
+    @test block_ν isa BlockDiagonalMomentMatrix{Int,typeof(ν1.basis)}
+    @test sprint(show, block_ν) == """
+BlockDiagonalMomentMatrix with 2 blocks:
+[1] Block with row/column basis:
+     MonomialBasis([y, x])
+    And entries in a 2×2 SymMatrix{Int64}:
+     3  2
+     2  1
+[2] Block with row/column basis:
+     MonomialBasis([y, x])
+    And entries in a 2×2 SymMatrix{Int64}:
+     3  2
+     2  1"""
 end
