@@ -2,6 +2,8 @@ using Documenter, MultivariateMoments
 # Needed because we include docstrings for `monomial`, `variables` and `monomials`
 import MultivariatePolynomials
 
+DocMeta.setdocmeta!(MultivariateMoments, :DocTestSetup, :(using MultivariateMoments); recursive=true)
+
 makedocs(
     sitename = "MultivariateMoments",
     # See https://github.com/JuliaDocs/Documenter.jl/issues/868
