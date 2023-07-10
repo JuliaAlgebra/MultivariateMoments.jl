@@ -1,4 +1,3 @@
-using RowEchelon
 using SemialgebraicSets
 import CommonSolve: solve
 
