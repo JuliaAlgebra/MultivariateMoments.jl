@@ -25,29 +25,66 @@ AtomicMeasure
 
 ## Atoms extraction
 
-Given a `MomentMatrix` with a positive semidefinite moment matrix,
-an algebraic system for which the set of solution is a superset of the support of the measure.
-If the measure is atomic and the `MomentMatrix` contains enough moments,
-the algebraic system will only have a finite number of solutions which are the centers
-of the diracs of the measure.
+Given a `MomentMatrix` containing the moments of an atomic measure,
+[`atomic_measure`](@ref) attempts to recover the dirac centers and weights
+by first computing an algebraic system with the atom centers as solution
+with [`compute_support!`](@ref).
 
 ```@docs
-MultivariateMoments.compute_support!
+compute_support!
 atomic_measure
 ```
 
-This system is obtained from a low rank cholesky decomposition of the moment matrix.
-This decomposition can either be obtained by a cholesky or SVD decomposition from which we remove the rows corresponding to the negligeable eigenvalues/singular values.
+For the first step of [`compute_support!`](@ref), there are two approaches.
+The first one is to exploit the *flat extension* to directly obtain the multiplication
+matrices.
+
+```@docs
+FlatExtension
+```
+
+The second approach is to first obtain the image space of the moment matrix,
+represented as a [`MacaulayNullspace`](@ref)
+and to then compute the multiplication matrices from this image space.
+This image space is obtained from a low rank LDLT decomposition of the moment matrix.
+This decomposition can either be obtained by a cholesky or SVD decomposition from which we remove the rows corresponding to the negligeable eigen/singular values.
 
 ```@docs
 LowRankLDLTAlgorithm
 ShiftCholeskyLDLT
 SVDLDLT
-MultivariateMoments.low_rank_ldlt
-MultivariateMoments.LowRankLDLT
-MultivariateMoments.MacaulayNullspace
-MultivariateMoments.accuracy
-MultivariateMoments.rank_from_singular_values
+low_rank_ldlt
+LowRankLDLT
+MacaulayNullspace
+```
+
+The choice of cutoff between the significant and neglibeable eigen/singular values is
+parametrized by the following interface:
+```@docs
+RankCheck
+rank_from_singular_values
+accuracy
+doubt
+```
+
+The rank check can be chosen among the following:
+```@docs
+UserRank
+FixedRank
+FixedRanks
+AbsoluteRankTol
+LeadingRelativeRankTol
+DifferentialRankTol
+LargestDifferentialRank
+FallbackRank
+```
+
+Given the [`MacaulayNullspace`](@ref), there are two approaches implemented
+to obtain the moment matrices:
+
+```@docs
+ShiftNullspace
+Echelon
 ```
 
 Once the center of the atoms are determined, a linear system is solved to determine
