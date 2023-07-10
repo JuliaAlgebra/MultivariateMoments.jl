@@ -8,10 +8,11 @@ import CommonSolve: solve
         basis::BT
     end
 
-Right nullspace with rows indexed by `basis` of a Macaulay matrix with columns
-indexed by `basis`.
+This matrix with rows indexed by `basis` can either be interpreted as
+the right null space of a Macaulay matrix with columns indexed by `basis` (resp. or
+the image space of a moment matrix with rows and columns indexed by `basis`).
 The value of `matrix[i, j]` should be interpreted as the value of the `i`th
-element of `basis` for the `j`th generator of the nullspace.
+element of `basis` for the `j`th generator of the null space (resp. image) space.
 """
 struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}
     matrix::MT
@@ -20,7 +21,7 @@ struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}
 end
 
 """
-    MultivariateMoments.compute_support!(ν::MomentMatrix, rank_check, [dec])
+    compute_support!(ν::MomentMatrix, rank_check, [dec])
 
 Computes the `support` field of `ν`.
 The `rank_check` and `dec` parameters are passed as is to the [`low_rank_ldlt`](@ref) function.
@@ -38,7 +39,7 @@ function compute_support!(
     # v[i] * β to be in μ.x
     # but maybe it's sufficient due to the shift structure of the matrix.
     #
-    # [LLR08] Lasserre, Jean Bernard and Monique Laurent, and Philipp Rostalski.
+    # [LLR08] Lasserre, Jean Bernard and Laurent, Monique, and Rostalski, Philipp.
     # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
     # Foundations of Computational Mathematics 8 (2008): 607-647.
     M = value_matrix(μ)
