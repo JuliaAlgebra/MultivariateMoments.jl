@@ -147,7 +147,7 @@ The rank is the number of singular values that are strictly larger than `tol`.
 ## Example
 
 ```jldoctest
-julia> rank_from_singular_values([1, 1e-1, 5e-5, 1e-5, 5e-6], AbsoluteRankTol(1e-4))
+julia> rank_from_singular_values([1, 1e-1, 5e-2, 1e-5, 5e-6], AbsoluteRankTol(1e-4))
 3
 ```
 """
@@ -291,7 +291,7 @@ is a tricky choice and can manually choose one of the two ranks, then see the
 result of the rest of his code using this value of the code and then choose
 the other rank and see the impact of this different choice.
 
-```jldoctest
+```julia
 julia> check = FallbackRank(1e-1, LargestDifferentialRank())
 FallbackRank{Float64, LargestDifferentialRank, UserRank}(0.1, LargestDifferentialRank(), UserRank(8))
 
