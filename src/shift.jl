@@ -22,7 +22,7 @@ end
 
 function shift_nullspace(null::MacaulayNullspace, monos)
     S = null[monos]
-    Sx = [null[monos .* shift] for shift in MP.variables(monos)]
+    Sx = [null[monos.*shift] for shift in MP.variables(monos)]
     pS = LinearAlgebra.pinv(S.matrix)
     mult = SemialgebraicSets.MultiplicationMatrices([pS * S.matrix for S in Sx])
     return MultivariateMoments.SemialgebraicSets.solve(
