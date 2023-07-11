@@ -64,6 +64,11 @@ IFAC Proceedings Volumes 45.16 (2012): 1203-1208.
 struct ShiftNullspace{C<:RankCheck}
     check::C
 end
+# Because the matrix is orthogonal, we know the SVD of the whole matrix is
+# `ones(...)` so an `AbsoluteRankTol` would be fine here.
+# However, since we also know that the first row (which correspond to the
+# constant monomial) should be a standard monomial, `LeadingRelativeRankTol`
+# ensures that we will take it.
 ShiftNullspace() = ShiftNullspace(LeadingRelativeRankTol(1e-8))
 
 function solve(null::MacaulayNullspace, shift::ShiftNullspace)
