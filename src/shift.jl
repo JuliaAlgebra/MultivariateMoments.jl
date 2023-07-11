@@ -81,7 +81,7 @@ function solve(null::MacaulayNullspace, ::ShiftNullspace)
         affine_monos = monos
         affine_null = null
     else
-        affine_monos = monos[1:num_affine]
+        affine_monos = monos[1:ma]
         @warn("Column compression not supported yet")
         return
     end
