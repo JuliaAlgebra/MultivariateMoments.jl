@@ -372,11 +372,12 @@ end
 function test_extract()
     default_solver = SemialgebraicSets.default_algebraic_solver([1.0x - 1.0x])
     for solver in [
-        SVDLDLT(),
-        ShiftCholeskyLDLT(1e-15),
         FlatExtension(),
         FlatExtension(NewtonTypeDiagonalization()),
+        Echelon(),
+        ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), Echelon()),
         ShiftNullspace(),
+        ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), ShiftNullspace()),
     ]
         atoms_1(1e-10, solver)
         atoms_2(1e-10, solver)

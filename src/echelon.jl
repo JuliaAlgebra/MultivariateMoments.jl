@@ -78,16 +78,42 @@ Foundations of Computational Mathematics 8 (2008): 607-647.
 *Numerical polynomial algebra.*
 Society for Industrial and Applied Mathematics, 2004.
 """
-struct Echelon end
+struct Echelon{S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <: MacaulayNullspaceSolver
+    solver::S
+end
+Echelon() = Echelon(nothing)
+
+# TODO remove in next breaking release
+function compute_support!(
+    ν::MomentMatrix,
+    rank_check::RankCheck,
+    ldlt::LowRankLDLTAlgorithm,
+    ::Echelon,
+    arg::SemialgebraicSets.AbstractAlgebraicSolver,
+)
+    return compute_support!(ν, rank_check, ldlt, Echelon(arg))
+end
+
 
 import RowEchelon
 
-function solve(null::MacaulayNullspace, ::Echelon, args...)
+function solve(null::MacaulayNullspace, solver::Echelon)
+    # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
+    # so that we have more chance that low order monomials are in β and then more chance
+    # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
+    # v[i] * β to be in μ.x
+    # but maybe it's sufficient due to the shift structure of the matrix.
+    #
+    # [LLR08] Lasserre, Jean Bernard and Laurent, Monique, and Rostalski, Philipp.
+    # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
+    # Foundations of Computational Mathematics 8 (2008): 607-647.
+
     # If M is multiplied by λ, W is multiplied by √λ
     # so we take √||M|| = √nM
     Z = Matrix(null.matrix')
     RowEchelon.rref!(Z, null.accuracy / sqrt(size(Z, 2)))
     #r, vals = solve_system(U', μ.x)
     # TODO determine what is better between rank_check and sqrt(rank_check) here
+    args = isnothing(solver.solver) ? tuple() : (solver.solver,)
     return build_system(Z, null.basis, √null.accuracy, args...)
 end
