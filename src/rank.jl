@@ -252,6 +252,13 @@ julia> rank_from_singular_values([1, 1e-2, 5e-2, 1e-3, 1e-6, 5e-7], LargestDiffe
 """
 struct LargestDifferentialRank <: RankCheck end
 function rank_from_singular_values(σ, ::LargestDifferentialRank)
+    if length(σ) == 1
+        if iszero(σ[1]) # An `atol` would be useful here still
+            return 0
+        else
+            return 1
+        end
+    end
     return argmax(i -> σ[i] / σ[i+1], 1:(length(σ)-1))
 end
 function default_accuracy(::Vector{T}, ::LargestDifferentialRank) where {T}
@@ -338,6 +345,15 @@ end
 function default_accuracy(σ::Vector{T}, check::FallbackRank) where {T}
     # FIXME We should use `fallback` if the `fallback` was used instead
     return default_accuracy(σ, check.default)
+end
+
+function LinearAlgebra.rank(A::AbstractMatrix, check::RankCheck)
+    if isempty(A)
+        return 0 # 0-dimensional case
+    else
+        σ = LinearAlgebra.svdvals(A)
+        return rank_from_singular_values(σ, check)
+    end
 end
 
 """
