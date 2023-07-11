@@ -20,24 +20,17 @@ function _standard_monomials(Z, tol = 1e-10)
     return list
 end
 
-function shiftnullspace(Z, dgap, srows, monos)
-    S = Z[srows, :]
-    Sx = [
-        Z[[findfirst(isequal(monos[row] * x), monos) for row in srows], :]
-        for x in MP.variables(monos)
-    ]
-    pS = LinearAlgebra.pinv(S)
-    mult = SemialgebraicSets.MultiplicationMatrices([pS * S for S in Sx])
+function shift_nullspace(null::MacaulayNullspace, monos)
+    S = null[monos]
+    Sx = [null[monos .* shift] for shift in MP.variables(monos)]
+    pS = LinearAlgebra.pinv(S.matrix)
+    mult = SemialgebraicSets.MultiplicationMatrices([pS * S.matrix for S in Sx])
     return MultivariateMoments.SemialgebraicSets.solve(
         mult,
         MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
             Float64,
         }(),
     )
-
-    return MultivariateMoments.solve
-    eig = [LinearAlgebra.eigen(S).values for S in Sx]
-    return [[eig[i][j] for i in eachindex(eig)] for j in eachindex(eig[1])]
 end
 
 function gap_zone_standard_monomials(monos, maxdegree)
@@ -71,28 +64,29 @@ IFAC Proceedings Volumes 45.16 (2012): 1203-1208.
 struct ShiftNullspace end
 
 function solve(null::MacaulayNullspace, ::ShiftNullspace)
-    monos = null.basis.monomials
     Z = null.matrix
-    d = MP.maxdegree(monos)
+    d = MP.maxdegree(null.basis.monomials)
     srows = _standard_monomials(Z)
-    gap_zone = gap_zone_standard_monomials(monos[srows], d)
+    monos = null.basis.monomials[srows]
+    gap_zone = gap_zone_standard_monomials(monos, d)
     if isnothing(gap_zone)
         return
     end
     dgap, ma, gapsize = gap_zone
-    srows = srows[1:ma]
     if gapsize < 1
         return
     end
     mb = size(Z, 2)
     if mb == ma
-        W = Z
+        affine_monos = monos
+        affine_null = null
     else
+        affine_monos = monos[1:num_affine]
         @warn("Column compression not supported yet")
         return
     end
 
     # Solve the system:
-    sols = shiftnullspace(W, dgap, srows, monos)
+    sols = shift_nullspace(affine_null, affine_monos)
     return ZeroDimensionalVariety(sols)
 end
