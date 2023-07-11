@@ -80,9 +80,19 @@ function Base.:(+)(μ::Measure, ν::Measure)
     return measure(μ.a + ν.a, μ.x)
 end
 
+# TODO Move to MultivariateBases
+function _monomial_index(monos::AbstractVector, mono)
+    i = searchsortedfirst(monos, mono)
+    if i in eachindex(monos) && mono == monos[i]
+        return i
+    else
+        return
+    end
+end
+
 function moment_value(μ, mono)
-    i = searchsortedfirst(μ.x, mono)
-    if !(i in eachindex(μ.x)) || mono != μ.x[i]
+    i = _monomial_index(μ.x, mono)
+    if isnothing(i)
         throw(ArgumentError("`$μ` does not have the moment `$mono`"))
     end
     return μ.a[i]

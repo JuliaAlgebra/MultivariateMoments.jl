@@ -80,11 +80,13 @@ Society for Industrial and Applied Mathematics, 2004.
 """
 struct Echelon end
 
+import RowEchelon
+
 function solve(null::MacaulayNullspace, ::Echelon, args...)
     # If M is multiplied by λ, W is multiplied by √λ
     # so we take √||M|| = √nM
     Z = Matrix(null.matrix')
-    rref!(Z, null.accuracy / sqrt(size(Z, 2)))
+    RowEchelon.rref!(Z, null.accuracy / sqrt(size(Z, 2)))
     #r, vals = solve_system(U', μ.x)
     # TODO determine what is better between rank_check and sqrt(rank_check) here
     return build_system(Z, null.basis, √null.accuracy, args...)

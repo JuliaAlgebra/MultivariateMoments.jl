@@ -23,4 +23,5 @@ makedocs(
 
 deploydocs(
     repo   = "github.com/JuliaAlgebra/MultivariateMoments.jl.git",
+    push_preview = true,
 )
