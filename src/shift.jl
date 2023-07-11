@@ -4,11 +4,11 @@
 # collide with `SemialgebraicSets.standard_monomials` and cannot add a method
 # as it would be type piracy
 # TODO implement sieve
-function _standard_monomials(Z, tol = 1e-10)
+function _standard_monomials(Z, rank_check)
     list = Int[]
     old_rank = 0
     for k in axes(Z, 1)
-        new_rank = LinearAlgebra.rank(Z[1:k, :], tol)
+        new_rank = LinearAlgebra.rank(Z[1:k, :], rank_check)
         if new_rank > old_rank
             push!(list, k)
         end
@@ -61,12 +61,20 @@ by exploiting the shift property of the rows [DBD12].
 *Back to the roots: Polynomial system solving, linear algebra, systems theory.*
 IFAC Proceedings Volumes 45.16 (2012): 1203-1208.
 """
-struct ShiftNullspace end
+struct ShiftNullspace{C<:RankCheck}
+    check::C
+end
+# Because the matrix is orthogonal, we know the SVD of the whole matrix is
+# `ones(...)` so an `AbsoluteRankTol` would be fine here.
+# However, since we also know that the first row (which correspond to the
+# constant monomial) should be a standard monomial, `LeadingRelativeRankTol`
+# ensures that we will take it.
+ShiftNullspace() = ShiftNullspace(LeadingRelativeRankTol(1e-8))
 
-function solve(null::MacaulayNullspace, ::ShiftNullspace)
+function solve(null::MacaulayNullspace, shift::ShiftNullspace)
     Z = null.matrix
     d = MP.maxdegree(null.basis.monomials)
-    srows = _standard_monomials(Z)
+    srows = _standard_monomials(Z, shift.check)
     monos = null.basis.monomials[srows]
     gap_zone = gap_zone_standard_monomials(monos, d)
     if isnothing(gap_zone)
