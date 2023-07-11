@@ -1,23 +1,50 @@
 # Inspired from macaulaylab.net
 
-# Cannot call it as exported symbol `standard_monomials` as it would
-# collide with `SemialgebraicSets.standard_monomials` and cannot add a method
-# as it would be type piracy
-# TODO implement sieve
-function _standard_monomials(Z, rank_check)
-    list = Int[]
+"""
+    function standard_monomials_and_border(
+        null::MacaulayNullspace,
+        rank_check,
+    )
+
+Computes the set of standard monomials using the *greedy sieve* algorithm
+presented in [LLR08, Algorithm 1].
+
+[LLR08] Lasserre, Jean Bernard and Laurent, Monique, and Rostalski, Philipp.
+*Semidefinite characterization and computation of zero-dimensional real radical ideals.*
+Foundations of Computational Mathematics 8 (2008): 607-647.
+"""
+function standard_monomials_and_border(
+    null::MacaulayNullspace{T,MT,<:MB.MonomialBasis},
+    rank_check,
+) where {T,MT}
+    monos = eltype(null.basis.monomials)[]
+    border = eltype(monos)[]
+    rows = Int[]
     old_rank = 0
-    for k in axes(Z, 1)
-        new_rank = LinearAlgebra.rank(Z[1:k, :], rank_check)
-        if new_rank > old_rank
-            push!(list, k)
-        end
-        old_rank = new_rank
-        if new_rank == size(Z, 2)
+    for (k, mono) in enumerate(null.basis.monomials)
+        if old_rank == size(null.matrix, 2)
             break
         end
+        # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
+        # It also ensures that the standard monomials have the "staircase structure".
+        if !any(Base.Fix2(MP.divides, mono), border)
+            new_rank =
+                LinearAlgebra.rank(null.matrix[vcat(rows, k), :], rank_check)
+            if new_rank < old_rank
+                @warn(
+                    "After adding rows, the rank dropped from `$old_rank` to `$new_rank`. Correcting the rank to `$old_rank` and continuing."
+                )
+                new_rank = old_rank
+            elseif new_rank > old_rank
+                push!(rows, k)
+                push!(monos, mono)
+            else
+                push!(border, mono)
+            end
+            old_rank = new_rank
+        end
     end
-    return list
+    return monos, border
 end
 
 function shift_nullspace(null::MacaulayNullspace, monos)
@@ -42,13 +69,12 @@ function gap_zone_standard_monomials(monos, maxdegree)
     if isnothing(i)
         return
     end
-    dgap = i - 2
-    gapsize = something(
+    gap_size = something(
         findfirst(!iszero, @view(num[(i+1):end])),
         length(num) - i + 1,
     )
-    ma = sum(view(num, 1:(i-1)))
-    return dgap, ma, gapsize
+    num_affine = sum(view(num, 1:(i-1)))
+    return num_affine, gap_size
 end
 
 """
@@ -74,22 +100,20 @@ ShiftNullspace() = ShiftNullspace(LeadingRelativeRankTol(1e-8))
 function solve(null::MacaulayNullspace, shift::ShiftNullspace)
     Z = null.matrix
     d = MP.maxdegree(null.basis.monomials)
-    srows = _standard_monomials(Z, shift.check)
-    monos = null.basis.monomials[srows]
+    monos, _ = standard_monomials_and_border(null, shift.check)
     gap_zone = gap_zone_standard_monomials(monos, d)
     if isnothing(gap_zone)
         return
     end
-    dgap, ma, gapsize = gap_zone
-    if gapsize < 1
+    num_affine, gap_size = gap_zone
+    if gap_size < 1
         return
     end
-    mb = size(Z, 2)
-    if mb == ma
+    if num_affine == length(monos)
         affine_monos = monos
         affine_null = null
     else
-        affine_monos = monos[1:ma]
+        affine_monos = monos[1:num_affine]
         @warn("Column compression not supported yet")
         return
     end

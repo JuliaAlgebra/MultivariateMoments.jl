@@ -87,6 +87,14 @@ ShiftNullspace
 Echelon
 ```
 
+The [`Echelon`](@ref) uses the RowEchelon package to determine the standard
+monomials (which is not numerically stable) while the [`ShiftNullspace`](@ref)
+uses the following function internally which is based on SVD so it should have
+better numerical behavior.
+```@docs
+standard_monomials_and_border
+```
+
 Once the center of the atoms are determined, a linear system is solved to determine
 the weights corresponding to each dirac.
 By default, [`MomentMatrixWeightSolver`](@ref) is used by [`atomic_measure`](@ref) so that if there are small differences between moment values corresponding to the same monomial in the matrix
