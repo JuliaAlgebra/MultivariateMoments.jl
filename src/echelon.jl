@@ -78,7 +78,8 @@ Foundations of Computational Mathematics 8 (2008): 607-647.
 *Numerical polynomial algebra.*
 Society for Industrial and Applied Mathematics, 2004.
 """
-struct Echelon{S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <: MacaulayNullspaceSolver
+struct Echelon{S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
+       MacaulayNullspaceSolver
     solver::S
 end
 Echelon() = Echelon(nothing)
@@ -93,7 +94,6 @@ function compute_support!(
 )
     return compute_support!(ν, rank_check, ldlt, Echelon(arg))
 end
-
 
 import RowEchelon
 

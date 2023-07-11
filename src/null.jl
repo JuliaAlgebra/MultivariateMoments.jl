@@ -52,10 +52,8 @@ function compute_support!(
     M = value_matrix(ν)
     chol = low_rank_ldlt(M, solver.ldlt, rank_check)
     @assert size(chol.L, 1) == LinearAlgebra.checksquare(M)
-    ν.support = solve(
-        MacaulayNullspace(chol.L, ν.basis, accuracy(chol)),
-        solver.null,
-    )
+    ν.support =
+        solve(MacaulayNullspace(chol.L, ν.basis, accuracy(chol)), solver.null)
     return
 end
 
@@ -63,7 +61,7 @@ function compute_support!(
     ν::MomentMatrix,
     rank_check::RankCheck,
     ldlt::LowRankLDLTAlgorithm,
-    null::MacaulayNullspaceSolver
+    null::MacaulayNullspaceSolver,
 )
     return compute_support!(ν, rank_check, ImageSpaceSolver(ldlt, null))
 end
