@@ -46,6 +46,13 @@ FlatExtension
 The second approach is to first obtain the image space of the moment matrix,
 represented as a [`MacaulayNullspace`](@ref)
 and to then compute the multiplication matrices from this image space.
+This is implemented by the [`ImageSpaceSolver`](@ref).
+
+```@docs
+MacaulayNullspace
+ImageSpaceSolver
+```
+
 This image space is obtained from a low rank LDLT decomposition of the moment matrix.
 This decomposition can either be obtained by a cholesky or SVD decomposition from which we remove the rows corresponding to the negligeable eigen/singular values.
 
@@ -55,7 +62,6 @@ ShiftCholeskyLDLT
 SVDLDLT
 low_rank_ldlt
 LowRankLDLT
-MacaulayNullspace
 ```
 
 The choice of cutoff between the significant and neglibeable eigen/singular values is

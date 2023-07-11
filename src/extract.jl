@@ -2,45 +2,12 @@ using SemialgebraicSets
 import CommonSolve: solve
 
 """
-    compute_support!(ν::MomentMatrix, rank_check, [dec])
+    function compute_support!(ν::MomentMatrix, rank_check, solver) end
 
-Computes the `support` field of `ν`.
-The `rank_check` and `dec` parameters are passed as is to the [`low_rank_ldlt`](@ref) function.
+Computes the `support` field of `ν` wth `solver` using a low-rank decomposition
+with the rank evaluated with `rank_check`.
 """
-function compute_support!(
-    μ::MomentMatrix,
-    rank_check::RankCheck,
-    dec::LowRankLDLTAlgorithm,
-    nullspace_solver = Echelon(),
-    args...,
-)
-    # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
-    # so that we have more chance that low order monomials are in β and then more chance
-    # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
-    # v[i] * β to be in μ.x
-    # but maybe it's sufficient due to the shift structure of the matrix.
-    #
-    # [LLR08] Lasserre, Jean Bernard and Laurent, Monique, and Rostalski, Philipp.
-    # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
-    # Foundations of Computational Mathematics 8 (2008): 607-647.
-    M = value_matrix(μ)
-    chol = low_rank_ldlt(M, dec, rank_check)
-    @assert size(chol.L, 1) == LinearAlgebra.checksquare(M)
-    return μ.support = solve(
-        MacaulayNullspace(chol.L, μ.basis, accuracy(chol)),
-        nullspace_solver,
-        args...,
-    )
-end
-
-function compute_support!(μ::MomentMatrix, rank_check::RankCheck, args...)
-    return compute_support!(
-        μ::MomentMatrix,
-        rank_check::RankCheck,
-        SVDLDLT(),
-        args...,
-    )
-end
+function compute_support! end
 
 # Determines weight
 
