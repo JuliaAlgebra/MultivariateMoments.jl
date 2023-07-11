@@ -16,7 +16,10 @@ struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}
     accuracy::T
 end
 
-function Base.getindex(null::MacaulayNullspace{T,MT,<:MB.MonomialBasis}, monos) where {T,MT}
+function Base.getindex(
+    null::MacaulayNullspace{T,MT,<:MB.MonomialBasis},
+    monos,
+) where {T,MT}
     I = _monomial_index.(Ref(null.basis.monomials), monos)
     return MacaulayNullspace(
         null.matrix[I, :],
