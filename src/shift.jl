@@ -1,7 +1,14 @@
 # Inspired from macaulaylab.net
 
+struct MonomialDependence{B<:MB.AbstractPolynomialBasis}
+    standard_monomials::B
+    corners::B
+    dependent_border::B
+    independent_border::B
+end
+
 """
-    function standard_monomials_and_border(
+    function standard_monomials_and_corners(
         null::MacaulayNullspace,
         rank_check,
     )
@@ -13,12 +20,12 @@ presented in [LLR08, Algorithm 1].
 *Semidefinite characterization and computation of zero-dimensional real radical ideals.*
 Foundations of Computational Mathematics 8 (2008): 607-647.
 """
-function standard_monomials_and_border(
+function standard_monomials_and_corners(
     null::MacaulayNullspace{T,MT,<:MB.MonomialBasis},
     rank_check,
 ) where {T,MT}
     monos = eltype(null.basis.monomials)[]
-    border = eltype(monos)[]
+    corners = eltype(monos)[]
     rows = Int[]
     old_rank = 0
     for (k, mono) in enumerate(null.basis.monomials)
@@ -27,7 +34,7 @@ function standard_monomials_and_border(
         end
         # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
         # It also ensures that the standard monomials have the "staircase structure".
-        if !any(Base.Fix2(MP.divides, mono), border)
+        if !any(Base.Fix2(MP.divides, mono), corners)
             new_rank =
                 LinearAlgebra.rank(null.matrix[vcat(rows, k), :], rank_check)
             if new_rank < old_rank
@@ -39,12 +46,12 @@ function standard_monomials_and_border(
                 push!(rows, k)
                 push!(monos, mono)
             else
-                push!(border, mono)
+                push!(corner, mono)
             end
             old_rank = new_rank
         end
     end
-    return monos, border
+    return monos, corners
 end
 
 function shift_nullspace(null::MacaulayNullspace, monos)
@@ -102,9 +109,8 @@ end
 ShiftNullspace() = ShiftNullspace(LeadingRelativeRankTol(1e-8))
 
 function solve(null::MacaulayNullspace, shift::ShiftNullspace)
-    Z = null.matrix
     d = MP.maxdegree(null.basis.monomials)
-    monos, _ = standard_monomials_and_border(null, shift.check)
+    monos, _ = standard_monomials_and_corners(null, shift.check)
     gap_zone = gap_zone_standard_monomials(monos, d)
     if isnothing(gap_zone)
         return

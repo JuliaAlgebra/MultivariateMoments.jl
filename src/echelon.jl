@@ -1,9 +1,9 @@
 function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     # System is
-    # y = [U 0] * y
-    # where y = x[end:-1:1]
+    # `basis = [U' 0] * basis`
     # which is
-    # y = U * β
+    # `y = U' * β`
+    # where `β` contains the pivots
     m = length(basis)
     r = size(U, 1)
     pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i in 1:r]
