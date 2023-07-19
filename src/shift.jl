@@ -41,8 +41,7 @@ end
 
 """
 """
-function column_compression
-end
+function column_compression end
 
 function _indices_or_ignore(in::MB.MonomialBasis, from::MB.MonomialBasis)
     indices = Int[]
@@ -102,10 +101,15 @@ end
 # However, since we also know that the first row (which correspond to the
 # constant monomial) should be a standard monomial, `LeadingRelativeRankTol`
 # ensures that we will take it.
-ShiftNullspace{D}(check::RankCheck) where {D} = ShiftNullspace{D,typeof(check)}(check)
+function ShiftNullspace{D}(check::RankCheck) where {D}
+    return ShiftNullspace{D,typeof(check)}(check)
+end
 ShiftNullspace{D}() where {D} = ShiftNullspace{D}(LeadingRelativeRankTol(1e-8))
 ShiftNullspace(args...) = ShiftNullspace{StaircaseDependence}(args...)
 
-function border_basis_and_solver(null::MacaulayNullspace, shift::ShiftNullspace{D}) where {D}
+function border_basis_and_solver(
+    null::MacaulayNullspace,
+    shift::ShiftNullspace{D},
+) where {D}
     return BorderBasis{D}(null, shift.check), nothing
 end

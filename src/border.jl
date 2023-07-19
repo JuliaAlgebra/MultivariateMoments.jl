@@ -36,8 +36,9 @@ end
 
 function solve(
     b::BorderBasis{StaircaseDependence,T},
-    solver::SemialgebraicSets.AbstractMultiplicationMatricesSolver =
-    MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{T}(),
+    solver::SemialgebraicSets.AbstractMultiplicationMatricesSolver = MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
+        T,
+    }(),
 ) where {T}
     d = b.dependence
     dependent = convert(AnyDependence, d).dependent
@@ -62,7 +63,8 @@ function solve(
     mult = Matrix{T}[zeros(T, m, m) for _ in eachindex(vars)]
     completed_border = Dict{eltype(dependent.monomials),Vector{T}}()
     function known_border_coefficients(border)
-        return !isnothing(_index(dependent, border)) || haskey(completed_border, border)
+        return !isnothing(_index(dependent, border)) ||
+               haskey(completed_border, border)
     end
     function border_coefficients(border)
         k = _index(dependent, border)
@@ -178,10 +180,7 @@ end
 _some_args(::Nothing) = tuple()
 _some_args(arg) = (arg,)
 
-function solve(
-    b::BorderBasis{E},
-    solver::AlgebraicBorderSolver{D},
-) where {D,E}
+function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     if !(E <: D)
         solve(BorderBasis{D}(b), solver)
     end
@@ -192,16 +191,30 @@ function solve(
     # 2005
     d = convert(AnyDependence, b.dependence)
     system = [
-        d.dependent.monomials[col] - MP.polynomial(b.matrix[:, col], d.independent)
-        for col in eachindex(d.dependent.monomials)
+        d.dependent.monomials[col] -
+        MP.polynomial(b.matrix[:, col], d.independent) for
+        col in eachindex(d.dependent.monomials)
     ]
     filter!(!MP.isconstant, system)
-    if min(MP.mindegree(d.independent.monomials), MP.mindegree(d.dependent.monomials)) ==
-        max(MP.maxdegree(d.independent.monomials), MP.maxdegree(d.dependent.monomials))
+    if min(
+        MP.mindegree(d.independent.monomials),
+        MP.mindegree(d.dependent.monomials),
+    ) == max(
+        MP.maxdegree(d.independent.monomials),
+        MP.maxdegree(d.dependent.monomials),
+    )
         # Homogeneous
-        projective_algebraic_set(system, _some_args(solver.algorithm)..., _some_args(solver.solver)...)
+        projective_algebraic_set(
+            system,
+            _some_args(solver.algorithm)...,
+            _some_args(solver.solver)...,
+        )
     else
-        algebraic_set(system, _some_args(solver.algorithm)..., _some_args(solver.solver)...)
+        algebraic_set(
+            system,
+            _some_args(solver.algorithm)...,
+            _some_args(solver.solver)...,
+        )
     end
 end
 
@@ -214,15 +227,26 @@ end
 Solve with `multiplication_matrices_solver` and if it fails, falls back to
 solving the algebraic system formed by the border basis with `algebraic_solver`.
 """
-struct BorderWithFallback{M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},S<:AlgebraicBorderSolver}
+struct BorderWithFallback{
+    M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},
+    S<:AlgebraicBorderSolver,
+}
     multiplication_matrices_solver::M
     algebraic_solver::S
 end
 function BorderWithFallback(;
-    multiplication_matrices_solver::Union{Nothing,SS.AbstractMultiplicationMatricesSolver} = nothing,
+    multiplication_matrices_solver::Union{
+        Nothing,
+        SS.AbstractMultiplicationMatricesSolver,
+    } = nothing,
     algorithm::Union{Nothing,SS.AbstractGröbnerBasisAlgorithm} = nothing,
     solver::Union{Nothing,SS.AbstractAlgebraicSolver} = nothing,
-    algebraic_solver::AlgebraicBorderSolver = AlgebraicBorderSolver{StaircaseDependence}(; algorithm, solver),
+    algebraic_solver::AlgebraicBorderSolver = AlgebraicBorderSolver{
+        StaircaseDependence,
+    }(;
+        algorithm,
+        solver,
+    ),
 )
     return BorderWithFallback(multiplication_matrices_solver, algebraic_solver)
 end
@@ -233,10 +257,7 @@ end
 #    return BorderWithFallback(nothing, solver)
 #end
 
-function solve(
-    b::BorderBasis,
-    solver::BorderWithFallback,
-)
+function solve(b::BorderBasis, solver::BorderWithFallback)
     sol = solve(b, _some_args(solver.multiplication_matrices_solver)...)
     if isnothing(sol)
         sol = solve(b, solver.algebraic_solver)

@@ -79,7 +79,8 @@ function StaircaseDependence(
     for mono in standard
         for shift in vars
             border = shift * mono
-            if isnothing(_monomial_index(standard, border)) && isnothing(_monomial_index(corners, border))
+            if isnothing(_monomial_index(standard, border)) &&
+               isnothing(_monomial_index(corners, border))
                 i = _index(basis, mono)
                 if isnothing(i) || is_dependent(i)
                     push!(independent_border, border)
@@ -91,7 +92,6 @@ function StaircaseDependence(
     end
     return Dependence(standard, corners, dependent_border, independent_border)
 end
-
 
 function _exponents(monos, i)
     return [MP.exponents(mono)[i] for mono in monos]
