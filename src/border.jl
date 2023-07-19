@@ -139,18 +139,41 @@ function solve(
 end
 
 """
-    struct AlgebraicBorderSolver{D<:AbstractDependence,A<:Union{Nothing,SS.AbstractAlgebraicSolver}}
-        solver::A
+    Base.@kwdef struct AlgebraicBorderSolver{
+        D<:AbstractDependence,
+        A<:Union{Nothing,SS.AbstractGröbnerBasisAlgorithm},
+        S<:Union{Nothing,SS.AbstractAlgebraicSolver},
+    }
+        algorithm::A = nothing
+        solver::S = nothing
     end
 
-Solve a border basis by first converting it to a `BorderBasis{D}`.
+Solve a border basis using `algorithm` and `solver by first converting it to a
+`BorderBasis{D}`.
 """
-struct AlgebraicBorderSolver{D<:AbstractDependence,A<:Union{Nothing,SS.AbstractAlgebraicSolver}}
-    solver::A
+struct AlgebraicBorderSolver{
+    D<:AbstractDependence,
+    A<:Union{Nothing,SS.AbstractGröbnerBasisAlgorithm},
+    S<:Union{Nothing,SS.AbstractAlgebraicSolver},
+}
+    algorithm::A
+    solver::S
 end
-function AlgebraicBorderSolver{D}(solver::Union{Nothing,SS.AbstractAlgebraicSolver}) where {D}
-    return AlgebraicBorderSolver{D,typeof(solver)}(solver)
+function AlgebraicBorderSolver{D}(;
+    algorithm::Union{Nothing,SS.AbstractGröbnerBasisAlgorithm} = nothing,
+    solver::Union{Nothing,SS.AbstractAlgebraicSolver} = nothing,
+) where {D}
+    return AlgebraicBorderSolver{D,typeof(algorithm),typeof(solver)}(
+        algorithm,
+        solver,
+    )
 end
+#function AlgebraicBorderSolver{D}(solver::SS.AbstractAlgebraicSolver) where {D}
+#    return AlgebraicBorderSolver{D}(nothing, solver)
+#end
+#function AlgebraicBorderSolver{D}(algo::SS.AbstractGröbnerBasisAlgorithm) where {D}
+#    return AlgebraicBorderSolver{D}(algo)
+#end
 
 _some_args(::Nothing) = tuple()
 _some_args(arg) = (arg,)
@@ -176,9 +199,9 @@ function solve(
     if min(MP.mindegree(d.independent.monomials), MP.mindegree(d.dependent.monomials)) ==
         max(MP.maxdegree(d.independent.monomials), MP.maxdegree(d.dependent.monomials))
         # Homogeneous
-        projective_algebraic_set(system, Buchberger(ztol), _some_args(solver.solver)...)
+        projective_algebraic_set(system, _some_args(solver.algorithm)..., _some_args(solver.solver)...)
     else
-        algebraic_set(system, Buchberger(ztol), _some_args(solver.solver))
+        algebraic_set(system, _some_args(solver.algorithm)..., _some_args(solver.solver)...)
     end
 end
 
@@ -195,16 +218,20 @@ struct BorderWithFallback{M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolv
     multiplication_matrices_solver::M
     algebraic_solver::S
 end
-function BorderWithFallback(mul, alg::Union{Nothing,SS.AbstractAlgebraicSolver})
-    alg_border = AlgebraicBorderSolver(StandardAndPartialBorder(), alg)
-    return BorderWithFallback(mul, alg_border)
+function BorderWithFallback(;
+    multiplication_matrices_solver::Union{Nothing,SS.AbstractMultiplicationMatricesSolver} = nothing,
+    algorithm::Union{Nothing,SS.AbstractGröbnerBasisAlgorithm} = nothing,
+    solver::Union{Nothing,SS.AbstractAlgebraicSolver} = nothing,
+    algebraic_solver::AlgebraicBorderSolver = AlgebraicBorderSolver{StaircaseDependence}(; algorithm, solver),
+)
+    return BorderWithFallback(multiplication_matrices_solver, algebraic_solver)
 end
-function BorderWithFallback(solver::SS.AbstractMultiplicationMatricesSolver)
-    return BorderWithFallback(solver, nothing)
-end
-function BorderWithFallback(solver::SS.AbstractAlgebraicSolver)
-    return BorderWithFallback(nothing, solver)
-end
+#function BorderWithFallback(solver::SS.AbstractMultiplicationMatricesSolver)
+#    return BorderWithFallback(solver, nothing)
+#end
+#function BorderWithFallback(solver::SS.AbstractAlgebraicSolver)
+#    return BorderWithFallback(nothing, solver)
+#end
 
 function solve(
     b::BorderBasis,
@@ -212,7 +239,7 @@ function solve(
 )
     sol = solve(b, _some_args(solver.multiplication_matrices_solver)...)
     if isnothing(sol)
-        sol = solve(b, AlgebraicBorderSolver(solver.algebraic_solver))
+        sol = solve(b, solver.algebraic_solver)
     end
     return sol
 end

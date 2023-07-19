@@ -10,7 +10,7 @@ end
 RankDependence(matrix, check) = RankDependence(matrix, check, Int[], 0)
 
 function is_dependent!(r::RankDependence, row)
-    if r.old_rank == size(null.matrix, 2)
+    if r.old_rank == size(r.matrix, 2)
         return false
     end
     rows = vcat(r.independent_rows, row)
@@ -106,8 +106,6 @@ ShiftNullspace{D}(check::RankCheck) where {D} = ShiftNullspace{D,typeof(check)}(
 ShiftNullspace{D}() where {D} = ShiftNullspace{D}(LeadingRelativeRankTol(1e-8))
 ShiftNullspace(args...) = ShiftNullspace{StaircaseDependence}(args...)
 
-border_basis_solver(::ShiftNullspace) = nothing
-
-function BorderBasis(null::MacaulayNullspace, shift::ShiftNullspace{D}) where {D}
-    return BorderBasis{D}(null, shift.check)
+function border_basis_and_solver(null::MacaulayNullspace, shift::ShiftNullspace{D}) where {D}
+    return BorderBasis{D}(null, shift.check), nothing
 end

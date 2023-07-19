@@ -32,7 +32,8 @@ end
 abstract type MacaulayNullspaceSolver end
 
 function solve(null::MacaulayNullspace, solver::MacaulayNullspaceSolver)
-    return solve(BorderBasis(null, solver), _some_args(border_basis_solver(solver))...)
+    border, solver = border_basis_and_solver(null, solver)
+    return solve(border, _some_args(solver)...)
 end
 
 """

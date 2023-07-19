@@ -1,4 +1,4 @@
-function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
+function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, args...)
     # System is
     # `basis = [U' 0] * basis`
     # which is
@@ -101,7 +101,7 @@ end
 
 import RowEchelon
 
-function BorderBasis(null::MacaulayNullspace, solver::Echelon)
+function border_basis_and_solver(null::MacaulayNullspace, solver::Echelon)
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
@@ -118,6 +118,9 @@ function BorderBasis(null::MacaulayNullspace, solver::Echelon)
     RowEchelon.rref!(Z, null.accuracy / sqrt(size(Z, 2)))
     #r, vals = solve_system(U', μ.x)
     # TODO determine what is better between rank_check and sqrt(rank_check) here
-    args = isnothing(solver.solver) ? tuple() : (solver.solver,)
-    return build_system(Z, null.basis, √null.accuracy, args...)
+    solver = AlgebraicBorderSolver{AnyDependence}(
+        algorithm = SS.Buchberger(√null.accuracy),
+        solver = solver.solver,
+    )
+    return build_system(Z, null.basis), solver
 end

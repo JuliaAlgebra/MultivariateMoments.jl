@@ -55,14 +55,14 @@ returns whether it is dependent.
 *Semidefinite characterization and computation of zero-dimensional real radical ideals.*
 Foundations of Computational Mathematics 8 (2008): 607-647.
 """
-function Dependence(
+function StaircaseDependence(
     is_dependent::Function,
     basis::MB.MonomialBasis{M},
 ) where {M}
     standard = M[]
     corners = M[]
     vars = MP.variables(basis)
-    for mono in MP.monomials(vars, 0:MP.maxdegree(basis))
+    for mono in MP.monomials(vars, 0:MP.maxdegree(basis.monomials))
         # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
         # It also ensures that the standard monomials have the "staircase structure".
         if !any(Base.Fix2(MP.divides, mono), corners)
@@ -89,7 +89,7 @@ function Dependence(
             end
         end
     end
-    return Dependence(standard, corner, dependent_border, independent_border)
+    return Dependence(standard, corners, dependent_border, independent_border)
 end
 
 
