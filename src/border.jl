@@ -1,35 +1,50 @@
 """
-    struct BorderBasis{T,MT<:AbstractMatrix{T},BT}
+    struct BorderBasis{D<:AbstractDependence,T,MT<:AbstractMatrix{T},BT}
+        dependence::D
         matrix::MT
-        standard::BT
-        border::BT
     end
 
 This matrix with rows indexed by `standard` and columns indexed by `border`
 a `standard`-border basis of the ideal `border .- matrix' * standard`
 [LLR08, Section 2.5].
-The basis `border` is a superset of *corners* of `standard` and a subset
-of the *border* of `standard`.
+For solving this with a multiplication matrix solver, it is necessary for the
+basis `border` to be a superset of the set of *corners* of `standard` and it is
+sufficient for it to be the *border* of `standard`.
 
 [LLR08] Lasserre, Jean Bernard and Laurent, Monique, and Rostalski, Philipp.
 *Semidefinite characterization and computation of zero-dimensional real radical ideals.*
 Foundations of Computational Mathematics 8 (2008): 607-647.
 """
-struct BorderBasis{T,MT<:AbstractMatrix{T},BT}
+struct BorderBasis{D<:AbstractDependence,T,MT<:AbstractMatrix{T}}
+    dependence::D
     matrix::MT
-    standard::BT
-    border::BT
+end
+
+BorderBasis{D}(b::BorderBasis{<:D}) where {D} = b
+
+function BorderBasis{AnyDependence}(b::BorderBasis{<:StaircaseDependence})
+    return BorderBasis(convert(AnyDependence, b.dependence), b.matrix)
+end
+
+function BorderBasis{StaircaseDependence}(b::BorderBasis{<:AnyDependence})
+    d = StaircaseDependence(_ -> true, b.dependent)
+    dependent = convert(AnyDependence, d).dependent
+    rows = _indices(b.dependence.independent, d.standard)
+    cols = _indices(b.dependence.dependent, dependent)
+    return BorderBasis(d, b.matrix[rows, cols])
 end
 
 function solve(
-    b::BorderBasis{T},
+    b::BorderBasis{StaircaseDependence,T},
     solver::SemialgebraicSets.AbstractMultiplicationMatricesSolver =
     MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{T}(),
 ) where {T}
-    vars = MP.variables(b.standard)
-    m = length(b.standard)
-    # If a monomial `border` is not in `b.border` and it is not a corner
-    # then it can be divided by another monomial `x^α in b.border`.
+    d = b.dependence
+    dependent = convert(AnyDependence, d).dependent
+    vars = MP.variables(d.standard)
+    m = length(d.standard)
+    # If a monomial `border` is not in `dependent` and it is not a corner
+    # then it can be divided by another monomial `x^α in dependent`.
     # So there exists a monomial `x^β` such that `border = x^(α + β)`.
     # In particular, there exists a variable `v` different from `shift`
     # that divides `border` and such that `shift * border / v` is in the border.
@@ -45,12 +60,12 @@ function solve(
     # to hypergraphs.
     order = zeros(Int, length(vars))
     mult = Matrix{T}[zeros(T, m, m) for _ in eachindex(vars)]
-    completed_border = Dict{eltype(b.border.monomials),Vector{T}}()
+    completed_border = Dict{eltype(dependent.monomials),Vector{T}}()
     function known_border_coefficients(border)
-        return !isnothing(_index(b.border, border)) || haskey(completed_border, border)
+        return !isnothing(_index(dependent, border)) || haskey(completed_border, border)
     end
     function border_coefficients(border)
-        k = _index(b.border, border)
+        k = _index(dependent, border)
         if isnothing(k)
             if haskey(completed_border, border)
                 return completed_border[border]
@@ -105,7 +120,7 @@ function solve(
             end
                 o += 1
                 order[o] = k
-                for (col, std) in enumerate(b.standard.monomials)
+                for (col, std) in enumerate(d.standard.monomials)
                     mult[k][:, col] = border_coefficients(shift * std)
                 end
             end
@@ -121,4 +136,91 @@ function solve(
     end
     sols = SS.solve(mult, solver)
     return ZeroDimensionalVariety(sols)
+end
+
+"""
+    struct AlgebraicBorderSolver{D<:AbstractDependence,A<:Union{Nothing,SS.AbstractAlgebraicSolver}}
+        solver::A
+    end
+
+Solve a border basis by first converting it to a `BorderBasis{D}`.
+"""
+struct AlgebraicBorderSolver{D<:AbstractDependence,A<:Union{Nothing,SS.AbstractAlgebraicSolver}}
+    solver::A
+end
+function AlgebraicBorderSolver{D}(solver::Union{Nothing,SS.AbstractAlgebraicSolver}) where {D}
+    return AlgebraicBorderSolver{D,typeof(solver)}(solver)
+end
+
+_some_args(::Nothing) = tuple()
+_some_args(arg) = (arg,)
+
+function solve(
+    b::BorderBasis{E},
+    solver::AlgebraicBorderSolver{D},
+) where {D,E}
+    if !(E <: D)
+        solve(BorderBasis{D}(b), solver)
+    end
+    # Form the system described in [HL05, (8)], note that `b.matrix`
+    # is the transpose to the matrix in [HL05, (8)].
+    # [HL05] Henrion, D. & Lasserre, J-B.
+    # *Detecting Global Optimality and Extracting Solutions of GloptiPoly*
+    # 2005
+    d = convert(AnyDependence, b.dependence)
+    system = [
+        d.dependent.monomials[col] - MP.polynomial(b.matrix[:, col], d.independent)
+        for col in eachindex(d.dependent.monomials)
+    ]
+    filter!(!MP.isconstant, system)
+    if min(MP.mindegree(d.independent.monomials), MP.mindegree(d.dependent.monomials)) ==
+        max(MP.maxdegree(d.independent.monomials), MP.maxdegree(d.dependent.monomials))
+        # Homogeneous
+        projective_algebraic_set(system, Buchberger(ztol), _some_args(solver.solver)...)
+    else
+        algebraic_set(system, Buchberger(ztol), _some_args(solver.solver))
+    end
+end
+
+"""
+    struct BorderWithFallback{M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},S<:Union{Nothing,SS.AbstractAlgebraicSolver}}
+        multiplication_matrices_solver::M
+        algebraic_solver::A
+    end
+
+Solve with `multiplication_matrices_solver` and if it fails, falls back to
+solving the algebraic system formed by the border basis with `algebraic_solver`.
+"""
+struct BorderWithFallback{M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},S<:AlgebraicBorderSolver}
+    multiplication_matrices_solver::M
+    algebraic_solver::S
+end
+function BorderWithFallback(mul, alg::Union{Nothing,SS.AbstractAlgebraicSolver})
+    alg_border = AlgebraicBorderSolver(StandardAndPartialBorder(), alg)
+    return BorderWithFallback(mul, alg_border)
+end
+function BorderWithFallback(solver::SS.AbstractMultiplicationMatricesSolver)
+    return BorderWithFallback(solver, nothing)
+end
+function BorderWithFallback(solver::SS.AbstractAlgebraicSolver)
+    return BorderWithFallback(nothing, solver)
+end
+
+function solve(
+    b::BorderBasis,
+    solver::BorderWithFallback,
+)
+    sol = solve(b, _some_args(solver.multiplication_matrices_solver)...)
+    if isnothing(sol)
+        sol = solve(b, AlgebraicBorderSolver(solver.algebraic_solver))
+    end
+    return sol
+end
+
+function solve(
+    b::BorderBasis{AnyDependence},
+    solver::BorderWithFallback{M,<:AlgebraicBorderSolver{StaircaseDependence}},
+) where {M}
+    # We will need to convert in both cases anyway
+    return solve(BorderBasis{StaircaseDependence}(b), solver)
 end

@@ -8,21 +8,21 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, ztol, args...)
     r = size(U, 1)
     pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i in 1:r]
     if any(isnothing, pivots)
+        # Remove zero rows of `U`
         keep = map(!isnothing, pivots)
         pivots = pivots[keep]
         r = length(pivots)
         U = U[keep, :]
     end
-    monos = basis.monomials
-    β = monos[pivots]
-    system = [MA.operate(dot, β, U[:, i]) - monos[i] for i in eachindex(monos)]
-    filter!(!MP.isconstant, system)
-    # Type instability here :(
-    if MP.mindegree(monos) == MP.maxdegree(monos) # Homogeneous
-        projective_algebraic_set(system, Buchberger(ztol), args...)
-    else
-        algebraic_set(system, Buchberger(ztol), args...)
-    end
+    set_pivots = Set(pivots)
+    independent = MP.monomial_vector(basis.monomials[pivots])
+    non_pivots = setdiff(eachindex(basis.monomials), set_pivots)
+    dependent = MP.monomial_vector(basis.monomials[non_pivots])
+    d = AnyDependence(
+        MB.MonomialBasis(independent),
+        MB.MonomialBasis(dependent),
+    )
+    return BorderBasis(d, U[:, non_pivots])
 end
 
 """
@@ -84,6 +84,10 @@ struct Echelon{S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
 end
 Echelon() = Echelon(nothing)
 
+function border_basis_solver(solver::Echelon)
+    return AlgebraicBorderSolver{AnyDependence}(solver.solver)
+end
+
 # TODO remove in next breaking release
 function compute_support!(
     ν::MomentMatrix,
@@ -97,7 +101,7 @@ end
 
 import RowEchelon
 
-function solve(null::MacaulayNullspace, solver::Echelon)
+function BorderBasis(null::MacaulayNullspace, solver::Echelon)
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve

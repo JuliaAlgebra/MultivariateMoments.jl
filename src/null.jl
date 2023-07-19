@@ -31,6 +31,10 @@ end
 
 abstract type MacaulayNullspaceSolver end
 
+function solve(null::MacaulayNullspace, solver::MacaulayNullspaceSolver)
+    return solve(BorderBasis(null, solver), _some_args(border_basis_solver(solver))...)
+end
+
 """
     struct ImageSpaceSolver{A<:LowRankLDLTAlgorithm,S<:MacaulayNullspaceSolver}
         ldlt::A

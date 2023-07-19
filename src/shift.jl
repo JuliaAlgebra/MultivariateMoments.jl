@@ -1,91 +1,87 @@
 # Inspired from macaulaylab.net
 
-struct MonomialDependence{B<:MB.AbstractPolynomialBasis}
-    standard_monomials::B
-    corners::B
-    dependent_border::B
-    independent_border::B
+mutable struct RankDependence{T,MT<:AbstractMatrix{T},C}
+    matrix::MT
+    check::C
+    independent_rows::Vector{Int}
+    old_rank::Int
+end
+
+RankDependence(matrix, check) = RankDependence(matrix, check, Int[], 0)
+
+function is_dependent!(r::RankDependence, row)
+    if r.old_rank == size(null.matrix, 2)
+        return false
+    end
+    rows = vcat(r.independent_rows, row)
+    new_rank = LinearAlgebra.rank(r.matrix[rows, :], r.check)
+    if new_rank < r.old_rank
+        @warn(
+            "After adding rows, the rank dropped from `$old_rank` to `$new_rank`. Correcting the rank to `$old_rank` and continuing."
+        )
+        new_rank = r.old_rank
+    end
+    independent = new_rank > r.old_rank
+    r.old_rank = new_rank
+    if independent
+        r.independent_rows = rows
+    end
+    return independent
+end
+
+function AnyDependence(null::MacaulayNullspace, rank_check::RankCheck)
+    r = RankDependence(null.matrix, rank_check)
+    return AnyDependence(Base.Fix1(is_dependent!, r), null.basis)
+end
+
+function StaircaseDependence(null::MacaulayNullspace, rank_check::RankCheck)
+    r = RankDependence(null.matrix, rank_check)
+    return StaircaseDependence(Base.Fix1(is_dependent!, r), null.basis)
 end
 
 """
-    function standard_monomials_and_corners(
-        null::MacaulayNullspace,
-        rank_check,
-    )
-
-Computes the set of standard monomials using the *greedy sieve* algorithm
-presented in [LLR08, Algorithm 1].
-
-[LLR08] Lasserre, Jean Bernard and Laurent, Monique, and Rostalski, Philipp.
-*Semidefinite characterization and computation of zero-dimensional real radical ideals.*
-Foundations of Computational Mathematics 8 (2008): 607-647.
 """
-function standard_monomials_and_corners(
-    null::MacaulayNullspace{T,MT,<:MB.MonomialBasis},
-    rank_check,
-) where {T,MT}
-    monos = eltype(null.basis.monomials)[]
-    corners = eltype(monos)[]
-    rows = Int[]
-    old_rank = 0
-    for (k, mono) in enumerate(null.basis.monomials)
-        if old_rank == size(null.matrix, 2)
-            break
+function column_compression
+end
+
+function _indices_or_ignore(in::MB.MonomialBasis, from::MB.MonomialBasis)
+    indices = Int[]
+    for mono in from.monomials
+        i = _index(in, mono)
+        if !isnothing(i)
+            push!(indices, i)
         end
-        # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
-        # It also ensures that the standard monomials have the "staircase structure".
-        if !any(Base.Fix2(MP.divides, mono), corners)
-            new_rank =
-                LinearAlgebra.rank(null.matrix[vcat(rows, k), :], rank_check)
-            if new_rank < old_rank
-                @warn(
-                    "After adding rows, the rank dropped from `$old_rank` to `$new_rank`. Correcting the rank to `$old_rank` and continuing."
-                )
-                new_rank = old_rank
-            elseif new_rank > old_rank
-                push!(rows, k)
-                push!(monos, mono)
-            else
-                push!(corner, mono)
-            end
-            old_rank = new_rank
-        end
     end
-    return monos, corners
+    return indices
 end
 
-function shift_nullspace(null::MacaulayNullspace, monos)
-    S = null[monos]
-    Sx = [null[monos.*shift] for shift in MP.variables(monos)]
-    pS = LinearAlgebra.pinv(S.matrix)
-    mult = SemialgebraicSets.MultiplicationMatrices([pS * S.matrix for S in Sx])
-    return MultivariateMoments.SemialgebraicSets.solve(
-        mult,
-        MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
-            Float64,
-        }(),
-    )
+function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
+    return Int[_index(in, mono) for mono in from.monomials]
 end
 
-function gap_zone_standard_monomials(monos, maxdegree)
-    num = zeros(Int, maxdegree + 1)
-    for mono in monos
-        num[MP.maxdegree(mono)+1] += 1
+function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
+    indep_rows = _indices_or_ignore(null.basis, d.independent)
+    dep_rows = _indices(null.basis, d.dependent)
+    @assert length(indep_rows) == size(null.matrix, 2)
+    return BorderBasis(d, null.matrix[dep_rows, :] / null.matrix[indep_rows, :])
+end
+
+function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
+    indep_rows = _indices_or_ignore(null.basis, d.independent)
+    dep = MB.merge_bases(d.corners, d.dependent_border)
+    dep_rows = _indices(null.basis, dep)
+    if length(indep_rows) < size(null.matrix)
+        error("Column compression not supported yet")
     end
-    i = findfirst(iszero, num)
-    if isnothing(i)
-        return
-    end
-    gap_size = something(
-        findfirst(!iszero, @view(num[(i+1):end])),
-        length(num) - i + 1,
-    )
-    num_affine = sum(view(num, 1:(i-1)))
-    return num_affine, gap_size
+    return BorderBasis(d, null.matrix[dep_rows, :] / null.matrix[indep_rows, :])
+end
+
+function BorderBasis{D}(null::MacaulayNullspace, check::RankCheck) where {D}
+    return BorderBasis(D(null, check), null)
 end
 
 """
-    struct ShiftNullspace{C<:RankCheck} <: MacaulayNullspaceSolver
+    struct ShiftNullspace{D,C<:RankCheck} <: MacaulayNullspaceSolver
         check::C
     end
 
@@ -98,7 +94,7 @@ the row indices of the null space.
 *Back to the roots: Polynomial system solving, linear algebra, systems theory.*
 IFAC Proceedings Volumes 45.16 (2012): 1203-1208.
 """
-struct ShiftNullspace{C<:RankCheck} <: MacaulayNullspaceSolver
+struct ShiftNullspace{D,C<:RankCheck} <: MacaulayNullspaceSolver
     check::C
 end
 # Because the matrix is orthogonal, we know the SVD of the whole matrix is
@@ -106,29 +102,12 @@ end
 # However, since we also know that the first row (which correspond to the
 # constant monomial) should be a standard monomial, `LeadingRelativeRankTol`
 # ensures that we will take it.
-ShiftNullspace() = ShiftNullspace(LeadingRelativeRankTol(1e-8))
+ShiftNullspace{D}(check::RankCheck) where {D} = ShiftNullspace{D,typeof(check)}(check)
+ShiftNullspace{D}() where {D} = ShiftNullspace{D}(LeadingRelativeRankTol(1e-8))
+ShiftNullspace(args...) = ShiftNullspace{StaircaseDependence}(args...)
 
-function solve(null::MacaulayNullspace, shift::ShiftNullspace)
-    d = MP.maxdegree(null.basis.monomials)
-    monos, _ = standard_monomials_and_corners(null, shift.check)
-    gap_zone = gap_zone_standard_monomials(monos, d)
-    if isnothing(gap_zone)
-        return
-    end
-    num_affine, gap_size = gap_zone
-    if gap_size < 1
-        return
-    end
-    if num_affine == length(monos)
-        affine_monos = monos
-        affine_null = null
-    else
-        affine_monos = monos[1:num_affine]
-        @warn("Column compression not supported yet")
-        return
-    end
+border_basis_solver(::ShiftNullspace) = nothing
 
-    # Solve the system:
-    sols = shift_nullspace(affine_null, affine_monos)
-    return ZeroDimensionalVariety(sols)
+function BorderBasis(null::MacaulayNullspace, shift::ShiftNullspace{D}) where {D}
+    return BorderBasis{D}(null, shift.check)
 end
