@@ -35,7 +35,7 @@ function BorderBasis{StaircaseDependence}(b::BorderBasis{<:AnyDependence})
 end
 
 function solve(
-    b::BorderBasis{StaircaseDependence,T},
+    b::BorderBasis{<:StaircaseDependence,T},
     solver::SemialgebraicSets.AbstractMultiplicationMatricesSolver = MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
         T,
     }(),
@@ -82,7 +82,7 @@ function solve(
         if known_border_coefficients(border)
             return
         end
-        for i in findfirst(1:(o-1))
+        for i in 1:o
             v = vars[order[i]]
             if MP.divides(v, border)
                 other_border = MP.div_multiple(border, v)
@@ -105,19 +105,19 @@ function solve(
         # monomial order so that we know that if `try_add_to_border`
         # fails, it will fail again if we run this for loop again with the same `o`.
         # That allows to limit the number of iteration of the outer loop by `length(vars)`
-        for std in b.standard.monomials
+        for std in d.standard.monomials
             for (k, shift) in enumerate(vars)
-                if k in view(order, 1:(o-1))
+                if k in view(order, 1:o)
                     continue
                 end
                 try_add_to_border(shift * std, o)
             end
         end
         for (k, shift) in enumerate(vars)
-            if k in view(order, 1:(o-1))
+            if k in view(order, 1:o)
                 continue
             end
-            if all(b.standard.monomials) do std
+            if all(d.standard.monomials) do std
                 return known_border_coefficients(shift * std)
             end
                 o += 1
@@ -136,7 +136,7 @@ function solve(
         # In any case, we don't have all multiplication matrices so we abort
         return
     end
-    sols = SS.solve(mult, solver)
+    sols = SS.solve(SS.MultiplicationMatrices(mult), solver)
     return ZeroDimensionalVariety(sols)
 end
 

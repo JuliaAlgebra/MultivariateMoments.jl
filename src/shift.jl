@@ -62,17 +62,17 @@ function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
     indep_rows = _indices_or_ignore(null.basis, d.independent)
     dep_rows = _indices(null.basis, d.dependent)
     @assert length(indep_rows) == size(null.matrix, 2)
-    return BorderBasis(d, null.matrix[dep_rows, :] / null.matrix[indep_rows, :])
+    return BorderBasis(d, (null.matrix[dep_rows, :] / null.matrix[indep_rows, :])')
 end
 
 function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
-    indep_rows = _indices_or_ignore(null.basis, d.independent)
-    dep = MB.merge_bases(d.corners, d.dependent_border)
-    dep_rows = _indices(null.basis, dep)
-    if length(indep_rows) < size(null.matrix)
+    indep_rows = _indices_or_ignore(null.basis, d.standard)
+    dependent = convert(AnyDependence, d).dependent
+    dep_rows = _indices(null.basis, dependent)
+    if length(indep_rows) < size(null.matrix, 2)
         error("Column compression not supported yet")
     end
-    return BorderBasis(d, null.matrix[dep_rows, :] / null.matrix[indep_rows, :])
+    return BorderBasis(d, (null.matrix[dep_rows, :] / null.matrix[indep_rows, :])')
 end
 
 function BorderBasis{D}(null::MacaulayNullspace, check::RankCheck) where {D}

@@ -90,7 +90,12 @@ function StaircaseDependence(
             end
         end
     end
-    return Dependence(standard, corners, dependent_border, independent_border)
+    return StaircaseDependence(
+        MB.MonomialBasis(standard),
+        MB.MonomialBasis(corners),
+        MB.MonomialBasis(dependent_border),
+        MB.MonomialBasis(independent_border),
+    )
 end
 
 function _exponents(monos, i)
