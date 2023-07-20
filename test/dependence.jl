@@ -12,8 +12,10 @@ function test_degree_error(x, y, z)
     M = typeof(x * y * z)
     m = b(M[])
     a = MM.AnyDependence(m, m)
+    @test sprint(show, a) == "AnyDependence\n"
     @test isempty(a)
-    s = MM.StaircaseDependence(m, m, m, m)
+    s = MM.StaircaseDependence(m, m, m, m, m)
+    @test sprint(show, s) == "StaircaseDependence\n"
     @test isempty(s)
     for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
         err = ErrorException(
@@ -27,6 +29,7 @@ function test_degree_error(x, y, z)
 end
 
 function _test_recipe(dep, ticks, args, names, indep)
+    @test sprint(show, dep) isa String
     d = Dict{Symbol,Any}()
     r = RB.apply_recipe(d, dep)
     @test length(d) == 1 + length(ticks)
@@ -70,11 +73,11 @@ function test_recipe(x, y, z)
         [true, false],
     )
     return _test_recipe(
-        MM.StaircaseDependence(b(a .* z^0), b(c .* z^0), b(d), b(e)),
+        MM.StaircaseDependence(b(a .* z^0), b([x^0 * y^0 * z]), b(c .* z^0), b(d), b(e)),
         [0:1, 0:3, 0:4],
-        [(A..., [0]), (C..., [0, 0]), D, E],
-        ["Standard", "Corners", "Dependent border", "Independent border"],
-        [true, false, false, true],
+        [(A..., [0]), ([0], [0], [1]), (C..., [0, 0]), D, E],
+        ["Trivial standard", "Standard", "Corners", "Dependent border", "Independent border"],
+        [true, true, false, false, true],
     )
 end
 

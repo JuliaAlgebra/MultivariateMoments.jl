@@ -26,7 +26,9 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis)
 end
 
 """
-    struct Echelon
+    struct Echelon{D<:AbstractDependence,S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
+        MacaulayNullspaceSolver
+        solver::S
     end
 
 Given a [`MacaulayNullspace`](@ref), computes its echelon form
@@ -78,15 +80,21 @@ Foundations of Computational Mathematics 8 (2008): 607-647.
 *Numerical polynomial algebra.*
 Society for Industrial and Applied Mathematics, 2004.
 """
-struct Echelon{S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
+struct Echelon{D<:AbstractDependence,S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
        MacaulayNullspaceSolver
+    fallback::Bool
     solver::S
 end
-Echelon() = Echelon(nothing)
-
-function border_basis_solver(solver::Echelon)
-    return AlgebraicBorderSolver{AnyDependence}(solver.solver)
+function Echelon{D}(;
+    fallback::Bool = false,
+    solver::Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver} = nothing,
+) where {D}
+    return Echelon{D,typeof(solver)}(fallback, solver)
 end
+Echelon(; kws...) = Echelon{AnyDependence}(; kws...)
+
+# TODO remove
+Echelon(solver) = Echelon(; solver)
 
 # TODO remove in next breaking release
 function compute_support!(
@@ -101,7 +109,7 @@ end
 
 import RowEchelon
 
-function border_basis_and_solver(null::MacaulayNullspace, solver::Echelon)
+function border_basis_and_solver(null::MacaulayNullspace, solver::Echelon{D}) where {D}
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve
@@ -118,9 +126,14 @@ function border_basis_and_solver(null::MacaulayNullspace, solver::Echelon)
     RowEchelon.rref!(Z, null.accuracy / sqrt(size(Z, 2)))
     #r, vals = solve_system(U', μ.x)
     # TODO determine what is better between rank_check and sqrt(rank_check) here
-    solver = AlgebraicBorderSolver{AnyDependence}(
+    algebraic_solver = AlgebraicBorderSolver{D}(
         algorithm = SS.Buchberger(√null.accuracy),
         solver = solver.solver,
     )
+    if solver.fallback
+        solver = AlgebraicFallbackBorderSolver(; algebraic_solver)
+    else
+        solver = algebraic_solver
+    end
     return build_system(Z, null.basis), solver
 end

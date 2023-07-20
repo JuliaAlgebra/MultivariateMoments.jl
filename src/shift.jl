@@ -11,7 +11,7 @@ RankDependence(matrix, check) = RankDependence(matrix, check, Int[], 0)
 
 function is_dependent!(r::RankDependence, row)
     if r.old_rank == size(r.matrix, 2)
-        return false
+        return true
     end
     rows = vcat(r.independent_rows, row)
     new_rank = LinearAlgebra.rank(r.matrix[rows, :], r.check)
@@ -26,7 +26,7 @@ function is_dependent!(r::RankDependence, row)
     if independent
         r.independent_rows = rows
     end
-    return independent
+    return !independent
 end
 
 function AnyDependence(null::MacaulayNullspace, rank_check::RankCheck)
@@ -39,23 +39,12 @@ function StaircaseDependence(null::MacaulayNullspace, rank_check::RankCheck)
     return StaircaseDependence(Base.Fix1(is_dependent!, r), null.basis)
 end
 
-function _indices_or_ignore(in::MB.MonomialBasis, from::MB.MonomialBasis)
-    indices = Int[]
-    for mono in from.monomials
-        i = _index(in, mono)
-        if !isnothing(i)
-            push!(indices, i)
-        end
-    end
-    return indices
-end
-
 function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
     return Int[_index(in, mono) for mono in from.monomials]
 end
 
 function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
-    indep_rows = _indices_or_ignore(null.basis, d.independent)
+    indep_rows = _indices(null.basis, d.independent)
     dep_rows = _indices(null.basis, d.dependent)
     @assert length(indep_rows) == size(null.matrix, 2)
     return BorderBasis(
@@ -64,12 +53,17 @@ function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
     )
 end
 
+function column_compression(A, rows)
+    return LinearAlgebra.svd(A[rows, :]).U
+end
+
 function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
-    indep_rows = _indices_or_ignore(null.basis, d.standard)
+    indep_rows = _indices(null.basis, d.standard)
     dependent = convert(AnyDependence, d).dependent
     dep_rows = _indices(null.basis, dependent)
-    if length(indep_rows) < size(null.matrix, 2)
-        error("Column compression not supported yet")
+    U = null.matrix
+    if length(indep_rows) < size(U, 2)
+        U = column_compression(U, indep_rows)
     end
     return BorderBasis(
         d,

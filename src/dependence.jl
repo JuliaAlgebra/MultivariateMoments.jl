@@ -26,15 +26,20 @@ end
 
 function Base.show(io::IO, d::AnyDependence)
     println(io, "AnyDependence")
-    println(io, "with independent basis:")
-    println(io, d.independent)
-    println(io, "and dependent basis:")
-    println(io, d.dependent)
+    if !isempty(d.independent.monomials)
+        println(io, "with independent basis:")
+        println(io, d.independent)
+    end
+    if !isempty(d.dependent.monomials)
+        println(io, "and dependent basis:")
+        println(io, d.dependent)
+    end
     return
 end
 
 """
     struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
+        trivial_standard::B
         standard::B
         corners::B
         dependent_border::B
@@ -48,6 +53,7 @@ by multiplying an independent with a variable.
     If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
 struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
+    trivial_standard::B
     standard::B
     corners::B
     dependent_border::B
@@ -63,14 +69,26 @@ end
 
 function Base.show(io::IO, d::StaircaseDependence)
     println(io, "StaircaseDependence")
-    println(io, "with standard basis:")
-    println(io, d.standard)
-    println(io, "and corners basis:")
-    println(io, d.corners)
-    println(io, "and dependent border basis:")
-    println(io, d.dependent_border)
-    println(io, "and independent border basis:")
-    print(io, d.independent_border)
+    if !isempty(d.trivial_standard.monomials)
+        println(io, "with trivial standard basis:")
+        println(io, d.trivial_standard)
+    end
+    if !isempty(d.standard.monomials)
+        println(io, "with standard basis:")
+        println(io, d.standard)
+    end
+    if !isempty(d.corners.monomials)
+        println(io, "and corners basis:")
+        println(io, d.corners)
+    end
+    if !isempty(d.dependent_border.monomials)
+        println(io, "and dependent border basis:")
+        println(io, d.dependent_border)
+    end
+    if !isempty(d.independent_border.monomials)
+        println(io, "and independent border basis:")
+        print(io, d.independent_border)
+    end
     return
 end
 
@@ -78,6 +96,24 @@ function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
     dependent = MB.merge_bases(d.corners, d.dependent_border)[1]
     return AnyDependence(d.standard, dependent)
 end
+
+function AnyDependence(
+    is_dependent::Function,
+    basis::MB.MonomialBasis{M},
+) where {M}
+    independent = M[]
+    dependent = M[]
+    for i in eachindex(basis.monomials)
+        mono = basis.monomials[i]
+        if is_dependent(i)
+            push!(dependent, mono)
+        else
+            push!(independent, mono)
+        end
+    end
+    return AnyDependence(MB.MonomialBasis(independent), MB.MonomialBasis(dependent))
+end
+
 
 """
     function StaircaseDependence(
@@ -98,6 +134,7 @@ function StaircaseDependence(
     is_dependent::Function,
     basis::MB.MonomialBasis{M},
 ) where {M}
+    trivial_standard = M[]
     standard = M[]
     corners = M[]
     vars = MP.variables(basis)
@@ -106,7 +143,9 @@ function StaircaseDependence(
         # It also ensures that the standard monomials have the "staircase structure".
         if !any(Base.Fix2(MP.divides, mono), corners)
             i = _index(basis, mono)
-            if isnothing(i) || is_dependent(i)
+            if isnothing(i)
+                push!(trivial_standard, mono)
+            elseif !is_dependent(i)
                 push!(standard, mono)
             else
                 push!(corners, mono)
@@ -121,7 +160,7 @@ function StaircaseDependence(
             if isnothing(_monomial_index(standard, border)) &&
                isnothing(_monomial_index(corners, border))
                 i = _index(basis, mono)
-                if isnothing(i) || is_dependent(i)
+                if isnothing(i) || !is_dependent(i)
                     push!(independent_border, border)
                 else
                     push!(dependent_border, border)
@@ -130,6 +169,7 @@ function StaircaseDependence(
         end
     end
     return StaircaseDependence(
+        MB.MonomialBasis(trivial_standard),
         MB.MonomialBasis(standard),
         MB.MonomialBasis(corners),
         MB.MonomialBasis(dependent_border),
@@ -158,36 +198,37 @@ function _deg(deg, b, args...)
     end
 end
 
-__combine(::Function, ::Nothing) = nothing
-__combine(::Function, a) = a
-__combine(f::Function, ::Nothing, args...) = __combine(f, args...)
-function __combine(f::Function, a, args...)
-    d = __combine(f, args...)
+__reduce(::Function, ::Nothing) = nothing
+__reduce(::Function, a) = a
+__reduce(f::Function, ::Nothing, args...) = __reduce(f, args...)
+function __reduce(f::Function, a, args...)
+    d = __reduce(f, args...)
     if isnothing(d)
         return a
     else
         f(a, d)
     end
 end
-function _combine(f, args...)
-    d = __combine(f, args...)
+function _reduce(f, args...)
+    d = __reduce(f, args...)
     if isnothing(d)
         error("Cannot compute `$(f)degree` as all bases are empty")
     end
     return d
 end
 
-function _combine_deg(combine, deg, d::AnyDependence, args...)
-    return _combine(
+function _map_reduce(combine, deg, d::AnyDependence, args...)
+    return _reduce(
         combine,
         _deg(deg, d.independent, args...),
         _deg(deg, d.dependent, args...),
     )
 end
 
-function _combine_deg(combine, deg, d::StaircaseDependence, args...)
-    return _combine(
+function _map_reduce(combine, deg, d::StaircaseDependence, args...)
+    return _reduce(
         combine,
+        _deg(deg, d.trivial_standard, args...),
         _deg(deg, d.standard, args...),
         _deg(deg, d.corners, args...),
         _deg(deg, d.dependent_border, args...),
@@ -195,12 +236,20 @@ function _combine_deg(combine, deg, d::StaircaseDependence, args...)
     )
 end
 
+function _reduce_variables(v, w)
+    return MP.variables(prod(v) * prod(w))
+end
+
+function MP.variables(d::AbstractDependence)
+    return _map_reduce(_reduce_variables, MP.variables, d)
+end
+
 function MP.mindegree(d::AbstractDependence, args...)
-    return _combine_deg(min, MP.mindegree, d, args...)
+    return _map_reduce(min, MP.mindegree, d, args...)
 end
 
 function MP.maxdegree(d::AbstractDependence, args...)
-    return _combine_deg(max, MP.maxdegree, d, args...)
+    return _map_reduce(max, MP.maxdegree, d, args...)
 end
 
 function _ticks(d::AbstractDependence, v)
@@ -216,17 +265,21 @@ RecipesBase.@recipe function f(m::AnyDependence)
     if length(t) >= 3
         zticks --> t[3]
     end
-    RecipesBase.@series begin
-        seriestype --> :scatter
-        markershape --> :circle
-        label := "Independent"
-        _split_exponents(m.independent)
+    if !isempty(m.independent.monomials)
+        RecipesBase.@series begin
+            seriestype --> :scatter
+            markershape --> :circle
+            label := "Independent"
+            _split_exponents(m.independent)
+        end
     end
-    RecipesBase.@series begin
-        seriestype --> :scatter
-        markershape --> :rect
-        label := "Dependent"
-        _split_exponents(m.dependent)
+    if !isempty(m.dependent.monomials)
+        RecipesBase.@series begin
+            seriestype --> :scatter
+            markershape --> :rect
+            label := "Dependent"
+            _split_exponents(m.dependent)
+        end
     end
 end
 
@@ -239,28 +292,44 @@ RecipesBase.@recipe function f(m::StaircaseDependence)
     if length(t) >= 3
         zticks --> t[3]
     end
-    RecipesBase.@series begin
-        seriestype --> :scatter
-        markershape --> :circle
-        label := "Standard"
-        _split_exponents(m.standard)
+    if !isempty(m.trivial_standard.monomials)
+        RecipesBase.@series begin
+            seriestype --> :scatter
+            markershape --> :circle
+            label := "Trivial standard"
+            _split_exponents(m.trivial_standard)
+        end
     end
-    RecipesBase.@series begin
-        seriestype --> :scatter
-        markershape --> :rect
-        label := "Corners"
-        _split_exponents(m.corners)
+    if !isempty(m.standard.monomials)
+        RecipesBase.@series begin
+            seriestype --> :scatter
+            markershape --> :circle
+            label := "Standard"
+            _split_exponents(m.standard)
+        end
     end
-    RecipesBase.@series begin
-        seriestype --> :scatter
-        markershape --> :rect
-        label := "Dependent border"
-        _split_exponents(m.dependent_border)
+    if !isempty(m.corners.monomials)
+        RecipesBase.@series begin
+            seriestype --> :scatter
+            markershape --> :rect
+            label := "Corners"
+            _split_exponents(m.corners)
+        end
     end
-    RecipesBase.@series begin
-        seriestype --> :scatter
-        markershape --> :circle
-        label := "Independent border"
-        _split_exponents(m.independent_border)
+    if !isempty(m.dependent_border.monomials)
+        RecipesBase.@series begin
+            seriestype --> :scatter
+            markershape --> :rect
+            label := "Dependent border"
+            _split_exponents(m.dependent_border)
+        end
+    end
+    if !isempty(m.independent_border.monomials)
+        RecipesBase.@series begin
+            seriestype --> :scatter
+            markershape --> :circle
+            label := "Independent border"
+            _split_exponents(m.independent_border)
+        end
     end
 end
