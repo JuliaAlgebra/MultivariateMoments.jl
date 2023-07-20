@@ -64,7 +64,7 @@ low_rank_ldlt
 LowRankLDLT
 ```
 
-The choice of cutoff between the significant and neglibeable eigen/singular values is
+The choice of cutoff between the significant and negligeable eigen/singular values is
 parametrized by the following interface:
 ```@docs
 RankCheck
@@ -93,12 +93,23 @@ ShiftNullspace
 Echelon
 ```
 
-The [`Echelon`](@ref) uses the RowEchelon package to determine the standard
-monomials (which is not numerically stable) while the [`ShiftNullspace`](@ref)
-uses the following function internally which is based on SVD so it should have
-better numerical behavior.
+The [`Echelon`](@ref) uses the RowEchelon package to determine the independent
+rows (which is not numerically stable) while the [`ShiftNullspace`](@ref) uses
+[`RankCheck`](@ref)s with the singular values so it should have better numerical
+behavior. They can either simply distinguish the dependency of rows with
+[`AnyDependence`](@ref) or use a sieve with [`StaircaseDependence`](@ref) to
+save some the computation of the singular values for some submatrices:
+
 ```@docs
-standard_monomials_and_border
+AnyDependence
+StaircaseDependence
+```
+
+The relationship between the dependent and the independent rows are
+then stored in a [`BorderBasis`](@ref):
+
+```@docs
+BorderBasis
 ```
 
 Once the center of the atoms are determined, a linear system is solved to determine

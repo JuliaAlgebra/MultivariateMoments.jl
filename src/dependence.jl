@@ -11,6 +11,9 @@ abstract type AbstractDependence end
     end
 
 The independent and dependent can be arbitrary disjoint bases.
+
+!!! tip
+    If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
 struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     independent::B
@@ -36,6 +39,9 @@ end
 
 No independent is a multiple of a dependent and each dependent can be obtained
 by multiplying an independent with a variable.
+
+!!! tip
+    If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
 struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     standard::B
@@ -57,14 +63,13 @@ function Base.show(io::IO, d::StaircaseDependence)
     return
 end
 
-
 function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
     dependent = MB.merge_bases(d.corners, d.dependent_border)[1]
     return AnyDependence(d.standard, dependent)
 end
 
 """
-    function Dependence(
+    function StaircaseDependence(
         is_dependent::Function,
         basis::MB.AbstractPolynomialBasis,
     )
@@ -175,10 +180,33 @@ RecipesBase.@recipe function f(m::AnyDependence)
     end
 end
 
+RecipesBase.@recipe function f(m::AnyDependence)
+    vars = MP.variables(m.independent.monomials)
+    t = _ticks.(Ref(m), vars)
+    aspect_ratio --> :equal # defaults to `:auto`
+    xticks --> t[1]
+    yticks --> t[2]
+    if length(t) >= 3
+        zticks --> t[3]
+    end
+    RecipesBase.@series begin
+        seriestype --> :scatter
+        markershape --> :circle
+        label := "Independent"
+        _split_exponents(m.independent)
+    end
+    RecipesBase.@series begin
+        seriestype --> :scatter
+        markershape --> :rect
+        label := "Dependent"
+        _split_exponents(m.dependent)
+    end
+end
+
 RecipesBase.@recipe function f(m::StaircaseDependence)
     vars = MP.variables(m.standard.monomials)
     t = _ticks.(Ref(m), vars)
-    aspect_ratio --> :equal # defaults to :auto
+    aspect_ratio --> :equal # defaults to `:auto`
     xticks --> t[1]
     yticks --> t[2]
     if length(t) >= 3

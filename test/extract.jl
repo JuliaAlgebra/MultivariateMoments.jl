@@ -143,10 +143,7 @@ function hl05_3_3_1()
     # β will be [z, y, x, y*z, x*z, x*y]
     x = monomial_vector([z, y, x, z^2, y * z, y^2, x * z, x * y, x^2])
     # x*β contains x*y*z, x^2*z, x^2*y which are not present so it should fail
-    b = MultivariateMoments.build_system(
-        U',
-        MB.MonomialBasis(x),
-    )
+    b = MultivariateMoments.build_system(U', MB.MonomialBasis(x))
     V = solve(b, AlgebraicBorderSolver{AnyDependence}())
     @test is_zero_dimensional(V)
     return testelements(
@@ -389,7 +386,8 @@ function test_extract()
             atoms_2(1e-10, solver)
         end
     end
-    @testset "hl05_2_3 $(_short(lrc))" for lrc in (SVDLDLT(), ShiftCholeskyLDLT(1e-14))
+    @testset "hl05_2_3 $(_short(lrc))" for lrc in
+                                           (SVDLDLT(), ShiftCholeskyLDLT(1e-14))
         perturb = !(lrc isa ShiftCholeskyLDLT) # the shift `1e-14` is too small compared to the noise of `1e-6`. We want high noise so that the default rtol of `Base.rtoldefault` does not work so that it tests that `rtol` is passed around.
         hl05_2_3(1e-4, lrc, default_solver, perturb)
         @test_throws ErrorException("Dummy solver") hl05_2_3(
@@ -403,11 +401,18 @@ function test_extract()
     end
     # Fails on 32-bits in CI
     if Sys.WORD_SIZE != 32
-        @testset "hl05_4 $(_short(lrc))" for lrc in (SVDLDLT(), ShiftCholeskyLDLT(1e-16))
+        @testset "hl05_4 $(_short(lrc))" for lrc in (
+            SVDLDLT(),
+            ShiftCholeskyLDLT(1e-16),
+        )
             hl05_4(1e-16, lrc)
         end
     end
-    @testset "lpj20_3_8_0 $(_short(check)) $(_short(lrc)) $ok" for (check, lrc, ok) in [
+    @testset "lpj20_3_8_0 $(_short(check)) $(_short(lrc)) $ok" for (
+        check,
+        lrc,
+        ok,
+    ) in [
         # All singular values will be at least 1e-6 > 1e-12 it won't eliminate any row
         (1e-12, ShiftCholeskyLDLT(1e-6), false)
         # The following tests that the method does not error if ranktol eliminates everything
