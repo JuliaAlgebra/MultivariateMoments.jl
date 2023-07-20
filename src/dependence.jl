@@ -17,6 +17,15 @@ struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     dependent::B
 end
 
+function Base.show(io::IO, d::AnyDependence)
+    println(io, "AnyDependence")
+    println(io, "with independent basis:")
+    println(io, d.independent)
+    println(io, "and dependent basis:")
+    println(io, d.dependent)
+    return
+end
+
 """
     struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
         standard::B
@@ -34,6 +43,20 @@ struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     dependent_border::B
     independent_border::B
 end
+
+function Base.show(io::IO, d::StaircaseDependence)
+    println(io, "StaircaseDependence")
+    println(io, "with standard basis:")
+    println(io, d.standard)
+    println(io, "and corners basis:")
+    println(io, d.corners)
+    println(io, "and dependent border basis:")
+    println(io, d.dependent_border)
+    println(io, "and independent border basis:")
+    print(io, d.independent_border)
+    return
+end
+
 
 function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
     dependent = MB.merge_bases(d.corners, d.dependent_border)[1]

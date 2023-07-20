@@ -1,6 +1,7 @@
 module MultivariateMoments
 
 using LinearAlgebra
+import SparseArrays
 
 import MutableArithmetics as MA
 

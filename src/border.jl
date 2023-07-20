@@ -20,6 +20,16 @@ struct BorderBasis{D<:AbstractDependence,T,MT<:AbstractMatrix{T}}
     matrix::MT
 end
 
+function Base.show(io::IO, b::BorderBasis)
+    println(io, "BorderBasis with independent rows and dependent columns in:")
+    println(io, b.dependence)
+    print(io, "And entries in a ", summary(b.matrix))
+    isempty(b.matrix) && return
+    println(io, ":")
+    Base.print_matrix(io, b.matrix)
+    return
+end
+
 BorderBasis{D}(b::BorderBasis{<:D}) where {D} = b
 
 function BorderBasis{AnyDependence}(b::BorderBasis{<:StaircaseDependence})
@@ -63,19 +73,23 @@ function solve(
     mult = Matrix{T}[zeros(T, m, m) for _ in eachindex(vars)]
     completed_border = Dict{eltype(dependent.monomials),Vector{T}}()
     function known_border_coefficients(border)
-        return !isnothing(_index(dependent, border)) ||
+        return !isnothing(_index(d.standard, border)) ||
+               !isnothing(_index(dependent, border)) ||
                haskey(completed_border, border)
     end
     function border_coefficients(border)
+        k = _index(d.standard, border)
+        if !isnothing(k)
+            return SparseArrays.sparsevec([k], [one(T)], m)
+        end
         k = _index(dependent, border)
-        if isnothing(k)
-            if haskey(completed_border, border)
-                return completed_border[border]
-            else
-                return
-            end
-        else
+        if !isnothing(k)
             return b.matrix[:, k]
+        end
+        if haskey(completed_border, border)
+            return completed_border[border]
+        else
+            return
         end
     end
     function try_add_to_border(border, o)
@@ -128,6 +142,7 @@ function solve(
             end
         end
     end
+    @assert o <= length(vars)
     if o < length(vars)
         # Several things could have gone wrong here:
         # 1) We could be missing corners,
@@ -196,7 +211,7 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
         col in eachindex(d.dependent.monomials)
     ]
     filter!(!MP.isconstant, system)
-    if min(
+    V = if min(
         MP.mindegree(d.independent.monomials),
         MP.mindegree(d.dependent.monomials),
     ) == max(
@@ -204,6 +219,7 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
         MP.maxdegree(d.dependent.monomials),
     )
         # Homogeneous
+        println("hom")
         projective_algebraic_set(
             system,
             _some_args(solver.algorithm)...,
@@ -216,6 +232,8 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
             _some_args(solver.solver)...,
         )
     end
+    display(V)
+    return V
 end
 
 """
@@ -250,12 +268,6 @@ function BorderWithFallback(;
 )
     return BorderWithFallback(multiplication_matrices_solver, algebraic_solver)
 end
-#function BorderWithFallback(solver::SS.AbstractMultiplicationMatricesSolver)
-#    return BorderWithFallback(solver, nothing)
-#end
-#function BorderWithFallback(solver::SS.AbstractAlgebraicSolver)
-#    return BorderWithFallback(nothing, solver)
-#end
 
 function solve(b::BorderBasis, solver::BorderWithFallback)
     sol = solve(b, _some_args(solver.multiplication_matrices_solver)...)

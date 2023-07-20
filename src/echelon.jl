@@ -1,4 +1,4 @@
-function build_system(U::AbstractMatrix, basis::MB.MonomialBasis, args...)
+function build_system(U::AbstractMatrix, basis::MB.MonomialBasis)
     # System is
     # `basis = [U' 0] * basis`
     # which is
