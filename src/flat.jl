@@ -8,7 +8,7 @@ Base.length(v::ZeroDimensionalVariety) = length(v.elements)
 Base.iterate(v::ZeroDimensionalVariety, args...) = iterate(v.elements, args...)
 function Base.show(io::IO, V::ZeroDimensionalVariety)
     println(io, "ZeroDimensionalVariety with elements:")
-    show(io, V.elements)
+    return show(io, V.elements)
 end
 
 # Decomposition of the pencil of matrices

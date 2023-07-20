@@ -37,7 +37,8 @@ function BorderBasis{AnyDependence}(b::BorderBasis{<:StaircaseDependence})
 end
 
 function BorderBasis{StaircaseDependence}(b::BorderBasis{<:AnyDependence})
-    basis, I, _ = MB.merge_bases(b.dependence.independent, b.dependence.dependent)
+    basis, I, _ =
+        MB.merge_bases(b.dependence.independent, b.dependence.dependent)
     d = StaircaseDependence(basis) do i
         return iszero(I[i])
     end

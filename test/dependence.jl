@@ -73,10 +73,22 @@ function test_recipe(x, y, z)
         [true, false],
     )
     return _test_recipe(
-        MM.StaircaseDependence(b(a .* z^0), b([x^0 * y^0 * z]), b(c .* z^0), b(d), b(e)),
+        MM.StaircaseDependence(
+            b(a .* z^0),
+            b([x^0 * y^0 * z]),
+            b(c .* z^0),
+            b(d),
+            b(e),
+        ),
         [0:1, 0:3, 0:4],
         [(A..., [0]), ([0], [0], [1]), (C..., [0, 0]), D, E],
-        ["Trivial standard", "Standard", "Corners", "Dependent border", "Independent border"],
+        [
+            "Trivial standard",
+            "Standard",
+            "Corners",
+            "Dependent border",
+            "Independent border",
+        ],
         [true, true, false, false, true],
     )
 end

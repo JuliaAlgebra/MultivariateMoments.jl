@@ -80,8 +80,10 @@ Foundations of Computational Mathematics 8 (2008): 607-647.
 *Numerical polynomial algebra.*
 Society for Industrial and Applied Mathematics, 2004.
 """
-struct Echelon{D<:AbstractDependence,S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
-       MacaulayNullspaceSolver
+struct Echelon{
+    D<:AbstractDependence,
+    S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver},
+} <: MacaulayNullspaceSolver
     fallback::Bool
     solver::S
 end
@@ -109,7 +111,10 @@ end
 
 import RowEchelon
 
-function border_basis_and_solver(null::MacaulayNullspace, solver::Echelon{D}) where {D}
+function border_basis_and_solver(
+    null::MacaulayNullspace,
+    solver::Echelon{D},
+) where {D}
     # Ideally, we should determine the pivots with a greedy sieve algorithm [LLR08, Algorithm 1]
     # so that we have more chance that low order monomials are in β and then more chance
     # so that the pivots form an order ideal. We just use `rref` which does not implement the sieve

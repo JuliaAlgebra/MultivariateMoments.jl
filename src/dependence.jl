@@ -111,9 +111,11 @@ function AnyDependence(
             push!(independent, mono)
         end
     end
-    return AnyDependence(MB.MonomialBasis(independent), MB.MonomialBasis(dependent))
+    return AnyDependence(
+        MB.MonomialBasis(independent),
+        MB.MonomialBasis(dependent),
+    )
 end
-
 
 """
     function StaircaseDependence(
