@@ -6,6 +6,10 @@ end
 SemialgebraicSets.is_zero_dimensional(::ZeroDimensionalVariety) = true
 Base.length(v::ZeroDimensionalVariety) = length(v.elements)
 Base.iterate(v::ZeroDimensionalVariety, args...) = iterate(v.elements, args...)
+function Base.show(io::IO, V::ZeroDimensionalVariety)
+    println(io, "ZeroDimensionalVariety with elements:")
+    return show(io, V.elements)
+end
 
 # Decomposition of the pencil of matrices
 function decompose(

@@ -37,11 +37,24 @@ function BorderBasis{AnyDependence}(b::BorderBasis{<:StaircaseDependence})
 end
 
 function BorderBasis{StaircaseDependence}(b::BorderBasis{<:AnyDependence})
-    d = StaircaseDependence(_ -> true, b.dependent)
+    basis, I, _ =
+        MB.merge_bases(b.dependence.independent, b.dependence.dependent)
+    d = StaircaseDependence(basis) do i
+        return iszero(I[i])
+    end
     dependent = convert(AnyDependence, d).dependent
     rows = _indices(b.dependence.independent, d.standard)
     cols = _indices(b.dependence.dependent, dependent)
     return BorderBasis(d, b.matrix[rows, cols])
+end
+
+function solve(
+    b::BorderBasis{<:AnyDependence,T},
+    solver::SemialgebraicSets.AbstractMultiplicationMatricesSolver = MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
+        T,
+    }(),
+) where {T}
+    return solve(BorderBasis{StaircaseDependence}(b), solver)
 end
 
 function solve(
@@ -52,8 +65,9 @@ function solve(
 ) where {T}
     d = b.dependence
     dependent = convert(AnyDependence, d).dependent
-    vars = MP.variables(d.standard)
-    m = length(d.standard)
+    vars = MP.variables(d)
+    standard, _, I = MB.merge_bases(d.trivial_standard, d.standard)
+    m = length(standard)
     # If a monomial `border` is not in `dependent` and it is not a corner
     # then it can be divided by another monomial `x^α in dependent`.
     # So there exists a monomial `x^β` such that `border = x^(α + β)`.
@@ -73,18 +87,24 @@ function solve(
     mult = Matrix{T}[zeros(T, m, m) for _ in eachindex(vars)]
     completed_border = Dict{eltype(dependent.monomials),Vector{T}}()
     function known_border_coefficients(border)
-        return !isnothing(_index(d.standard, border)) ||
+        return !isnothing(_index(standard, border)) ||
                !isnothing(_index(dependent, border)) ||
                haskey(completed_border, border)
     end
     function border_coefficients(border)
-        k = _index(d.standard, border)
+        k = _index(standard, border)
         if !isnothing(k)
             return SparseArrays.sparsevec([k], [one(T)], m)
         end
         k = _index(dependent, border)
         if !isnothing(k)
-            return b.matrix[:, k]
+            v = zeros(T, m)
+            for i in eachindex(I)
+                if !iszero(I[i])
+                    v[i] = b.matrix[I[i], k]
+                end
+            end
+            return v
         end
         if haskey(completed_border, border)
             return completed_border[border]
@@ -119,7 +139,7 @@ function solve(
         # monomial order so that we know that if `try_add_to_border`
         # fails, it will fail again if we run this for loop again with the same `o`.
         # That allows to limit the number of iteration of the outer loop by `length(vars)`
-        for std in d.standard.monomials
+        for std in standard.monomials
             for (k, shift) in enumerate(vars)
                 if k in view(order, 1:o)
                     continue
@@ -131,12 +151,12 @@ function solve(
             if k in view(order, 1:o)
                 continue
             end
-            if all(d.standard.monomials) do std
+            if all(standard.monomials) do std
                 return known_border_coefficients(shift * std)
             end
                 o += 1
                 order[o] = k
-                for (col, std) in enumerate(d.standard.monomials)
+                for (col, std) in enumerate(standard.monomials)
                     mult[k][:, col] = border_coefficients(shift * std)
                 end
             end
@@ -229,9 +249,12 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
 end
 
 """
-    struct AlgebraicFallbackBorderSolver{M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},S<:Union{Nothing,SS.AbstractAlgebraicSolver}}
+    struct AlgebraicFallbackBorderSolver{
+        M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},
+        S<:AlgebraicBorderSolver,
+    }
         multiplication_matrices_solver::M
-        algebraic_solver::A
+        algebraic_solver::S
     end
 
 Solve with `multiplication_matrices_solver` and if it fails, falls back to
