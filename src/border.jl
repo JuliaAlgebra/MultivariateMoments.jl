@@ -195,6 +195,20 @@ end
 _some_args(::Nothing) = tuple()
 _some_args(arg) = (arg,)
 
+function _combine_deg(combine, deg, a, b)
+    if isempty(a)
+        return deg(b)
+    elseif isempty(b)
+        return deg(b)
+    else
+        return combine(deg(a), deg(b))
+    end
+end
+
+function _combine_deg(combine, deg, a::MB.MonomialBasis, b::MB.MonomialBasis)
+    return _combine_deg(combine, deg, a.monomials, b.monomials)
+end
+
 function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     if !(E <: D)
         solve(BorderBasis{D}(b), solver)
@@ -211,15 +225,10 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
         col in eachindex(d.dependent.monomials)
     ]
     filter!(!MP.isconstant, system)
-    V = if min(
-        MP.mindegree(d.independent.monomials),
-        MP.mindegree(d.dependent.monomials),
-    ) == max(
-        MP.maxdegree(d.independent.monomials),
-        MP.maxdegree(d.dependent.monomials),
-    )
+    mindeg = _combine_deg(min, MP.mindegree, d.independent, d.dependent)
+    maxdeg = _combine_deg(max, MP.maxdegree, d.independent, d.dependent)
+    V = if mindeg == maxdeg
         # Homogeneous
-        println("hom")
         projective_algebraic_set(
             system,
             _some_args(solver.algorithm)...,
@@ -232,7 +241,6 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
             _some_args(solver.solver)...,
         )
     end
-    display(V)
     return V
 end
 
