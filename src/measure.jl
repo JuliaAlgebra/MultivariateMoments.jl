@@ -90,6 +90,10 @@ function _monomial_index(monos::AbstractVector, mono)
     end
 end
 
+function _index(basis::MB.MonomialBasis, mono)
+    return _monomial_index(basis.monomials, mono)
+end
+
 function moment_value(μ, mono)
     i = _monomial_index(μ.x, mono)
     if isnothing(i)

@@ -2,6 +2,7 @@
     struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}
         matrix::MT
         basis::BT
+        accuracy::T
     end
 
 This matrix with rows indexed by `basis` can either be interpreted as
@@ -10,7 +11,7 @@ the image space of a moment matrix with rows and columns indexed by `basis`).
 The value of `matrix[i, j]` should be interpreted as the value of the `i`th
 element of `basis` for the `j`th generator of the null space (resp. image) space.
 """
-struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT}
+struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT<:MB.AbstractPolynomialBasis}
     matrix::MT
     basis::BT
     accuracy::T
@@ -20,7 +21,7 @@ function Base.getindex(
     null::MacaulayNullspace{T,MT,<:MB.MonomialBasis},
     monos,
 ) where {T,MT}
-    I = _monomial_index.(Ref(null.basis.monomials), monos)
+    I = _index.(Ref(null.basis), monos)
     return MacaulayNullspace(
         null.matrix[I, :],
         MB.MonomialBasis(null.basis.monomials[I]),
@@ -29,6 +30,11 @@ function Base.getindex(
 end
 
 abstract type MacaulayNullspaceSolver end
+
+function solve(null::MacaulayNullspace, solver::MacaulayNullspaceSolver)
+    border, solver = border_basis_and_solver(null, solver)
+    return solve(border, _some_args(solver)...)
+end
 
 """
     struct ImageSpaceSolver{A<:LowRankLDLTAlgorithm,S<:MacaulayNullspaceSolver}

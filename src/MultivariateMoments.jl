@@ -1,6 +1,7 @@
 module MultivariateMoments
 
 using LinearAlgebra
+import SparseArrays
 
 import MutableArithmetics as MA
 
@@ -8,6 +9,8 @@ import MultivariatePolynomials as MP
 const _APL = MP.AbstractPolynomialLike
 
 import MultivariateBases as MB
+
+import SemialgebraicSets as SS
 
 abstract type AbstractMeasureLike{T} end
 abstract type AbstractMomentLike{T} <: AbstractMeasureLike{T} end
@@ -24,6 +27,8 @@ include("moment_matrix.jl")
 include("atomic.jl")
 
 include("rank.jl")
+include("dependence.jl")
+include("border.jl")
 include("null.jl")
 include("extract.jl")
 include("echelon.jl")

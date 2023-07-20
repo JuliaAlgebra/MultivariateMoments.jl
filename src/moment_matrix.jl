@@ -65,7 +65,8 @@ function show_basis_indexed_matrix(io::IO, A, pre = "")
     print(io, pre, "And entries in a ", summary(A.Q))
     isempty(A.Q) && return
     println(io, ":")
-    return Base.print_matrix(io, A.Q, pre * " ")
+    Base.print_matrix(io, A.Q, pre * " ")
+    return
 end
 
 function Base.show(io::IO, M::MomentMatrix)
