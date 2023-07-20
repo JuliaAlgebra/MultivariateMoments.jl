@@ -245,7 +245,7 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
 end
 
 """
-    struct BorderWithFallback{M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},S<:Union{Nothing,SS.AbstractAlgebraicSolver}}
+    struct AlgebraicFallbackBorderSolver{M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},S<:Union{Nothing,SS.AbstractAlgebraicSolver}}
         multiplication_matrices_solver::M
         algebraic_solver::A
     end
@@ -253,14 +253,14 @@ end
 Solve with `multiplication_matrices_solver` and if it fails, falls back to
 solving the algebraic system formed by the border basis with `algebraic_solver`.
 """
-struct BorderWithFallback{
+struct AlgebraicFallbackBorderSolver{
     M<:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},
     S<:AlgebraicBorderSolver,
 }
     multiplication_matrices_solver::M
     algebraic_solver::S
 end
-function BorderWithFallback(;
+function AlgebraicFallbackBorderSolver(;
     multiplication_matrices_solver::Union{
         Nothing,
         SS.AbstractMultiplicationMatricesSolver,
@@ -274,10 +274,10 @@ function BorderWithFallback(;
         solver,
     ),
 )
-    return BorderWithFallback(multiplication_matrices_solver, algebraic_solver)
+    return AlgebraicFallbackBorderSolver(multiplication_matrices_solver, algebraic_solver)
 end
 
-function solve(b::BorderBasis, solver::BorderWithFallback)
+function solve(b::BorderBasis, solver::AlgebraicFallbackBorderSolver)
     sol = solve(b, _some_args(solver.multiplication_matrices_solver)...)
     if isnothing(sol)
         sol = solve(b, solver.algebraic_solver)
@@ -287,7 +287,7 @@ end
 
 function solve(
     b::BorderBasis{AnyDependence},
-    solver::BorderWithFallback{M,<:AlgebraicBorderSolver{StaircaseDependence}},
+    solver::AlgebraicFallbackBorderSolver{M,<:AlgebraicBorderSolver{StaircaseDependence}},
 ) where {M}
     # We will need to convert in both cases anyway
     return solve(BorderBasis{StaircaseDependence}(b), solver)

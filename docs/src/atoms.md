@@ -106,10 +106,19 @@ StaircaseDependence
 ```
 
 The relationship between the dependent and the independent rows are
-then stored in a [`BorderBasis`](@ref):
+then stored in a [`BorderBasis`](@ref).
+By default, calling `solve` with only a [`BorderBasis`](@ref)` as argument
+or providing a `SemialgebraicSets.AbstractMultiplicationMatricesSolver`
+as second argument will try to construct the moment matrices from these
+and find the solutions from these moment matrices.
+Alternatively, give an [`AlgebraicBorderSolver`](@ref) or a
+[`AlgebraicFallbackBorderSolver`](@ref) as second argument
+to solve the system formed by these relations with these instead.
 
 ```@docs
 BorderBasis
+AlgebraicBorderSolver
+AlgebraicFallbackBorderSolver
 ```
 
 Once the center of the atoms are determined, a linear system is solved to determine
