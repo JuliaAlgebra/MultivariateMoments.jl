@@ -20,6 +20,10 @@ struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     dependent::B
 end
 
+function Base.isempty(d::AnyDependence)
+    return isempty(d.independent.monomials) && isempty(d.dependent.monomials)
+end
+
 function Base.show(io::IO, d::AnyDependence)
     println(io, "AnyDependence")
     println(io, "with independent basis:")
@@ -48,6 +52,12 @@ struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     corners::B
     dependent_border::B
     independent_border::B
+end
+
+function Base.isempty(d::StaircaseDependence)
+    return isempty(d.standard.monomials) && isempty(d.corners.monomials) &&
+        isempty(d.dependent_border.monomials) &&
+        isempty(d.independent_border.monomials)
 end
 
 function Base.show(io::IO, d::StaircaseDependence)
@@ -139,45 +149,61 @@ function _split_exponents(basis::MB.AbstractPolynomialBasis)
     return _split_exponents(basis.monomials)
 end
 
-function _ticks(m::AnyDependence, v)
-    n = max(
-        MP.maxdegree(m.independent.monomials, v),
-        MP.maxdegree(m.dependent.monomials, v),
-    )
-    return 0:n
+function _deg(deg, b, args...)
+    if isempty(b.monomials)
+        return nothing
+    else
+        return deg(b.monomials, args...)
+    end
 end
 
-function _ticks(m::StaircaseDependence, v)
-    n = max(
-        MP.maxdegree(m.standard.monomials, v),
-        MP.maxdegree(m.corners.monomials, v),
-        MP.maxdegree(m.dependent_border.monomials, v),
-        MP.maxdegree(m.independent_border.monomials, v),
-    )
-    return 0:n
+__combine(::Function, ::Nothing) = nothing
+__combine(::Function, a) = a
+__combine(f::Function, ::Nothing, args...) = __combine(f, args...)
+function __combine(f::Function, a, args...)
+    d = __combine(f, args...)
+    if isnothing(d)
+        return a
+    else
+        f(a, d)
+    end
+end
+function _combine(f, args...)
+    d = __combine(f, args...)
+    if isnothing(d)
+        error("Cannot compute `$(f)degree` as all bases are empty")
+    end
+    return d
 end
 
-RecipesBase.@recipe function f(m::AnyDependence)
-    vars = MP.variables(m.standard.monomials)
-    t = _ticks.(Ref(m), vars)
-    aspect_ratio --> :equal # defaults to :auto
-    xticks --> t[1]
-    yticks --> t[2]
-    if length(t) >= 3
-        zticks --> t[3]
-    end
-    RecipesBase.@series begin
-        seriestype --> :scatter
-        markershape --> :circle
-        label := "Independent"
-        _split_exponents(m.independent)
-    end
-    RecipesBase.@series begin
-        seriestype --> :scatter
-        markershape --> :rect
-        label := "Dependent"
-        _split_exponents(m.dependent)
-    end
+function _combine_deg(combine, deg, d::AnyDependence, args...)
+    return _combine(
+        combine,
+        _deg(deg, d.independent, args...),
+        _deg(deg, d.dependent, args...),
+    )
+end
+
+function _combine_deg(combine, deg, d::StaircaseDependence, args...)
+    return _combine(
+        combine,
+        _deg(deg, d.standard, args...),
+        _deg(deg, d.corners, args...),
+        _deg(deg, d.dependent_border, args...),
+        _deg(deg, d.independent_border, args...),
+    )
+end
+
+function MP.mindegree(d::AbstractDependence, args...)
+    return _combine_deg(min, MP.mindegree, d, args...)
+end
+
+function MP.maxdegree(d::AbstractDependence, args...)
+    return _combine_deg(max, MP.maxdegree, d, args...)
+end
+
+function _ticks(d::AbstractDependence, v)
+    return MP.mindegree(d, v):MP.maxdegree(d, v)
 end
 
 RecipesBase.@recipe function f(m::AnyDependence)
@@ -227,13 +253,13 @@ RecipesBase.@recipe function f(m::StaircaseDependence)
     RecipesBase.@series begin
         seriestype --> :scatter
         markershape --> :rect
-        label := "Dependent"
+        label := "Dependent border"
         _split_exponents(m.dependent_border)
     end
     RecipesBase.@series begin
         seriestype --> :scatter
         markershape --> :circle
-        label := "Independent"
+        label := "Independent border"
         _split_exponents(m.independent_border)
     end
 end

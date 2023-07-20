@@ -32,7 +32,7 @@ function testelements(X, Y, atol)
 end
 
 function _atoms(atoms, rank_check, solver)
-    Mod.@polyvar x[1:length(first(atoms))]
+    Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, WeightedDiracMeasure.(atoms, ones(length(atoms))))
     monos = monomials(x, 0:(length(atoms)+2))
     μ = measure(η, monos)

@@ -39,10 +39,6 @@ function StaircaseDependence(null::MacaulayNullspace, rank_check::RankCheck)
     return StaircaseDependence(Base.Fix1(is_dependent!, r), null.basis)
 end
 
-"""
-"""
-function column_compression end
-
 function _indices_or_ignore(in::MB.MonomialBasis, from::MB.MonomialBasis)
     indices = Int[]
     for mono in from.monomials
