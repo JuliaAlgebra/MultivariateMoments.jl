@@ -55,9 +55,10 @@ struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
 end
 
 function Base.isempty(d::StaircaseDependence)
-    return isempty(d.standard.monomials) && isempty(d.corners.monomials) &&
-        isempty(d.dependent_border.monomials) &&
-        isempty(d.independent_border.monomials)
+    return isempty(d.standard.monomials) &&
+           isempty(d.corners.monomials) &&
+           isempty(d.dependent_border.monomials) &&
+           isempty(d.independent_border.monomials)
 end
 
 function Base.show(io::IO, d::StaircaseDependence)

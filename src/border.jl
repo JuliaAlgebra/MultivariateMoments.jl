@@ -258,7 +258,10 @@ function AlgebraicFallbackBorderSolver(;
         solver,
     ),
 )
-    return AlgebraicFallbackBorderSolver(multiplication_matrices_solver, algebraic_solver)
+    return AlgebraicFallbackBorderSolver(
+        multiplication_matrices_solver,
+        algebraic_solver,
+    )
 end
 
 function solve(b::BorderBasis, solver::AlgebraicFallbackBorderSolver)
@@ -271,7 +274,10 @@ end
 
 function solve(
     b::BorderBasis{AnyDependence},
-    solver::AlgebraicFallbackBorderSolver{M,<:AlgebraicBorderSolver{StaircaseDependence}},
+    solver::AlgebraicFallbackBorderSolver{
+        M,
+        <:AlgebraicBorderSolver{StaircaseDependence},
+    },
 ) where {M}
     # We will need to convert in both cases anyway
     return solve(BorderBasis{StaircaseDependence}(b), solver)

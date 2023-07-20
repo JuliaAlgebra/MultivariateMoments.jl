@@ -16,7 +16,9 @@ function test_degree_error(x, y, z)
     s = MM.StaircaseDependence(m, m, m, m)
     @test isempty(s)
     for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
-        err = ErrorException("Cannot compute `$(name)degree` as all bases are empty")
+        err = ErrorException(
+            "Cannot compute `$(name)degree` as all bases are empty",
+        )
         @test_throws err f(a)
         @test_throws err f(a, x)
         @test_throws err f(s)
@@ -25,7 +27,7 @@ function test_degree_error(x, y, z)
 end
 
 function _test_recipe(dep, ticks, args, names, indep)
-    d = Dict{Symbol, Any}()
+    d = Dict{Symbol,Any}()
     r = RB.apply_recipe(d, dep)
     @test length(d) == 1 + length(ticks)
     @test d[:aspect_ratio] == :equal
@@ -51,7 +53,7 @@ function test_recipe(x, y, z)
     C = ([1, 0], [0, 2])
     d = [x * z^1, x * y^2]
     D = ([1, 1], [0, 2], [1, 0])
-    e = [x*y^2, x*y^3, x*z^4]
+    e = [x * y^2, x * y^3, x * z^4]
     E = ([1, 1, 1], [2, 3, 0], [0, 0, 4])
     _test_recipe(
         MM.AnyDependence(b(a), b(c)),
@@ -67,7 +69,7 @@ function test_recipe(x, y, z)
         ["Independent", "Dependent"],
         [true, false],
     )
-    _test_recipe(
+    return _test_recipe(
         MM.StaircaseDependence(b(a .* z^0), b(c .* z^0), b(d), b(e)),
         [0:1, 0:3, 0:4],
         [(A..., [0]), (C..., [0, 0]), D, E],
