@@ -421,27 +421,27 @@ function test_extract()
     ]
         lpj20_3_8_0(check, lrc, ok)
     end
-#    @test_throws ErrorException("Dummy solver") lpj20_3_8(1e-5, DummySolver())
-#    lpj20_3_8(1e-5, default_solver)
-#    for ranktol in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7]
-#        # With 1e-3 and 1e-4, the rank is detected to be 1
-#        # With 1e-5, the rank is detected to be 2
-#        # With 1e-6, the rank is detected to be 3
-#        # With 1e-7, the rank is detected to be 5
-#        lpj20_3_9(ranktol)
-#    end
-#    for fixed_rank in 1:5
-#        lpj20_3_9(FixedRank(fixed_rank))
-#    end
-#    # With 1e-8, the rank is detected to be 6
-#    lpj20_3_9(1e-8, 2)
-#    lpj20_3_9(FixedRank(6), 2)
-#    # With 1e-9, the rank is detected to be 7
-#    lpj20_3_9(1e-9, 0)
-#    lpj20_3_9(FixedRank(7), 0)
-#    jcg14_6_1(6e-3)
-#    jcg14_6_1(8e-4, false)
-#    large_norm(1e-2)
+    @test_throws ErrorException("Dummy solver") lpj20_3_8(1e-5, DummySolver())
+    lpj20_3_8(1e-5, default_solver)
+    for ranktol in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7]
+        # With 1e-3 and 1e-4, the rank is detected to be 1
+        # With 1e-5, the rank is detected to be 2
+        # With 1e-6, the rank is detected to be 3
+        # With 1e-7, the rank is detected to be 5
+        lpj20_3_9(ranktol)
+    end
+    for fixed_rank in 1:5
+        lpj20_3_9(FixedRank(fixed_rank))
+    end
+    # With 1e-8, the rank is detected to be 6
+    lpj20_3_9(1e-8, 2)
+    lpj20_3_9(FixedRank(6), 2)
+    # With 1e-9, the rank is detected to be 7
+    lpj20_3_9(1e-9, 0)
+    lpj20_3_9(FixedRank(7), 0)
+    jcg14_6_1(6e-3)
+    jcg14_6_1(8e-4, false)
+    large_norm(1e-2)
     return
 end
 
