@@ -7,7 +7,31 @@ import MultivariateMoments as MM
 
 b(x) = MB.MonomialBasis(x)
 
-function test_univariate_infinity(x)
+include("utils.jl")
+
+function test_dreesen1(x, y)
+    matrix = Float64[
+        1 0 0 0
+        0 1 0 0
+        0 0 1 0
+        0 0 0 1
+        0 0 1 0
+        1 0 0 0
+    ]
+    basis = MB.MonomialBasis([1, y, x, y^2, x * y, x^2])
+    null = MM.MacaulayNullspace(matrix, basis, 1e-8)
+    @testset "$D" for D in [MM.AnyDependence, MM.StaircaseDependence]
+        @testset "$name" for (solver, name) in [
+            (MM.ShiftNullspace{D}(), "shift"),
+            #(MM.Echelon{D}(fallback = false), "echelon no fallback"),
+            #(MM.Echelon{D}(fallback = true), "echelon fallback"),
+        ]
+            @test isnothing(MM.solve(null, solver))
+        end
+    end
+end
+
+function _test_univariate_infinity(x, y)
     Z = Float64[
         1 0
         2 0
@@ -51,12 +75,12 @@ using Test
 
 import DynamicPolynomials
 @testset "DynamicPolynomials" begin
-    DynamicPolynomials.@polyvar x
-    TestNull.runtests(x)
+    DynamicPolynomials.@polyvar x y
+    TestNull.runtests(x, y)
 end
 
 import TypedPolynomials
 @testset "TypedPolynomials" begin
-    TypedPolynomials.@polyvar x
-    TestNull.runtests(x)
+    TypedPolynomials.@polyvar x y
+    TestNull.runtests(x, y)
 end
