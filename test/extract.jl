@@ -24,12 +24,7 @@ end
 
 Mod.@polyvar x
 
-function testelements(X, Y, atol)
-    @test length(X) == length(Y)
-    for y in Y
-        @test any(x -> isapprox(x, y, atol = atol), X)
-    end
-end
+include("utils.jl")
 
 function _atoms(atoms, rank_check, solver)
     Mod.@polyvar x[1:2]

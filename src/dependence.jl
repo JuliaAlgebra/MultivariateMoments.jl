@@ -161,7 +161,7 @@ function StaircaseDependence(
             border = shift * mono
             if isnothing(_monomial_index(standard, border)) &&
                isnothing(_monomial_index(corners, border))
-                i = _index(basis, mono)
+                i = _index(basis, border)
                 if isnothing(i) || !is_dependent(i)
                     push!(independent_border, border)
                 else
