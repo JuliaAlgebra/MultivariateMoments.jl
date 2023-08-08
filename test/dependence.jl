@@ -49,6 +49,17 @@ function _test_recipe(dep, ticks, args, names, indep)
     end
 end
 
+function test_staircase(x, y, z)
+    d = MM.StaircaseDependence(b([1, x^2])) do i
+        return i > 1
+    end
+    @test d.trivial_standard.monomials == [x]
+    @test d.standard.monomials == [x^0]
+    @test d.corners.monomials == [x^2]
+    @test isempty(d.dependent_border.monomials)
+    @test isempty(d.independent_border.monomials)
+end
+
 function test_recipe(x, y, z)
     a = [x^0 * y^0]
     A = ([0], [0])
