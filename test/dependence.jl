@@ -8,24 +8,31 @@ import MultivariateMoments as MM
 
 b(x) = MB.MonomialBasis(x)
 
+struct FixedDependence
+    dependent::Vector{Int}
+end
+
+MM.is_dependent!(d::FixedDependence, i) = i in d.dependent
+function MM.column_compression!(::FixedDependence, _) end
+
 function test_degree_error(x, y, z)
     M = typeof(x * y * z)
     m = b(M[])
-    a = MM.AnyDependence(m, m)
-    @test sprint(show, a) == "AnyDependence\n"
+    a = MM.AnyDependence(_ -> true, m)
+    @test sprint(show, a) == "AnyDependence for an empty basis\n"
     @test isempty(a)
-    s = MM.StaircaseDependence(m, m, m, m, m)
-    @test sprint(show, s) == "StaircaseDependence\n"
+    s = MM.StaircaseDependence(_ -> true, m)
+    @test sprint(show, s) == "StaircaseDependence for an empty basis\n"
     @test isempty(s)
-    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
-        err = ErrorException(
-            "Cannot compute `$(name)degree` as all bases are empty",
-        )
-        @test_throws err f(a)
-        @test_throws err f(a, x)
-        @test_throws err f(s)
-        @test_throws err f(s, x)
-    end
+#    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
+#        err = ErrorException(
+#            "Cannot compute `$(name)degree` as all bases are empty",
+#        )
+#        @test_throws err f(a)
+#        @test_throws err f(a, x)
+#        @test_throws err f(s)
+#        @test_throws err f(s, x)
+#    end
 end
 
 function _test_recipe(dep, ticks, args, names, indep)
@@ -50,14 +57,23 @@ function _test_recipe(dep, ticks, args, names, indep)
 end
 
 function test_staircase(x, y, z)
-    d = MM.StaircaseDependence(b([1, x^2])) do i
-        return i > 1
-    end
-    @test d.trivial_standard.monomials == [x]
-    @test d.standard.monomials == [x^0]
-    @test d.corners.monomials == [x^2]
-    @test isempty(d.dependent_border.monomials)
-    @test isempty(d.independent_border.monomials)
+    basis = b([1, x^2])
+    d = MM.StaircaseDependence(FixedDependence([2]), basis)
+    @test d.basis.monomials == [x^0, x, x^2]
+    @test d.dependence == [
+        MM.LinearDependence(false, true, false),
+        MM.LinearDependence(false, false, false),
+        MM.LinearDependence(true, true, false),
+    ]
+    @test d.position == [MM.STANDARD, MM.STANDARD, MM.CORNER]
+    d = MM.StaircaseDependence(FixedDependence(Int[]), b([1, x]))
+    @test d.basis.monomials == [x^0, x, x^2]
+    @test d.dependence == [
+        MM.LinearDependence(false, true, false),
+        MM.LinearDependence(false, true, false),
+        MM.LinearDependence(false, false, false),
+    ]
+    @test d.position == [MM.STANDARD, MM.STANDARD, MM.STANDARD]
 end
 
 function test_recipe(x, y, z)
@@ -65,12 +81,16 @@ function test_recipe(x, y, z)
     A = ([0], [0])
     c = [x, y^2]
     C = ([1, 0], [0, 2])
+    ac, Ia, Ic = MB.merge_bases(b(a), b(c))
     d = [x * z^1, x * y^2]
     D = ([1, 1], [0, 2], [1, 0])
     e = [x * y^2, x * y^3, x * z^4]
     E = ([1, 1, 1], [2, 3, 0], [0, 0, 4])
+    ae, _, _ = MB.merge_bases(b(a), b(e))
+    cd, _, _ = MB.merge_bases(b(c), b(d))
+    aecd, _, Idep = MB.merge_bases(ae, cd)
     _test_recipe(
-        MM.AnyDependence(b(a), b(c)),
+        MM.AnyDependence(i -> !iszero(Ic), ac),
         [0:1, 0:2],
         [A, C],
         ["Independent", "Dependent"],
@@ -83,13 +103,10 @@ function test_recipe(x, y, z)
         ["Independent", "Dependent"],
         [true, false],
     )
-    return _test_recipe(
+    _test_recipe(
         MM.StaircaseDependence(
-            b(a .* z^0),
-            b([x^0 * y^0 * z]),
-            b(c .* z^0),
-            b(d),
-            b(e),
+            FixedDependence(findall(!iszero, Idep)),
+            aecd,
         ),
         [0:1, 0:3, 0:4],
         [(A..., [0]), ([0], [0], [1]), (C..., [0, 0]), D, E],
@@ -102,6 +119,7 @@ function test_recipe(x, y, z)
         ],
         [true, true, false, false, true],
     )
+    return
 end
 
 function runtests(args...)

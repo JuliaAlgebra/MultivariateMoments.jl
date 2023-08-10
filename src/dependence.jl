@@ -1,13 +1,94 @@
 import MultivariatePolynomials as MP
 import MultivariateBases as MB
 import RecipesBase
+import Colors
+
+"""
+    struct LinearDependence
+        dependent::Bool
+        in_basis::Bool
+        saturated::Bool
+    end
+
+Linear dependence of the element of a basis representing the indices of the rows
+of a [`MacaulayNullspace`]. `dependent` indicates whether it is linearly
+dependent to rows that appear earlier in the basis. `in_basis` indicates
+whether the element is in the basis (otherwise, it is trivially dependent so the
+pair `dependent = false` and `in_basis = false` is impossible). `saturated`
+indicates that it is known that all rows of the macaulay matrix with this column
+have already been generated.
+"""
+struct LinearDependence
+    dependent::Bool
+    in_basis::Bool
+    saturated::Bool
+end
+
+_shape(d::LinearDependence) = d.dependent ? :square : :circle
+
+function _label(d::LinearDependence)
+    s = d.saturated ? "Saturated " : ""
+    s *= d.in_basis ? "" : "Trivial "
+    s *= d.dependent ? "" : "In"
+    s *= "dependent"
+end
+
+function _markercolor(d::LinearDependence)
+    if d.in_basis
+        if d.dependent
+            return Colors.JULIA_LOGO_COLORS.green
+        else
+            return Colors.JULIA_LOGO_COLORS.blue
+        end
+    else
+        return Colors.JULIA_LOGO_COLORS.purple
+    end
+end
+
+@enum StaircasePosition STANDARD CORNER BORDER
+
+function _shape(d::Tuple{LinearDependence,StaircasePosition})
+    if d[2] == STANDARD
+        return :circle
+    elseif d[2] == CORNER
+        return :star5
+    else
+        @assert d[2] == BORDER
+        return :square
+    end
+end
+
+function _label(d::Tuple{LinearDependence,StaircasePosition})
+    return _label(d[1]) * " " * string(d[2])
+end
+
+function _markercolor(d::Tuple{LinearDependence,StaircasePosition})
+    return _markercolor(d[1])
+end
 
 abstract type AbstractDependence end
 
+function Base.isempty(d::AbstractDependence)
+    return isempty(d.dependence)
+end
+
+function Base.show(io::IO, d::AbstractDependence)
+    print(io, "$(nameof(typeof(d))) for ")
+    if isempty(d)
+        println(io, "an empty basis")
+    else
+        println(io, "basis:")
+    end
+    for i in eachindex(d.dependence)
+        println(io, " ", d.basis.monomials[i], " : ", string_dependence(d, i))
+    end
+    return
+end
+
 """
     struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
-        independent::B
-        dependent::B
+        basis::B
+        dependence::Vector{LinearDependence}
     end
 
 The independent and dependent can be arbitrary disjoint bases.
@@ -16,34 +97,22 @@ The independent and dependent can be arbitrary disjoint bases.
     If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
 struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
-    independent::B
-    dependent::B
+    basis::B
+    dependence::Vector{LinearDependence}
 end
 
-function Base.isempty(d::AnyDependence)
-    return isempty(d.independent.monomials) && isempty(d.dependent.monomials)
+function string_dependence(d::AnyDependence)
+    return string(d.dependence[i])
 end
 
-function Base.show(io::IO, d::AnyDependence)
-    println(io, "AnyDependence")
-    if !isempty(d.independent.monomials)
-        println(io, "with independent basis:")
-        println(io, d.independent)
-    end
-    if !isempty(d.dependent.monomials)
-        println(io, "and dependent basis:")
-        println(io, d.dependent)
-    end
-    return
-end
+_category_type(::AnyDependence) = LinearDependence
+_category(d::AnyDependence, i) = d.dependence[i]
 
 """
     struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
-        trivial_standard::B
-        standard::B
-        corners::B
-        dependent_border::B
-        independent_border::B
+        basis::B
+        dependence::Vector{LinearDependence}
+        position::Vector{StaircasePosition}
     end
 
 No independent is a multiple of a dependent and each dependent can be obtained
@@ -53,44 +122,17 @@ by multiplying an independent with a variable.
     If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
 struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
-    trivial_standard::B
-    standard::B
-    corners::B
-    dependent_border::B
-    independent_border::B
+    basis::B
+    dependence::Vector{LinearDependence}
+    position::Vector{StaircasePosition}
 end
 
-function Base.isempty(d::StaircaseDependence)
-    return isempty(d.standard.monomials) &&
-           isempty(d.corners.monomials) &&
-           isempty(d.dependent_border.monomials) &&
-           isempty(d.independent_border.monomials)
+function string_dependence(d::StaircaseDependence)
+    return string(d.position[i]) * " " * string(d.dependence[i])
 end
 
-function Base.show(io::IO, d::StaircaseDependence)
-    println(io, "StaircaseDependence")
-    if !isempty(d.trivial_standard.monomials)
-        println(io, "with trivial standard basis:")
-        println(io, d.trivial_standard)
-    end
-    if !isempty(d.standard.monomials)
-        println(io, "with standard basis:")
-        println(io, d.standard)
-    end
-    if !isempty(d.corners.monomials)
-        println(io, "and corners basis:")
-        println(io, d.corners)
-    end
-    if !isempty(d.dependent_border.monomials)
-        println(io, "and dependent border basis:")
-        println(io, d.dependent_border)
-    end
-    if !isempty(d.independent_border.monomials)
-        println(io, "and independent border basis:")
-        print(io, d.independent_border)
-    end
-    return
-end
+_category_type(::StaircaseDependence) = Tuple{LinearDependence,StaircasePosition}
+_category(d::StaircaseDependence, i) = d.dependence[i], d.position[i]
 
 function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
     dependent = MB.merge_bases(d.corners, d.dependent_border)[1]
@@ -101,19 +143,12 @@ function AnyDependence(
     is_dependent::Function,
     basis::MB.MonomialBasis{M},
 ) where {M}
-    independent = M[]
-    dependent = M[]
-    for i in eachindex(basis.monomials)
-        mono = basis.monomials[i]
-        if is_dependent(i)
-            push!(dependent, mono)
-        else
-            push!(independent, mono)
-        end
-    end
     return AnyDependence(
-        MB.MonomialBasis(independent),
-        MB.MonomialBasis(dependent),
+        basis,
+        LinearDependence[
+            LinearDependence(is_dependent(i), true, false)
+            for i in eachindex(basis.monomials)
+        ],
     )
 end
 
@@ -133,50 +168,79 @@ returns whether it is dependent.
 Foundations of Computational Mathematics 8 (2008): 607-647.
 """
 function StaircaseDependence(
-    is_dependent::Function,
+    r,
     basis::MB.MonomialBasis{M},
 ) where {M}
-    trivial_standard = M[]
-    standard = M[]
-    corners = M[]
+    function dependence(mono)
+        i = _index(basis, mono)
+        if isnothing(i)
+            dependent = false
+            in_basis = false
+        else
+            dependent = is_dependent!(r, i)
+            in_basis = true
+        end
+        return LinearDependence(dependent, in_basis, false)
+    end
     vars = MP.variables(basis)
-    for mono in MP.monomials(vars, 0:MP.maxdegree(basis.monomials))
-        # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
-        # It also ensures that the standard monomials have the "staircase structure".
-        if !any(Base.Fix2(MP.divides, mono), corners)
-            i = _index(basis, mono)
-            if isnothing(i)
-                push!(trivial_standard, mono)
-            elseif !is_dependent(i)
-                push!(standard, mono)
-            else
-                push!(corners, mono)
+    full_basis = MB.maxdegree_basis(
+        typeof(basis),
+        vars,
+        MP.maxdegree(basis.monomials),
+    )
+    d = LinearDependence[]
+    s = StaircasePosition[]
+    # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
+    # It also ensures that the standard monomials have the "staircase structure".
+    function is_corner_multiple(mono, dependence)
+        for i in eachindex(dependence)
+            if dependence[i].dependent &&
+                MP.divides(full_basis.monomials[i], mono)
+                return true
             end
         end
+        return false
     end
-    dependent_border = M[]
-    independent_border = M[]
-    for mono in standard
-        for shift in vars
-            border = shift * mono
-            if isnothing(_monomial_index(trivial_standard, border)) &&
-               isnothing(_monomial_index(standard, border)) &&
-               isnothing(_monomial_index(corners, border))
-                i = _index(basis, border)
-                if isnothing(i) || !is_dependent(i)
-                    push!(independent_border, border)
-                else
-                    push!(dependent_border, border)
-                end
+    keep = Int[]
+    # Compute standard monomials and corners
+    for (i, mono) in enumerate(full_basis.monomials)
+        if !is_corner_multiple(mono, view(d, 1:(i-1)))
+            push!(keep, i)
+            push!(d, dependence(mono))
+            push!(s, d[end].dependent ? CORNER : STANDARD)
+        end
+    end
+    column_compression!(r, Int[keep[i] for i in eachindex(d) if !d[i].dependent])
+    full_basis = typeof(full_basis)(full_basis.monomials[keep])
+    new_basis = MB.MonomialBasis(eltype(basis.monomials)[
+        full_basis.monomials[i] * shift
+        for i in eachindex(s) if !d[i].dependent for shift in vars
+    ])
+    full_basis, I1, I2 = MB.merge_bases(full_basis, new_basis)
+    deps = Vector{LinearDependence}(undef, length(full_basis.monomials))
+    position = Vector{StaircasePosition}(undef, length(full_basis.monomials))
+    for (i, mono) in enumerate(full_basis.monomials)
+        if iszero(I1[i])
+            deps[i] = dependence(mono)
+            @assert !iszero(I2[i])
+            if is_corner_multiple(mono, view(deps, 1:(i-1)))
+                position[i] = BORDER
+            else
+                # If it was not seen before, it means it is outside the basis
+                # so it is trivial standard
+                @assert !deps[i].dependent
+                @assert !deps[i].in_basis
+                position[i] = STANDARD
             end
+        else
+            deps[i] = d[I1[i]]
+            position[i] = s[I1[i]]
         end
     end
     return StaircaseDependence(
-        MB.MonomialBasis(trivial_standard),
-        MB.MonomialBasis(standard),
-        MB.MonomialBasis(corners),
-        MB.MonomialBasis(dependent_border),
-        MB.MonomialBasis(independent_border),
+        full_basis,
+        deps,
+        position,
     )
 end
 
@@ -189,150 +253,44 @@ function _split_exponents(monos)
     return ntuple(Base.Fix1(_exponents, monos), Val(N))
 end
 
-function _split_exponents(basis::MB.AbstractPolynomialBasis)
-    return _split_exponents(basis.monomials)
-end
-
-function _deg(deg, b, args...)
-    if isempty(b.monomials)
-        return nothing
-    else
-        return deg(b.monomials, args...)
-    end
-end
-
-__reduce(::Function, ::Nothing) = nothing
-__reduce(::Function, a) = a
-__reduce(f::Function, ::Nothing, args...) = __reduce(f, args...)
-function __reduce(f::Function, a, args...)
-    d = __reduce(f, args...)
-    if isnothing(d)
-        return a
-    else
-        f(a, d)
-    end
-end
-function _reduce(f, args...)
-    d = __reduce(f, args...)
-    if isnothing(d)
-        error("Cannot compute `$(f)degree` as all bases are empty")
-    end
-    return d
-end
-
-function _map_reduce(combine, deg, d::AnyDependence, args...)
-    return _reduce(
-        combine,
-        _deg(deg, d.independent, args...),
-        _deg(deg, d.dependent, args...),
-    )
-end
-
-function _map_reduce(combine, deg, d::StaircaseDependence, args...)
-    return _reduce(
-        combine,
-        _deg(deg, d.trivial_standard, args...),
-        _deg(deg, d.standard, args...),
-        _deg(deg, d.corners, args...),
-        _deg(deg, d.dependent_border, args...),
-        _deg(deg, d.independent_border, args...),
-    )
-end
-
-function _reduce_variables(v, w)
-    return MP.variables(prod(v) * prod(w))
-end
-
-function MP.variables(d::AbstractDependence)
-    return _map_reduce(_reduce_variables, MP.variables, d)
-end
+MP.variables(d::AbstractDependence) = MP.variables(d.basis.monomials)
 
 function MP.mindegree(d::AbstractDependence, args...)
-    return _map_reduce(min, MP.mindegree, d, args...)
+    return MP.mindegree(d.basis.monomials, args...)
 end
 
 function MP.maxdegree(d::AbstractDependence, args...)
-    return _map_reduce(max, MP.maxdegree, d, args...)
+    return MP.maxdegree(d.basis.monomials, args...)
 end
 
 function _ticks(d::AbstractDependence, v)
     return MP.mindegree(d, v):MP.maxdegree(d, v)
 end
 
-RecipesBase.@recipe function f(m::AnyDependence)
-    vars = MP.variables(m.independent.monomials)
-    t = _ticks.(Ref(m), vars)
+RecipesBase.@recipe function f(d::AbstractDependence)
+    vars = MP.variables(d)
+    t = _ticks.(Ref(d), vars)
     aspect_ratio --> :equal # defaults to `:auto`
     xticks --> t[1]
     yticks --> t[2]
     if length(t) >= 3
         zticks --> t[3]
     end
-    if !isempty(m.independent.monomials)
-        RecipesBase.@series begin
-            seriestype --> :scatter
-            markershape --> :circle
-            label := "Independent"
-            _split_exponents(m.independent)
+    M = eltype(d.basis.monomials)
+    categories = Dict{_category_type(d),Vector{M}}()
+    for (i, mono) in enumerate(d.basis.monomials)
+        cat = _category(d, i)
+        if !haskey(categories, cat)
+            categories[cat] = M[]
         end
+        push!(categories[cat], mono)
     end
-    if !isempty(m.dependent.monomials)
+    for (cat, monos) in categories
         RecipesBase.@series begin
             seriestype --> :scatter
-            markershape --> :rect
-            label := "Dependent"
-            _split_exponents(m.dependent)
-        end
-    end
-end
-
-RecipesBase.@recipe function f(m::StaircaseDependence)
-    vars = MP.variables(m.standard.monomials)
-    t = _ticks.(Ref(m), vars)
-    aspect_ratio --> :equal # defaults to `:auto`
-    xticks --> t[1]
-    yticks --> t[2]
-    if length(t) >= 3
-        zticks --> t[3]
-    end
-    if !isempty(m.trivial_standard.monomials)
-        RecipesBase.@series begin
-            seriestype --> :scatter
-            markershape --> :circle
-            label := "Trivial standard"
-            _split_exponents(m.trivial_standard)
-        end
-    end
-    if !isempty(m.standard.monomials)
-        RecipesBase.@series begin
-            seriestype --> :scatter
-            markershape --> :circle
-            label := "Standard"
-            _split_exponents(m.standard)
-        end
-    end
-    if !isempty(m.corners.monomials)
-        RecipesBase.@series begin
-            seriestype --> :scatter
-            markershape --> :rect
-            label := "Corners"
-            _split_exponents(m.corners)
-        end
-    end
-    if !isempty(m.dependent_border.monomials)
-        RecipesBase.@series begin
-            seriestype --> :scatter
-            markershape --> :rect
-            label := "Dependent border"
-            _split_exponents(m.dependent_border)
-        end
-    end
-    if !isempty(m.independent_border.monomials)
-        RecipesBase.@series begin
-            seriestype --> :scatter
-            markershape --> :circle
-            label := "Independent border"
-            _split_exponents(m.independent_border)
+            markershape --> _shape(cat)
+            label := _label(cat)
+            _split_exponents(monos)
         end
     end
 end

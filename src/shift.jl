@@ -29,14 +29,22 @@ function is_dependent!(r::RankDependence, row)
     return !independent
 end
 
+function column_compression!(r::RankDependence, rows)
+    if length(rows) < size(r.matrix, 2)
+        s = LinearAlgebra.svd(A[rows, :], full = true)
+        # FIXME should we multiply by inv(Diagonal(s.S)) ?
+        r.matrix = r.matrix[dep_rows, :] * s.V
+    end
+end
+
 function AnyDependence(null::MacaulayNullspace, rank_check::RankCheck)
     r = RankDependence(null.matrix, rank_check)
-    return AnyDependence(Base.Fix1(is_dependent!, r), null.basis)
+    return AnyDependence(r, null.basis)
 end
 
 function StaircaseDependence(null::MacaulayNullspace, rank_check::RankCheck)
     r = RankDependence(null.matrix, rank_check)
-    return StaircaseDependence(Base.Fix1(is_dependent!, r), null.basis)
+    return StaircaseDependence(r, null.basis)
 end
 
 function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
@@ -44,17 +52,13 @@ function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
 end
 
 function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
-    indep_rows = _indices(null.basis, d.independent)
-    dep_rows = _indices(null.basis, d.dependent)
+    indep_rows = [i for (i, dep) in enumerate(d.dependence) if !dep.dependent]
+    dep_rows = [i for (i, dep) in enumerate(d.dependence) if dep.dependent]
     @assert length(indep_rows) == size(null.matrix, 2)
     return BorderBasis(
         d,
         (null.matrix[dep_rows, :] / null.matrix[indep_rows, :])',
     )
-end
-
-function column_compression(A, rows)
-    return LinearAlgebra.svd(A[rows, :]).U
 end
 
 function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)

@@ -15,13 +15,7 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis)
         U = U[keep, :]
     end
     set_pivots = Set(pivots)
-    independent = MP.monomial_vector(basis.monomials[pivots])
-    non_pivots = setdiff(eachindex(basis.monomials), set_pivots)
-    dependent = MP.monomial_vector(basis.monomials[non_pivots])
-    d = AnyDependence(
-        MB.MonomialBasis(independent),
-        MB.MonomialBasis(dependent),
-    )
+    d = AnyDependence(!Base.Fix2(in, set_pivots), basis)
     return BorderBasis(d, U[:, non_pivots])
 end
 
