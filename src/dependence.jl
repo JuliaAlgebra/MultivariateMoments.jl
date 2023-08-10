@@ -24,13 +24,16 @@ struct LinearDependence
     saturated::Bool
 end
 
+function Base.isless(a::LinearDependence, b::LinearDependence)
+    return isless((!a.dependent, !a.in_basis, !a.saturated), (!b.dependent, !b.in_basis, !b.saturated))
+end
+
 _shape(d::LinearDependence) = d.dependent ? :square : :circle
 
 function _label(d::LinearDependence)
     s = d.saturated ? "Saturated " : ""
     s *= d.in_basis ? "" : "Trivial "
-    s *= d.dependent ? "" : "In"
-    s *= "dependent"
+    s *= d.dependent ? "Dependent" : "Independent"
 end
 
 function _markercolor(d::LinearDependence)
@@ -47,23 +50,27 @@ end
 
 @enum StaircasePosition STANDARD CORNER BORDER
 
-function _shape(d::Tuple{LinearDependence,StaircasePosition})
-    if d[2] == STANDARD
+function _shape(d::Tuple{StaircasePosition,LinearDependence})
+    if d[1] == STANDARD
         return :circle
-    elseif d[2] == CORNER
+    elseif d[1] == CORNER
         return :star5
     else
-        @assert d[2] == BORDER
+        @assert d[1] == BORDER
         return :square
     end
 end
 
-function _label(d::Tuple{LinearDependence,StaircasePosition})
-    return _label(d[1]) * " " * string(d[2])
+function _label(d::Tuple{StaircasePosition,LinearDependence})
+    if d[1] == CORNER
+        return "Corners"
+    else
+        return _label(d[2]) * " " * lowercase(string(d[1]))
+    end
 end
 
-function _markercolor(d::Tuple{LinearDependence,StaircasePosition})
-    return _markercolor(d[1])
+function _markercolor(d::Tuple{StaircasePosition,LinearDependence})
+    return _markercolor(d[2])
 end
 
 abstract type AbstractDependence end
@@ -131,8 +138,8 @@ function string_dependence(d::StaircaseDependence)
     return string(d.position[i]) * " " * string(d.dependence[i])
 end
 
-_category_type(::StaircaseDependence) = Tuple{LinearDependence,StaircasePosition}
-_category(d::StaircaseDependence, i) = d.dependence[i], d.position[i]
+_category_type(::StaircaseDependence) = Tuple{StaircasePosition,LinearDependence}
+_category(d::StaircaseDependence, i) = d.position[i], d.dependence[i]
 
 function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
     dependent = MB.merge_bases(d.corners, d.dependent_border)[1]
@@ -140,13 +147,13 @@ function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
 end
 
 function AnyDependence(
-    is_dependent::Function,
+    r,
     basis::MB.MonomialBasis{M},
 ) where {M}
     return AnyDependence(
         basis,
         LinearDependence[
-            LinearDependence(is_dependent(i), true, false)
+            LinearDependence(is_dependent!(r, i), true, false)
             for i in eachindex(basis.monomials)
         ],
     )
@@ -192,10 +199,10 @@ function StaircaseDependence(
     s = StaircasePosition[]
     # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
     # It also ensures that the standard monomials have the "staircase structure".
-    function is_corner_multiple(mono, dependence)
+    function is_corner_multiple(mono, indices, dependence)
         for i in eachindex(dependence)
             if dependence[i].dependent &&
-                MP.divides(full_basis.monomials[i], mono)
+                MP.divides(full_basis.monomials[indices[i]], mono)
                 return true
             end
         end
@@ -204,7 +211,7 @@ function StaircaseDependence(
     keep = Int[]
     # Compute standard monomials and corners
     for (i, mono) in enumerate(full_basis.monomials)
-        if !is_corner_multiple(mono, view(d, 1:(i-1)))
+        if !is_corner_multiple(mono, keep, d)
             push!(keep, i)
             push!(d, dependence(mono))
             push!(s, d[end].dependent ? CORNER : STANDARD)
@@ -223,7 +230,7 @@ function StaircaseDependence(
         if iszero(I1[i])
             deps[i] = dependence(mono)
             @assert !iszero(I2[i])
-            if is_corner_multiple(mono, view(deps, 1:(i-1)))
+            if is_corner_multiple(mono, 1:(i-1), view(deps, 1:(i-1)))
                 position[i] = BORDER
             else
                 # If it was not seen before, it means it is outside the basis
@@ -285,7 +292,7 @@ RecipesBase.@recipe function f(d::AbstractDependence)
         end
         push!(categories[cat], mono)
     end
-    for (cat, monos) in categories
+    for (cat, monos) in sort!(collect(categories))
         RecipesBase.@series begin
             seriestype --> :scatter
             markershape --> _shape(cat)

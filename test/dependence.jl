@@ -86,18 +86,19 @@ function test_recipe(x, y, z)
     D = ([1, 1], [0, 2], [1, 0])
     e = [x * y^2, x * y^3, x * z^4]
     E = ([1, 1, 1], [2, 3, 0], [0, 0, 4])
+    de, Id, Ie = MB.merge_bases(b(d), b(e))
     ae, _, _ = MB.merge_bases(b(a), b(e))
     cd, _, _ = MB.merge_bases(b(c), b(d))
     aecd, _, Idep = MB.merge_bases(ae, cd)
     _test_recipe(
-        MM.AnyDependence(i -> !iszero(Ic), ac),
+        MM.AnyDependence(FixedDependence(findall(!iszero, Ic)), ac),
         [0:1, 0:2],
         [A, C],
         ["Independent", "Dependent"],
         [true, false],
     )
     _test_recipe(
-        MM.AnyDependence(b(d), b(e)),
+        MM.AnyDependence(FixedDependence(findall(!iszero, Ie)), de),
         [1:1, 0:3, 0:4],
         [D, E],
         ["Independent", "Dependent"],
