@@ -26,15 +26,15 @@ function test_degree_error(x, y, z)
     @test sprint(show, s) == "StaircaseDependence for an empty basis
 "
     @test isempty(s)
-#    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
-#        err = ErrorException(
-#            "Cannot compute `$(name)degree` as all bases are empty",
-#        )
-#        @test_throws err f(a)
-#        @test_throws err f(a, x)
-#        @test_throws err f(s)
-#        @test_throws err f(s, x)
-#    end
+    #    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
+    #        err = ErrorException(
+    #            "Cannot compute `$(name)degree` as all bases are empty",
+    #        )
+    #        @test_throws err f(a)
+    #        @test_throws err f(a, x)
+    #        @test_throws err f(s)
+    #        @test_throws err f(s, x)
+    #    end
 end
 
 function _test_recipe(dep, ticks, args, names, shapes)
@@ -111,10 +111,7 @@ function test_recipe(x, y, z)
         ["Independent", "Dependent"],
         [:circle, :rect],
     )
-    dep = MM.StaircaseDependence(
-        FixedDependence(findall(!iszero, Idep)),
-        fecd,
-    )
+    dep = MM.StaircaseDependence(FixedDependence(findall(!iszero, Idep)), fecd)
     @test sprint(show, dep) == """
 StaircaseDependence for bases:
  Standard:

@@ -230,9 +230,8 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     ind = independent_basis(b.dependence)
     dep = dependent_basis(b.dependence)
     system = [
-        dep.monomials[col] -
-        MP.polynomial(b.matrix[:, col], ind)
-        for col in eachindex(dep.monomials)
+        dep.monomials[col] - MP.polynomial(b.matrix[:, col], ind) for
+        col in eachindex(dep.monomials)
     ]
     filter!(!MP.isconstant, system)
     V = if MP.mindegree(b.dependence) == MP.maxdegree(b.dependence)

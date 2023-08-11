@@ -25,7 +25,10 @@ struct LinearDependence
 end
 
 function Base.isless(a::LinearDependence, b::LinearDependence)
-    return isless((a.dependent, !a.in_basis, !a.saturated), (b.dependent, !b.in_basis, !b.saturated))
+    return isless(
+        (a.dependent, !a.in_basis, !a.saturated),
+        (b.dependent, !b.in_basis, !b.saturated),
+    )
 end
 
 _shape(d::LinearDependence) = d.dependent ? :rect : :circle
@@ -131,7 +134,6 @@ function dependent_basis(d::AbstractDependence)
     return sub_basis(d, findall(d -> d.dependent, d.dependence))
 end
 
-
 """
     struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
         basis::B
@@ -182,27 +184,25 @@ function corners_basis(d::AbstractDependence)
     return sub_basis(d, findall(isequal(CORNER), d.position))
 end
 
-
 function string_dependence(d::StaircaseDependence, i)
     return string(d.position[i]) * " " * string(d.dependence[i])
 end
 
-_category_type(::StaircaseDependence) = Tuple{StaircasePosition,LinearDependence}
+function _category_type(::StaircaseDependence)
+    return Tuple{StaircasePosition,LinearDependence}
+end
 _category(d::StaircaseDependence, i) = d.position[i], d.dependence[i]
 
 function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
     return AnyDependence(d.basis, d.dependence)
 end
 
-function AnyDependence(
-    r,
-    basis::MB.MonomialBasis{M},
-) where {M}
+function AnyDependence(r, basis::MB.MonomialBasis{M}) where {M}
     return AnyDependence(
         basis,
         LinearDependence[
-            LinearDependence(is_dependent!(r, i), true, false)
-            for i in eachindex(basis.monomials)
+            LinearDependence(is_dependent!(r, i), true, false) for
+            i in eachindex(basis.monomials)
         ],
     )
 end
@@ -222,10 +222,7 @@ returns whether it is dependent.
 *Semidefinite characterization and computation of zero-dimensional real radical ideals.*
 Foundations of Computational Mathematics 8 (2008): 607-647.
 """
-function StaircaseDependence(
-    r,
-    basis::MB.MonomialBasis{M},
-) where {M}
+function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
     if isempty(basis.monomials)
         return StaircaseDependence(
             basis,
@@ -245,11 +242,8 @@ function StaircaseDependence(
         return LinearDependence(dependent, in_basis, false)
     end
     vars = MP.variables(basis)
-    full_basis = MB.maxdegree_basis(
-        typeof(basis),
-        vars,
-        MP.maxdegree(basis.monomials),
-    )
+    full_basis =
+        MB.maxdegree_basis(typeof(basis), vars, MP.maxdegree(basis.monomials))
     d = LinearDependence[]
     s = StaircasePosition[]
     # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
@@ -257,7 +251,7 @@ function StaircaseDependence(
     function is_corner_multiple(mono, indices, dependence)
         for i in eachindex(dependence)
             if dependence[i].dependent &&
-                MP.divides(full_basis.monomials[indices[i]], mono)
+               MP.divides(full_basis.monomials[indices[i]], mono)
                 return true
             end
         end
@@ -272,12 +266,17 @@ function StaircaseDependence(
             push!(s, d[end].dependent ? CORNER : STANDARD)
         end
     end
-    column_compression!(r, Int[keep[i] for i in eachindex(d) if !d[i].dependent])
+    column_compression!(
+        r,
+        Int[keep[i] for i in eachindex(d) if !d[i].dependent],
+    )
     full_basis = typeof(full_basis)(full_basis.monomials[keep])
-    new_basis = MB.MonomialBasis(eltype(basis.monomials)[
-        full_basis.monomials[i] * shift
-        for i in eachindex(s) if !d[i].dependent for shift in vars
-    ])
+    new_basis = MB.MonomialBasis(
+        eltype(basis.monomials)[
+            full_basis.monomials[i] * shift for
+            i in eachindex(s) if !d[i].dependent for shift in vars
+        ],
+    )
     full_basis, I1, I2 = MB.merge_bases(full_basis, new_basis)
     deps = Vector{LinearDependence}(undef, length(full_basis.monomials))
     position = Vector{StaircasePosition}(undef, length(full_basis.monomials))
@@ -299,11 +298,7 @@ function StaircaseDependence(
             position[i] = s[I1[i]]
         end
     end
-    return StaircaseDependence(
-        full_basis,
-        deps,
-        position,
-    )
+    return StaircaseDependence(full_basis, deps, position)
 end
 
 function _exponents(monos, i)
