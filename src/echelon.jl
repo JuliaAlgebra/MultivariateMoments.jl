@@ -1,3 +1,9 @@
+struct Pivots
+    pivots::Set{Int}
+end
+
+is_dependent!(p::Pivots, i) = !(i in p.pivots)
+
 function build_system(U::AbstractMatrix, basis::MB.MonomialBasis)
     # System is
     # `basis = [U' 0] * basis`
@@ -15,7 +21,8 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis)
         U = U[keep, :]
     end
     set_pivots = Set(pivots)
-    d = AnyDependence(!Base.Fix2(in, set_pivots), basis)
+    d = AnyDependence(Pivots(set_pivots), basis)
+    non_pivots = setdiff(eachindex(basis.monomials), set_pivots)
     return BorderBasis(d, U[:, non_pivots])
 end
 

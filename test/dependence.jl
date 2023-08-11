@@ -35,7 +35,7 @@ function test_degree_error(x, y, z)
 #    end
 end
 
-function _test_recipe(dep, ticks, args, names, indep)
+function _test_recipe(dep, ticks, args, names, shapes)
     @test sprint(show, dep) isa String
     d = Dict{Symbol,Any}()
     r = RB.apply_recipe(d, dep)
@@ -47,11 +47,10 @@ function _test_recipe(dep, ticks, args, names, indep)
         @test d[:zticks] == ticks[3]
     end
     @test length(r) == length(names)
-    for i in eachindex(names)
+    @testset "$i" for i in eachindex(names)
         @test r[i].args == args[i]
         @test r[i].plotattributes[:seriestype] == :scatter
-        shape = indep[i] ? :circle : :rect
-        @test r[i].plotattributes[:markershape] == shape
+        @test r[i].plotattributes[:markershape] == shapes[i]
         @test r[i].plotattributes[:label] == names[i]
     end
 end
@@ -79,48 +78,63 @@ end
 function test_recipe(x, y, z)
     a = [x^0 * y^0]
     A = ([0], [0])
+    # Corners
     c = [x, y^2]
     C = ([1, 0], [0, 2])
     ac, Ia, Ic = MB.merge_bases(b(a), b(c))
-    d = [x * z^1, x * y^2]
-    D = ([1, 1], [0, 2], [1, 0])
-    e = [x * y^2, x * y^3, x * z^4]
-    E = ([1, 1, 1], [2, 3, 0], [0, 0, 4])
+    # Dependent border
+    d = [x * y * z^0]
+    D = ([1], [1], [0])
+    # Independent border
+    e = [x * y^0 * z]
+    E = ([1], [0], [1])
+    f = [x^0 * y^0 * z]
+    F = ([0], [0], [1])
     de, Id, Ie = MB.merge_bases(b(d), b(e))
-    ae, _, _ = MB.merge_bases(b(a), b(e))
-    cd, _, _ = MB.merge_bases(b(c), b(d))
-    aecd, _, Idep = MB.merge_bases(ae, cd)
+    ae, _, _ = MB.merge_bases(b(a .* z^0), b(e))
+    fe, _, _ = MB.merge_bases(b(f), b(e))
+    cd, _, _ = MB.merge_bases(b(c .* z^0), b(d))
+    fecd, _, Idep = MB.merge_bases(fe, cd)
     _test_recipe(
         MM.AnyDependence(FixedDependence(findall(!iszero, Ic)), ac),
         [0:1, 0:2],
         [A, C],
         ["Independent", "Dependent"],
-        [true, false],
+        [:circle, :rect],
     )
     _test_recipe(
         MM.AnyDependence(FixedDependence(findall(!iszero, Ie)), de),
-        [1:1, 0:3, 0:4],
+        [1:1, 0:1, 0:1],
         [D, E],
         ["Independent", "Dependent"],
-        [true, false],
+        [:circle, :rect],
+    )
+    dep = MM.StaircaseDependence(
+        FixedDependence(findall(!iszero, Idep)),
+        fecd,
     )
     _test_recipe(
-        MM.StaircaseDependence(
-            FixedDependence(findall(!iszero, Idep)),
-            aecd,
-        ),
-        [0:1, 0:3, 0:4],
-        [(A..., [0]), ([0], [0], [1]), (C..., [0, 0]), D, E],
+        dep,
+        [0:1, 0:2, 0:3],
         [
-            "Trivial standard",
-            "Standard",
-            "Corners",
-            "Dependent border",
-            "Independent border",
+            F,
+            (zeros(Int, 6), [0, 1, 0, 1, 0, 1], [0, 0, 2, 1, 3, 2]),
+            (C..., [0, 0]),
+            E,
+            ([0, 1, 1], [2, 0, 1], [1, 2, 1]),
+            D,
         ],
-        [true, true, false, false, true],
+        [
+            "Standard",
+            "Trivial Standard",
+            "Corners",
+            "Independent Border",
+            "Trivial Independent Border",
+            "Dependent Border",
+        ],
+        [:circle, :circle, :diamond, :rect, :rect, :rect],
     )
-    return
+    return dep
 end
 
 function runtests(args...)

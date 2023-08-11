@@ -225,10 +225,13 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     # *Detecting Global Optimality and Extracting Solutions of GloptiPoly*
     # 2005
     d = convert(AnyDependence, b.dependence)
+    independent_indices = findall(d -> !d.dependent, d.dependence)
+    independent = typeof(d.basis)(d.basis.monomials[independent_indices])
     system = [
-        d.dependent.monomials[col] -
-        MP.polynomial(b.matrix[:, col], d.independent) for
-        col in eachindex(d.dependent.monomials)
+        d.basis.monomials[col] -
+        MP.polynomial(b.matrix[:, col], independent)
+        for col in eachindex(d.dependence)
+        if d.dependence[col].dependent
     ]
     filter!(!MP.isconstant, system)
     V = if MP.mindegree(d) == MP.maxdegree(d)

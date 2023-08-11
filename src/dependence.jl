@@ -25,15 +25,37 @@ struct LinearDependence
 end
 
 function Base.isless(a::LinearDependence, b::LinearDependence)
-    return isless((!a.dependent, !a.in_basis, !a.saturated), (!b.dependent, !b.in_basis, !b.saturated))
+    return isless((a.dependent, !a.in_basis, !a.saturated), (b.dependent, !b.in_basis, !b.saturated))
 end
 
-_shape(d::LinearDependence) = d.dependent ? :square : :circle
+_shape(d::LinearDependence) = d.dependent ? :rect : :circle
 
-function _label(d::LinearDependence)
-    s = d.saturated ? "Saturated " : ""
-    s *= d.in_basis ? "" : "Trivial "
-    s *= d.dependent ? "Dependent" : "Independent"
+function _upper(a)
+    if isempty(a)
+        return a
+    else
+        return uppercase(a[1]) * a[2:end]
+    end
+end
+
+function __join(a, b)
+    if isempty(a) || isempty(b)
+        return a * b
+    else
+        return a * " " * b
+    end
+end
+
+_join(a, b) = __join(a, _upper(b))
+
+function _label(d::LinearDependence; dependent::Bool = true)
+    s = ""
+    s = _join(s, d.saturated ? "saturated" : "")
+    s = _join(s, d.in_basis ? "" : "trivial")
+    if dependent
+        s = _join(s, (d.dependent ? "" : "in") * "dependent")
+    end
+    return s
 end
 
 function _markercolor(d::LinearDependence)
@@ -54,18 +76,21 @@ function _shape(d::Tuple{StaircasePosition,LinearDependence})
     if d[1] == STANDARD
         return :circle
     elseif d[1] == CORNER
-        return :star5
+        return :diamond
     else
         @assert d[1] == BORDER
-        return :square
+        return :rect
     end
 end
 
 function _label(d::Tuple{StaircasePosition,LinearDependence})
     if d[1] == CORNER
-        return "Corners"
+        return _upper("corners")
     else
-        return _label(d[2]) * " " * lowercase(string(d[1]))
+        return _join(
+            _label(d[2], dependent = d[1] != STANDARD),
+            lowercase(string(d[1])),
+        )
     end
 end
 
@@ -84,10 +109,11 @@ function Base.show(io::IO, d::AbstractDependence)
     if isempty(d)
         println(io, "an empty basis")
     else
-        println(io, "basis:")
+        println(io, "bases:")
     end
-    for i in eachindex(d.dependence)
-        println(io, " ", d.basis.monomials[i], " : ", string_dependence(d, i))
+    for (cat, monos) in _categories(d)
+        println(io, " ", _label(cat), ":")
+        println(io, " ", MB.MonomialBasis(monos))
     end
     return
 end
@@ -108,7 +134,7 @@ struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     dependence::Vector{LinearDependence}
 end
 
-function string_dependence(d::AnyDependence)
+function string_dependence(d::AnyDependence, i)
     return string(d.dependence[i])
 end
 
@@ -134,7 +160,7 @@ struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     position::Vector{StaircasePosition}
 end
 
-function string_dependence(d::StaircaseDependence)
+function string_dependence(d::StaircaseDependence, i)
     return string(d.position[i]) * " " * string(d.dependence[i])
 end
 
@@ -142,8 +168,7 @@ _category_type(::StaircaseDependence) = Tuple{StaircasePosition,LinearDependence
 _category(d::StaircaseDependence, i) = d.position[i], d.dependence[i]
 
 function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
-    dependent = MB.merge_bases(d.corners, d.dependent_border)[1]
-    return AnyDependence(d.standard, dependent)
+    return AnyDependence(d.basis, d.dependence)
 end
 
 function AnyDependence(
@@ -178,6 +203,13 @@ function StaircaseDependence(
     r,
     basis::MB.MonomialBasis{M},
 ) where {M}
+    if isempty(basis.monomials)
+        return StaircaseDependence(
+            basis,
+            LinearDependence[],
+            StaircasePosition[],
+        )
+    end
     function dependence(mono)
         i = _index(basis, mono)
         if isnothing(i)
@@ -274,15 +306,7 @@ function _ticks(d::AbstractDependence, v)
     return MP.mindegree(d, v):MP.maxdegree(d, v)
 end
 
-RecipesBase.@recipe function f(d::AbstractDependence)
-    vars = MP.variables(d)
-    t = _ticks.(Ref(d), vars)
-    aspect_ratio --> :equal # defaults to `:auto`
-    xticks --> t[1]
-    yticks --> t[2]
-    if length(t) >= 3
-        zticks --> t[3]
-    end
+function _categories(d::AbstractDependence)
     M = eltype(d.basis.monomials)
     categories = Dict{_category_type(d),Vector{M}}()
     for (i, mono) in enumerate(d.basis.monomials)
@@ -292,7 +316,19 @@ RecipesBase.@recipe function f(d::AbstractDependence)
         end
         push!(categories[cat], mono)
     end
-    for (cat, monos) in sort!(collect(categories))
+    return sort!(collect(categories))
+end
+
+RecipesBase.@recipe function f(d::AbstractDependence)
+    vars = MP.variables(d)
+    t = _ticks.(Ref(d), vars)
+    aspect_ratio --> :equal # defaults to `:auto`
+    xticks --> t[1]
+    yticks --> t[2]
+    if length(t) >= 3
+        zticks --> t[3]
+    end
+    for (cat, monos) in _categories(d)
         RecipesBase.@series begin
             seriestype --> :scatter
             markershape --> _shape(cat)
