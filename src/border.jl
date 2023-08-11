@@ -64,9 +64,9 @@ function solve(
     }(),
 ) where {T}
     d = b.dependence
-    dependent = convert(AnyDependence, d).dependent
+    dependent = dependent_basis(d)
     vars = MP.variables(d)
-    standard, _, I = MB.merge_bases(d.trivial_standard, d.standard)
+    standard = standard_basis(d)
     m = length(standard)
     # If a monomial `border` is not in `dependent` and it is not a corner
     # then it can be divided by another monomial `x^α in dependent`.
@@ -99,9 +99,12 @@ function solve(
         k = _index(dependent, border)
         if !isnothing(k)
             v = zeros(T, m)
-            for i in eachindex(I)
-                if !iszero(I[i])
-                    v[i] = b.matrix[I[i], k]
+            row = 0
+            for (i, std) in enumerate(standard.monomials)
+                j = _index(d.basis, std)
+                if d.dependence[j].in_basis
+                    row += 1
+                    v[i] = b.matrix[row, k]
                 end
             end
             return v
@@ -224,17 +227,15 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     # [HL05] Henrion, D. & Lasserre, J-B.
     # *Detecting Global Optimality and Extracting Solutions of GloptiPoly*
     # 2005
-    d = convert(AnyDependence, b.dependence)
-    independent_indices = findall(d -> !d.dependent, d.dependence)
-    independent = typeof(d.basis)(d.basis.monomials[independent_indices])
+    ind = independent_basis(b.dependence)
+    dep = dependent_basis(b.dependence)
     system = [
-        d.basis.monomials[col] -
-        MP.polynomial(b.matrix[:, col], independent)
-        for col in eachindex(d.dependence)
-        if d.dependence[col].dependent
+        dep.monomials[col] -
+        MP.polynomial(b.matrix[:, col], ind)
+        for col in eachindex(dep.monomials)
     ]
     filter!(!MP.isconstant, system)
-    V = if MP.mindegree(d) == MP.maxdegree(d)
+    V = if MP.mindegree(b.dependence) == MP.maxdegree(b.dependence)
         # Homogeneous
         projective_algebraic_set(
             system,

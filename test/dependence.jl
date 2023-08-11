@@ -19,10 +19,12 @@ function test_degree_error(x, y, z)
     M = typeof(x * y * z)
     m = b(M[])
     a = MM.AnyDependence(_ -> true, m)
-    @test sprint(show, a) == "AnyDependence for an empty basis\n"
+    @test sprint(show, a) == "AnyDependence for an empty basis
+"
     @test isempty(a)
     s = MM.StaircaseDependence(_ -> true, m)
-    @test sprint(show, s) == "StaircaseDependence for an empty basis\n"
+    @test sprint(show, s) == "StaircaseDependence for an empty basis
+"
     @test isempty(s)
 #    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
 #        err = ErrorException(
@@ -113,6 +115,22 @@ function test_recipe(x, y, z)
         FixedDependence(findall(!iszero, Idep)),
         fecd,
     )
+    @test sprint(show, dep) == """
+StaircaseDependence for bases:
+ Standard:
+ MonomialBasis([z])
+ Trivial Standard:
+ MonomialBasis([1, y, z^2, y*z, z^3, y*z^2])
+ Corners:
+ MonomialBasis([x, y^2])
+ Independent Border:
+ MonomialBasis([x*z])
+ Trivial Independent Border:
+ MonomialBasis([y^2*z, x*z^2, x*y*z])
+ Dependent Border:
+ MonomialBasis([x*y])
+"""
+    @test MM.corners_basis(dep).monomials == c
     _test_recipe(
         dep,
         [0:1, 0:2, 0:3],

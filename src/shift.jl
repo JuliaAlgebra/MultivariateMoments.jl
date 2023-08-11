@@ -52,8 +52,8 @@ function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
 end
 
 function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
-    indep_rows = [i for (i, dep) in enumerate(d.dependence) if !dep.dependent]
-    dep_rows = [i for (i, dep) in enumerate(d.dependence) if dep.dependent]
+    indep_rows = findall(d -> !d.dependent, d.dependence)
+    dep_rows = findall(d -> d.dependent, d.dependence)
     @assert length(indep_rows) == size(null.matrix, 2)
     return BorderBasis(
         d,
@@ -62,9 +62,8 @@ function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
 end
 
 function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
-    indep_rows = _indices(null.basis, d.standard)
-    dependent = convert(AnyDependence, d).dependent
-    dep_rows = _indices(null.basis, dependent)
+    indep_rows = _indices(null.basis, standard_basis(d))
+    dep_rows = _indices(null.basis, dependent_basis(d))
     U = null.matrix
     if length(indep_rows) < size(U, 2)
         U = column_compression(U, indep_rows)

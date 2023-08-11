@@ -118,6 +118,20 @@ function Base.show(io::IO, d::AbstractDependence)
     return
 end
 
+function sub_basis(d::AbstractDependence, I::AbstractVector{Int})
+    @assert issorted(I)
+    return typeof(d.basis)(d.basis.monomials[I])
+end
+
+function independent_basis(d::AbstractDependence)
+    return sub_basis(d, findall(d -> !d.dependent, d.dependence))
+end
+
+function dependent_basis(d::AbstractDependence)
+    return sub_basis(d, findall(d -> d.dependent, d.dependence))
+end
+
+
 """
     struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
         basis::B
@@ -159,6 +173,15 @@ struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     dependence::Vector{LinearDependence}
     position::Vector{StaircasePosition}
 end
+
+function standard_basis(d::AbstractDependence)
+    return sub_basis(d, findall(isequal(STANDARD), d.position))
+end
+
+function corners_basis(d::AbstractDependence)
+    return sub_basis(d, findall(isequal(CORNER), d.position))
+end
+
 
 function string_dependence(d::StaircaseDependence, i)
     return string(d.position[i]) * " " * string(d.dependence[i])
