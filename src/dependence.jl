@@ -21,10 +21,7 @@ struct LinearDependence
 end
 
 function Base.isless(a::LinearDependence, b::LinearDependence)
-    return isless(
-        (a.dependent, !a.in_basis),
-        (b.dependent, !b.in_basis),
-    )
+    return isless((a.dependent, !a.in_basis), (b.dependent, !b.in_basis))
 end
 
 _shape(d::LinearDependence) = d.dependent ? :rect : :circle
@@ -177,7 +174,7 @@ _in_basis(a::Bool, b::Bool) = a == b
 function standard_basis(d::AbstractDependence; in_basis = nothing)
     I = findall(eachindex(d.position)) do i
         return d.position[i] == STANDARD &&
-            _in_basis(d.dependence[i].in_basis, in_basis)
+               _in_basis(d.dependence[i].in_basis, in_basis)
     end
     return sub_basis(d, I)
 end
