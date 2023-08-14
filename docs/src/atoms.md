@@ -101,6 +101,7 @@ behavior. They can either simply distinguish the dependency of rows with
 save some the computation of the singular values for some submatrices:
 
 ```@docs
+LinearDependence
 AnyDependence
 StaircaseDependence
 ```
