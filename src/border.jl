@@ -37,14 +37,12 @@ function BorderBasis{AnyDependence}(b::BorderBasis{<:StaircaseDependence})
 end
 
 function BorderBasis{StaircaseDependence}(b::BorderBasis{<:AnyDependence})
-    basis, I, _ =
-        MB.merge_bases(b.dependence.independent, b.dependence.dependent)
-    d = StaircaseDependence(basis) do i
-        return iszero(I[i])
-    end
-    dependent = convert(AnyDependence, d).dependent
-    rows = _indices(b.dependence.independent, d.standard)
-    cols = _indices(b.dependence.dependent, dependent)
+    d = convert(StaircaseDependence, b.dependence)
+    rows = _indices(
+        independent_basis(b.dependence),
+        standard_basis(d, in_basis = true),
+    )
+    cols = _indices(dependent_basis(b.dependence), dependent_basis(d))
     return BorderBasis(d, b.matrix[rows, cols])
 end
 
@@ -64,9 +62,9 @@ function solve(
     }(),
 ) where {T}
     d = b.dependence
-    dependent = convert(AnyDependence, d).dependent
+    dependent = dependent_basis(d)
     vars = MP.variables(d)
-    standard, _, I = MB.merge_bases(d.trivial_standard, d.standard)
+    standard = standard_basis(d)
     m = length(standard)
     # If a monomial `border` is not in `dependent` and it is not a corner
     # then it can be divided by another monomial `x^α in dependent`.
@@ -99,9 +97,12 @@ function solve(
         k = _index(dependent, border)
         if !isnothing(k)
             v = zeros(T, m)
-            for i in eachindex(I)
-                if !iszero(I[i])
-                    v[i] = b.matrix[I[i], k]
+            row = 0
+            for (i, std) in enumerate(standard.monomials)
+                j = _index(d.basis, std)
+                if d.dependence[j].in_basis
+                    row += 1
+                    v[i] = b.matrix[row, k]
                 end
             end
             return v
@@ -224,14 +225,14 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     # [HL05] Henrion, D. & Lasserre, J-B.
     # *Detecting Global Optimality and Extracting Solutions of GloptiPoly*
     # 2005
-    d = convert(AnyDependence, b.dependence)
+    ind = independent_basis(b.dependence)
+    dep = dependent_basis(b.dependence)
     system = [
-        d.dependent.monomials[col] -
-        MP.polynomial(b.matrix[:, col], d.independent) for
-        col in eachindex(d.dependent.monomials)
+        dep.monomials[col] - MP.polynomial(b.matrix[:, col], ind) for
+        col in eachindex(dep.monomials)
     ]
     filter!(!MP.isconstant, system)
-    V = if MP.mindegree(d) == MP.maxdegree(d)
+    V = if MP.mindegree(b.dependence) == MP.maxdegree(b.dependence)
         # Homogeneous
         projective_algebraic_set(
             system,

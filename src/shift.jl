@@ -29,14 +29,22 @@ function is_dependent!(r::RankDependence, row)
     return !independent
 end
 
+function column_compression!(r::RankDependence, rows)
+    if length(rows) < size(r.matrix, 2)
+        # FIXME should we multiply by inv(Diagonal(s.S)) ?
+        s = LinearAlgebra.svd(r.matrix[rows, :], full = true)
+        r.matrix = r.matrix[dep_rows, :] * s.V
+    end
+end
+
 function AnyDependence(null::MacaulayNullspace, rank_check::RankCheck)
     r = RankDependence(null.matrix, rank_check)
-    return AnyDependence(Base.Fix1(is_dependent!, r), null.basis)
+    return AnyDependence(r, null.basis)
 end
 
 function StaircaseDependence(null::MacaulayNullspace, rank_check::RankCheck)
     r = RankDependence(null.matrix, rank_check)
-    return StaircaseDependence(Base.Fix1(is_dependent!, r), null.basis)
+    return StaircaseDependence(r, null.basis)
 end
 
 function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
@@ -44,8 +52,8 @@ function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
 end
 
 function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
-    indep_rows = _indices(null.basis, d.independent)
-    dep_rows = _indices(null.basis, d.dependent)
+    indep_rows = findall(d -> !d.dependent, d.dependence)
+    dep_rows = findall(d -> d.dependent, d.dependence)
     @assert length(indep_rows) == size(null.matrix, 2)
     return BorderBasis(
         d,
@@ -53,17 +61,12 @@ function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
     )
 end
 
-function column_compression(A, rows)
-    return LinearAlgebra.svd(A[rows, :]).U
-end
-
 function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
-    indep_rows = _indices(null.basis, d.standard)
-    dependent = convert(AnyDependence, d).dependent
-    dep_rows = _indices(null.basis, dependent)
+    indep_rows = _indices(null.basis, standard_basis(d; in_basis = true))
+    dep_rows = _indices(null.basis, dependent_basis(d))
     U = null.matrix
     if length(indep_rows) < size(U, 2)
-        U = column_compression(U, indep_rows)
+        U = LinearAlgebra.svd(U[indep_rows, :]).U
     end
     return BorderBasis(
         d,

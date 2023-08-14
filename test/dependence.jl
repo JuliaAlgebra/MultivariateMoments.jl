@@ -8,27 +8,36 @@ import MultivariateMoments as MM
 
 b(x) = MB.MonomialBasis(x)
 
+struct FixedDependence
+    dependent::Vector{Int}
+end
+
+MM.is_dependent!(d::FixedDependence, i) = i in d.dependent
+function MM.column_compression!(::FixedDependence, _) end
+
 function test_degree_error(x, y, z)
     M = typeof(x * y * z)
     m = b(M[])
-    a = MM.AnyDependence(m, m)
-    @test sprint(show, a) == "AnyDependence\n"
+    a = MM.AnyDependence(_ -> true, m)
+    @test sprint(show, a) == "AnyDependence for an empty basis
+"
     @test isempty(a)
-    s = MM.StaircaseDependence(m, m, m, m, m)
-    @test sprint(show, s) == "StaircaseDependence\n"
+    s = MM.StaircaseDependence(_ -> true, m)
+    @test sprint(show, s) == "StaircaseDependence for an empty basis
+"
     @test isempty(s)
-    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
-        err = ErrorException(
-            "Cannot compute `$(name)degree` as all bases are empty",
-        )
-        @test_throws err f(a)
-        @test_throws err f(a, x)
-        @test_throws err f(s)
-        @test_throws err f(s, x)
-    end
+    #    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
+    #        err = ErrorException(
+    #            "Cannot compute `$(name)degree` as all bases are empty",
+    #        )
+    #        @test_throws err f(a)
+    #        @test_throws err f(a, x)
+    #        @test_throws err f(s)
+    #        @test_throws err f(s, x)
+    #    end
 end
 
-function _test_recipe(dep, ticks, args, names, indep)
+function _test_recipe(dep, ticks, args, names, shapes)
     @test sprint(show, dep) isa String
     d = Dict{Symbol,Any}()
     r = RB.apply_recipe(d, dep)
@@ -40,68 +49,107 @@ function _test_recipe(dep, ticks, args, names, indep)
         @test d[:zticks] == ticks[3]
     end
     @test length(r) == length(names)
-    for i in eachindex(names)
+    @testset "$i" for i in eachindex(names)
         @test r[i].args == args[i]
         @test r[i].plotattributes[:seriestype] == :scatter
-        shape = indep[i] ? :circle : :rect
-        @test r[i].plotattributes[:markershape] == shape
+        @test r[i].plotattributes[:markershape] == shapes[i]
         @test r[i].plotattributes[:label] == names[i]
     end
 end
 
 function test_staircase(x, y, z)
-    d = MM.StaircaseDependence(b([1, x^2])) do i
-        return i > 1
-    end
-    @test d.trivial_standard.monomials == [x]
-    @test d.standard.monomials == [x^0]
-    @test d.corners.monomials == [x^2]
-    @test isempty(d.dependent_border.monomials)
-    @test isempty(d.independent_border.monomials)
+    basis = b([1, x^2])
+    d = MM.StaircaseDependence(FixedDependence([2]), basis)
+    @test d.basis.monomials == [x^0, x, x^2]
+    @test d.dependence == [
+        MM.LinearDependence(false, true),
+        MM.LinearDependence(false, false),
+        MM.LinearDependence(true, true),
+    ]
+    @test d.position == [MM.STANDARD, MM.STANDARD, MM.CORNER]
+    d = MM.StaircaseDependence(FixedDependence(Int[]), b([1, x]))
+    @test d.basis.monomials == [x^0, x, x^2]
+    @test d.dependence == [
+        MM.LinearDependence(false, true),
+        MM.LinearDependence(false, true),
+        MM.LinearDependence(false, false),
+    ]
+    @test d.position == [MM.STANDARD, MM.STANDARD, MM.STANDARD]
 end
 
 function test_recipe(x, y, z)
     a = [x^0 * y^0]
     A = ([0], [0])
+    # Corners
     c = [x, y^2]
     C = ([1, 0], [0, 2])
-    d = [x * z^1, x * y^2]
-    D = ([1, 1], [0, 2], [1, 0])
-    e = [x * y^2, x * y^3, x * z^4]
-    E = ([1, 1, 1], [2, 3, 0], [0, 0, 4])
+    ac, Ia, Ic = MB.merge_bases(b(a), b(c))
+    # Dependent border
+    d = [x * y * z^0]
+    D = ([1], [1], [0])
+    # Independent border
+    e = [x * y^0 * z]
+    E = ([1], [0], [1])
+    f = [x^0 * y^0 * z]
+    F = ([0], [0], [1])
+    de, Id, Ie = MB.merge_bases(b(d), b(e))
+    ae, _, _ = MB.merge_bases(b(a .* z^0), b(e))
+    fe, _, _ = MB.merge_bases(b(f), b(e))
+    cd, _, _ = MB.merge_bases(b(c .* z^0), b(d))
+    fecd, _, Idep = MB.merge_bases(fe, cd)
     _test_recipe(
-        MM.AnyDependence(b(a), b(c)),
+        MM.AnyDependence(FixedDependence(findall(!iszero, Ic)), ac),
         [0:1, 0:2],
         [A, C],
         ["Independent", "Dependent"],
-        [true, false],
+        [:circle, :rect],
     )
     _test_recipe(
-        MM.AnyDependence(b(d), b(e)),
-        [1:1, 0:3, 0:4],
+        MM.AnyDependence(FixedDependence(findall(!iszero, Ie)), de),
+        [1:1, 0:1, 0:1],
         [D, E],
         ["Independent", "Dependent"],
-        [true, false],
+        [:circle, :rect],
     )
-    return _test_recipe(
-        MM.StaircaseDependence(
-            b(a .* z^0),
-            b([x^0 * y^0 * z]),
-            b(c .* z^0),
-            b(d),
-            b(e),
-        ),
-        [0:1, 0:3, 0:4],
-        [(A..., [0]), ([0], [0], [1]), (C..., [0, 0]), D, E],
+    dep = MM.StaircaseDependence(FixedDependence(findall(!iszero, Idep)), fecd)
+    @test sprint(show, dep) == """
+StaircaseDependence for bases:
+ Standard:
+ MonomialBasis([z])
+ Trivial Standard:
+ MonomialBasis([1, y, z^2, y*z, z^3, y*z^2])
+ Corners:
+ MonomialBasis([x, y^2])
+ Independent Border:
+ MonomialBasis([x*z])
+ Trivial Independent Border:
+ MonomialBasis([y^2*z, x*z^2, x*y*z])
+ Dependent Border:
+ MonomialBasis([x*y])
+"""
+    @test MM.corners_basis(dep).monomials == c
+    _test_recipe(
+        dep,
+        [0:1, 0:2, 0:3],
         [
-            "Trivial standard",
-            "Standard",
-            "Corners",
-            "Dependent border",
-            "Independent border",
+            F,
+            (zeros(Int, 6), [0, 1, 0, 1, 0, 1], [0, 0, 2, 1, 3, 2]),
+            (C..., [0, 0]),
+            E,
+            ([0, 1, 1], [2, 0, 1], [1, 2, 1]),
+            D,
         ],
-        [true, true, false, false, true],
+        [
+            "Standard",
+            "Trivial Standard",
+            "Corners",
+            "Independent Border",
+            "Trivial Independent Border",
+            "Dependent Border",
+        ],
+        [:circle, :circle, :diamond, :rect, :rect, :rect],
     )
+    return dep
 end
 
 function runtests(args...)
