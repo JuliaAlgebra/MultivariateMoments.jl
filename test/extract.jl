@@ -34,7 +34,9 @@ function _atoms(atoms, rank_check, solver)
     ν = moment_matrix(μ, monomials(x, 0:(div(length(atoms), 2)+1)))
     atoms = atomic_measure(ν, rank_check, solver)
     @test atoms !== nothing
-    @test atoms ≈ η
+    if !isnothing(atoms)
+        @test atoms ≈ η
+    end
 end
 
 function atoms_1(rank_check, solver)

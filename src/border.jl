@@ -37,14 +37,12 @@ function BorderBasis{AnyDependence}(b::BorderBasis{<:StaircaseDependence})
 end
 
 function BorderBasis{StaircaseDependence}(b::BorderBasis{<:AnyDependence})
-    basis, I, _ =
-        MB.merge_bases(b.dependence.independent, b.dependence.dependent)
-    d = StaircaseDependence(basis) do i
-        return iszero(I[i])
-    end
-    dependent = convert(AnyDependence, d).dependent
-    rows = _indices(b.dependence.independent, d.standard)
-    cols = _indices(b.dependence.dependent, dependent)
+    d = convert(StaircaseDependence, b.dependence)
+    rows = _indices(
+        independent_basis(b.dependence),
+        standard_basis(d, in_basis = true),
+    )
+    cols = _indices(dependent_basis(b.dependence), dependent_basis(d))
     return BorderBasis(d, b.matrix[rows, cols])
 end
 

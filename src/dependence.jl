@@ -7,27 +7,23 @@ import Colors
     struct LinearDependence
         dependent::Bool
         in_basis::Bool
-        saturated::Bool
     end
 
 Linear dependence of the element of a basis representing the indices of the rows
 of a [`MacaulayNullspace`]. `dependent` indicates whether it is linearly
 dependent to rows that appear earlier in the basis. `in_basis` indicates
 whether the element is in the basis (otherwise, it is trivially dependent so the
-pair `dependent = false` and `in_basis = false` is impossible). `saturated`
-indicates that it is known that all rows of the macaulay matrix with this column
-have already been generated.
+pair `dependent = false` and `in_basis = false` is impossible).
 """
 struct LinearDependence
     dependent::Bool
     in_basis::Bool
-    saturated::Bool
 end
 
 function Base.isless(a::LinearDependence, b::LinearDependence)
     return isless(
-        (a.dependent, !a.in_basis, !a.saturated),
-        (b.dependent, !b.in_basis, !b.saturated),
+        (a.dependent, !a.in_basis),
+        (b.dependent, !b.in_basis),
     )
 end
 
@@ -53,7 +49,6 @@ _join(a, b) = __join(a, _upper(b))
 
 function _label(d::LinearDependence; dependent::Bool = true)
     s = ""
-    s = _join(s, d.saturated ? "saturated" : "")
     s = _join(s, d.in_basis ? "" : "trivial")
     if dependent
         s = _join(s, (d.dependent ? "" : "in") * "dependent")
@@ -176,8 +171,15 @@ struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
     position::Vector{StaircasePosition}
 end
 
-function standard_basis(d::AbstractDependence)
-    return sub_basis(d, findall(isequal(STANDARD), d.position))
+_in_basis(::Bool, ::Nothing) = true
+_in_basis(a::Bool, b::Bool) = a == b
+
+function standard_basis(d::AbstractDependence; in_basis = nothing)
+    I = findall(eachindex(d.position)) do i
+        return d.position[i] == STANDARD &&
+            _in_basis(d.dependence[i].in_basis, in_basis)
+    end
+    return sub_basis(d, I)
 end
 
 function corners_basis(d::AbstractDependence)
@@ -201,10 +203,20 @@ function AnyDependence(r, basis::MB.MonomialBasis{M}) where {M}
     return AnyDependence(
         basis,
         LinearDependence[
-            LinearDependence(is_dependent!(r, i), true, false) for
+            LinearDependence(is_dependent!(r, i), true) for
             i in eachindex(basis.monomials)
         ],
     )
+end
+
+function is_dependent!(d::AbstractDependence, i)
+    return d.dependence[i].dependent
+end
+
+column_compression!(::AbstractDependence, ::Any) = nothing
+
+function Base.convert(::Type{StaircaseDependence}, d::AnyDependence)
+    return StaircaseDependence(d, d.basis)
 end
 
 """
@@ -239,7 +251,7 @@ function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
             dependent = is_dependent!(r, i)
             in_basis = true
         end
-        return LinearDependence(dependent, in_basis, false)
+        return LinearDependence(dependent, in_basis)
     end
     vars = MP.variables(basis)
     full_basis =

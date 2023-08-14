@@ -31,8 +31,8 @@ end
 
 function column_compression!(r::RankDependence, rows)
     if length(rows) < size(r.matrix, 2)
-        s = LinearAlgebra.svd(A[rows, :], full = true)
         # FIXME should we multiply by inv(Diagonal(s.S)) ?
+        s = LinearAlgebra.svd(r.matrix[rows, :], full = true)
         r.matrix = r.matrix[dep_rows, :] * s.V
     end
 end
@@ -62,11 +62,11 @@ function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
 end
 
 function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
-    indep_rows = _indices(null.basis, standard_basis(d))
+    indep_rows = _indices(null.basis, standard_basis(d; in_basis = true))
     dep_rows = _indices(null.basis, dependent_basis(d))
     U = null.matrix
     if length(indep_rows) < size(U, 2)
-        U = column_compression(U, indep_rows)
+        U = LinearAlgebra.svd(U[indep_rows, :]).U
     end
     return BorderBasis(
         d,
