@@ -18,12 +18,12 @@ function MM.column_compression!(::FixedDependence, _) end
 function test_degree_error(x, y, z)
     M = typeof(x * y * z)
     m = b(M[])
-    a = MM.AnyDependence(_ -> true, m)
-    @test sprint(show, a) == "AnyDependence for an empty basis
+    a = MM.BasisDependence{LinearDependence}(_ -> true, m)
+    @test sprint(show, a) == "BasisDependence for an empty basis
 "
     @test isempty(a)
     s = MM.StaircaseDependence(_ -> true, m)
-    @test sprint(show, s) == "StaircaseDependence for an empty basis
+    @test sprint(show, s) == "BasisDependence for an empty basis
 "
     @test isempty(s)
     #    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
@@ -90,14 +90,14 @@ function test_recipe(x, y, z)
     cd, _, _ = MB.merge_bases(b(c .* z^0), b(d))
     fecd, _, Idep = MB.merge_bases(fe, cd)
     _test_recipe(
-        MM.AnyDependence(FixedDependence(findall(!iszero, Ic)), ac),
+        MM.BasisDependence{LinearDependence}(FixedDependence(findall(!iszero, Ic)), ac),
         [0:1, 0:2],
         [A, C],
         ["Independent", "Dependent"],
         [:circle, :rect],
     )
     _test_recipe(
-        MM.AnyDependence(FixedDependence(findall(!iszero, Ie)), de),
+        MM.BasisDependence{LinearDependence}(FixedDependence(findall(!iszero, Ie)), de),
         [1:1, 0:1, 0:1],
         [D, E],
         ["Independent", "Dependent"],

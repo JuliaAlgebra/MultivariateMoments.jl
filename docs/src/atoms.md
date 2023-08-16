@@ -97,13 +97,13 @@ The [`Echelon`](@ref) uses the RowEchelon package to determine the independent
 rows (which is not numerically stable) while the [`ShiftNullspace`](@ref) uses
 [`RankCheck`](@ref)s with the singular values so it should have better numerical
 behavior. They can either simply distinguish the dependency of rows with
-[`AnyDependence`](@ref) or use a sieve with [`StaircaseDependence`](@ref) to
+[`LinearDependence`](@ref) or use a sieve with [`StaircaseDependence`](@ref) to
 save some the computation of the singular values for some submatrices:
 
 ```@docs
 LinearDependence
-AnyDependence
 StaircaseDependence
+BasisDependence
 ```
 
 The relationship between the dependent and the independent rows are
