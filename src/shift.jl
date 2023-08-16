@@ -52,8 +52,8 @@ function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
 end
 
 function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
-    indep_rows = findall(d -> !d.dependent, d.dependence)
-    dep_rows = findall(d -> d.dependent, d.dependence)
+    indep_rows = findall(d -> !is_dependent(d), d.dependence)
+    dep_rows = findall(d -> is_dependent(d), d.dependence)
     @assert length(indep_rows) == size(null.matrix, 2)
     return BorderBasis(
         d,

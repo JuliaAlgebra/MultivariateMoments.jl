@@ -4,27 +4,19 @@ import RecipesBase
 import Colors
 
 """
-    struct LinearDependence
-        dependent::Bool
-        in_basis::Bool
-    end
+    @enum LinearDependence INDEPENDENT TRIVIAL DEPENDENT
 
 Linear dependence of the element of a basis representing the indices of the rows
-of a [`MacaulayNullspace`]. `dependent` indicates whether it is linearly
-dependent to rows that appear earlier in the basis. `in_basis` indicates
-whether the element is in the basis (otherwise, it is trivially dependent so the
-pair `dependent = false` and `in_basis = false` is impossible).
+of a [`MacaulayNullspace`]. `DEPENDENT` indicates that it is linearly dependent
+to rows that appear earlier in the basis. `TRIVIAL` indicates that the element
+was not in the original basis so it is trivially independent.
 """
-struct LinearDependence
-    dependent::Bool
-    in_basis::Bool
-end
+@enum LinearDependence INDEPENDENT TRIVIAL DEPENDENT
 
-function Base.isless(a::LinearDependence, b::LinearDependence)
-    return isless((a.dependent, !a.in_basis), (b.dependent, !b.in_basis))
-end
+is_dependent(d::LinearDependence) = d == DEPENDENT
+is_trivial(d::LinearDependence) = d == TRIVIAL
 
-_shape(d::LinearDependence) = d.dependent ? :rect : :circle
+_shape(d::LinearDependence) = is_dependent(d) ? :rect : :circle
 
 function _upper(a)
     if isempty(a)
@@ -46,22 +38,22 @@ _join(a, b) = __join(a, _upper(b))
 
 function _label(d::LinearDependence; dependent::Bool = true)
     s = ""
-    s = _join(s, d.in_basis ? "" : "trivial")
+    s = _join(s, is_trivial(d) ? "trivial" : "")
     if dependent
-        s = _join(s, (d.dependent ? "" : "in") * "dependent")
+        s = _join(s, (is_dependent(d) ? "" : "in") * "dependent")
     end
     return s
 end
 
 function _markercolor(d::LinearDependence)
-    if d.in_basis
-        if d.dependent
+    if is_trivial(d)
+        return Colors.JULIA_LOGO_COLORS.purple
+    else
+        if is_dependent(d)
             return Colors.JULIA_LOGO_COLORS.green
         else
             return Colors.JULIA_LOGO_COLORS.blue
         end
-    else
-        return Colors.JULIA_LOGO_COLORS.purple
     end
 end
 
@@ -119,11 +111,11 @@ function sub_basis(d::AbstractDependence, I::AbstractVector{Int})
 end
 
 function independent_basis(d::AbstractDependence)
-    return sub_basis(d, findall(d -> !d.dependent, d.dependence))
+    return sub_basis(d, findall(d -> !is_dependent(d), d.dependence))
 end
 
 function dependent_basis(d::AbstractDependence)
-    return sub_basis(d, findall(d -> d.dependent, d.dependence))
+    return sub_basis(d, findall(d -> is_dependent(d), d.dependence))
 end
 
 """
@@ -174,7 +166,7 @@ _in_basis(a::Bool, b::Bool) = a == b
 function standard_basis(d::AbstractDependence; in_basis = nothing)
     I = findall(eachindex(d.position)) do i
         return d.position[i] == STANDARD &&
-               _in_basis(d.dependence[i].in_basis, in_basis)
+               _in_basis(!is_trivial(d.dependence[i]), in_basis)
     end
     return sub_basis(d, I)
 end
@@ -200,14 +192,14 @@ function AnyDependence(r, basis::MB.MonomialBasis{M}) where {M}
     return AnyDependence(
         basis,
         LinearDependence[
-            LinearDependence(is_dependent!(r, i), true) for
+            is_dependent!(r, i) ? DEPENDENT : INDEPENDENT for
             i in eachindex(basis.monomials)
         ],
     )
 end
 
 function is_dependent!(d::AbstractDependence, i)
-    return d.dependence[i].dependent
+    return is_dependent(d.dependence[i])
 end
 
 column_compression!(::AbstractDependence, ::Any) = nothing
@@ -241,14 +233,11 @@ function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
     end
     function dependence(mono)
         i = _index(basis, mono)
-        if isnothing(i)
-            dependent = false
-            in_basis = false
+        return if isnothing(i)
+            TRIVIAL
         else
-            dependent = is_dependent!(r, i)
-            in_basis = true
+            is_dependent!(r, i) ? DEPENDENT : INDEPENDENT
         end
-        return LinearDependence(dependent, in_basis)
     end
     vars = MP.variables(basis)
     full_basis =
@@ -259,7 +248,7 @@ function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
     # It also ensures that the standard monomials have the "staircase structure".
     function is_corner_multiple(mono, indices, dependence)
         for i in eachindex(dependence)
-            if dependence[i].dependent &&
+            if is_dependent(dependence[i]) &&
                MP.divides(full_basis.monomials[indices[i]], mono)
                 return true
             end
@@ -272,18 +261,18 @@ function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
         if !is_corner_multiple(mono, keep, d)
             push!(keep, i)
             push!(d, dependence(mono))
-            push!(s, d[end].dependent ? CORNER : STANDARD)
+            push!(s, is_dependent(d[end]) ? CORNER : STANDARD)
         end
     end
     column_compression!(
         r,
-        Int[keep[i] for i in eachindex(d) if !d[i].dependent],
+        Int[keep[i] for i in eachindex(d) if !is_dependent(d[i])],
     )
     full_basis = typeof(full_basis)(full_basis.monomials[keep])
     new_basis = MB.MonomialBasis(
         eltype(basis.monomials)[
             full_basis.monomials[i] * shift for
-            i in eachindex(s) if !d[i].dependent for shift in vars
+            i in eachindex(s) if !is_dependent(d[i]) for shift in vars
         ],
     )
     full_basis, I1, I2 = MB.merge_bases(full_basis, new_basis)
@@ -298,8 +287,8 @@ function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
             else
                 # If it was not seen before, it means it is outside the basis
                 # so it is trivial standard
-                @assert !deps[i].dependent
-                @assert !deps[i].in_basis
+                @assert !is_dependent(deps[i])
+                @assert is_trivial(deps[i])
                 position[i] = STANDARD
             end
         else
