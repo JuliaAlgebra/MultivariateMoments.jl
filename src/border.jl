@@ -100,7 +100,7 @@ function solve(
             row = 0
             for (i, std) in enumerate(standard.monomials)
                 j = _index(d.basis, std)
-                if d.dependence[j].in_basis
+                if !is_trivial(d.dependence[j])
                     row += 1
                     v[i] = b.matrix[row, k]
                 end

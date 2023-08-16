@@ -62,17 +62,17 @@ function test_staircase(x, y, z)
     d = MM.StaircaseDependence(FixedDependence([2]), basis)
     @test d.basis.monomials == [x^0, x, x^2]
     @test d.dependence == [
-        MM.LinearDependence(false, true),
-        MM.LinearDependence(false, false),
-        MM.LinearDependence(true, true),
+        MM.INDEPENDENT,
+        MM.TRIVIAL,
+        MM.DEPENDENT,
     ]
     @test d.position == [MM.STANDARD, MM.STANDARD, MM.CORNER]
     d = MM.StaircaseDependence(FixedDependence(Int[]), b([1, x]))
     @test d.basis.monomials == [x^0, x, x^2]
     @test d.dependence == [
-        MM.LinearDependence(false, true),
-        MM.LinearDependence(false, true),
-        MM.LinearDependence(false, false),
+        MM.INDEPENDENT,
+        MM.INDEPENDENT,
+        MM.TRIVIAL,
     ]
     @test d.position == [MM.STANDARD, MM.STANDARD, MM.STANDARD]
 end
