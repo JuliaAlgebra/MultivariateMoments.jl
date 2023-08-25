@@ -10,6 +10,8 @@ const _APL = MP.AbstractPolynomialLike
 
 import MultivariateBases as MB
 
+import CommonSolve: solve
+
 import SemialgebraicSets as SS
 
 abstract type AbstractMeasureLike{T} end
