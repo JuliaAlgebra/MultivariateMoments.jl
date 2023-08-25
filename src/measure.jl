@@ -29,8 +29,8 @@ function Measure(
             j = rev[x[i]]
             if i != σ[j]
                 if !isapprox(b[j], a[i]; kws...)
-                    error(
-                        "The monomial `$(x[i])` occurs twice with different values: `$(a[i])` and `$(b[j])`",
+                    @warn(
+                        "The monomial `$(x[i])` occurs twice with different values: `$(a[i])` and `$(b[j])`, keeping the first one.",
                     )
                 end
             end
