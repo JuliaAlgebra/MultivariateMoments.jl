@@ -11,6 +11,7 @@ const _APL = MP.AbstractPolynomialLike
 import MultivariateBases as MB
 
 import CommonSolve: solve
+export solve
 
 import SemialgebraicSets as SS
 
