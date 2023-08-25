@@ -1,5 +1,4 @@
 using SemialgebraicSets
-import CommonSolve: solve
 
 """
     function compute_support!(ν::MomentMatrix, rank_check, solver) end
