@@ -68,8 +68,9 @@ _is_trivial(::Bool, ::Nothing) = true
 _is_trivial(a::Bool, b::Bool) = a == b
 
 function is_standard(d::StaircaseDependence; trivial = nothing)
-    return d.standard_or_corner && !is_dependent(d) &&
-        _is_trivial(d.linear == TRIVIAL, trivial)
+    return d.standard_or_corner &&
+           !is_dependent(d) &&
+           _is_trivial(d.linear == TRIVIAL, trivial)
 end
 
 function is_corner(d::StaircaseDependence)
@@ -152,9 +153,6 @@ function string_dependence(d::BasisDependence, i)
     return string(d.dependence[i])
 end
 
-_is_trivial(::Bool, ::Nothing) = true
-_is_trivial(a::Bool, b::Bool) = a == b
-
 function standard_basis(d::BasisDependence; kws...)
     I = findall(d.dependence) do d
         return is_standard(d; kws...)
@@ -166,11 +164,17 @@ function corners_basis(d::BasisDependence)
     return sub_basis(d, findall(is_corner, d.dependence))
 end
 
-function Base.convert(::Type{BasisDependence{LinearDependence}}, d::BasisDependence{StaircaseDependence})
+function Base.convert(
+    ::Type{BasisDependence{LinearDependence}},
+    d::BasisDependence{StaircaseDependence},
+)
     return BasisDependence(d.basis, map(d -> d.linear, d.dependence))
 end
 
-function BasisDependence{LinearDependence}(r, basis::MB.MonomialBasis{M}) where {M}
+function BasisDependence{LinearDependence}(
+    r,
+    basis::MB.MonomialBasis{M},
+) where {M}
     return BasisDependence(
         basis,
         LinearDependence[
@@ -208,7 +212,10 @@ returns whether it is dependent.
 *Semidefinite characterization and computation of zero-dimensional real radical ideals.*
 Foundations of Computational Mathematics 8 (2008): 607-647.
 """
-function BasisDependence{StaircaseDependence}(r, basis::MB.MonomialBasis{M}) where {M}
+function BasisDependence{StaircaseDependence}(
+    r,
+    basis::MB.MonomialBasis{M},
+) where {M}
     if isempty(basis.monomials)
         return BasisDependence(basis, StaircaseDependence[])
     end

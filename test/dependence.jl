@@ -90,14 +90,20 @@ function test_recipe(x, y, z)
     cd, _, _ = MB.merge_bases(b(c .* z^0), b(d))
     fecd, _, Idep = MB.merge_bases(fe, cd)
     _test_recipe(
-        MM.BasisDependence{LinearDependence}(FixedDependence(findall(!iszero, Ic)), ac),
+        MM.BasisDependence{LinearDependence}(
+            FixedDependence(findall(!iszero, Ic)),
+            ac,
+        ),
         [0:1, 0:2],
         [A, C],
         ["Independent", "Dependent"],
         [:circle, :rect],
     )
     _test_recipe(
-        MM.BasisDependence{LinearDependence}(FixedDependence(findall(!iszero, Ie)), de),
+        MM.BasisDependence{LinearDependence}(
+            FixedDependence(findall(!iszero, Ie)),
+            de,
+        ),
         [1:1, 0:1, 0:1],
         [D, E],
         ["Independent", "Dependent"],

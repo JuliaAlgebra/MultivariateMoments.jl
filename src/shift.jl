@@ -37,12 +37,18 @@ function column_compression!(r::RankDependence, rows)
     end
 end
 
-function BasisDependence{LinearDependence}(null::MacaulayNullspace, rank_check::RankCheck)
+function BasisDependence{LinearDependence}(
+    null::MacaulayNullspace,
+    rank_check::RankCheck,
+)
     r = RankDependence(null.matrix, rank_check)
     return BasisDependence{LinearDependence}(r, null.basis)
 end
 
-function BasisDependence{StaircaseDependence}(null::MacaulayNullspace, rank_check::RankCheck)
+function BasisDependence{StaircaseDependence}(
+    null::MacaulayNullspace,
+    rank_check::RankCheck,
+)
     r = RankDependence(null.matrix, rank_check)
     return BasisDependence{StaircaseDependence}(r, null.basis)
 end
@@ -51,7 +57,10 @@ function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
     return Int[_index(in, mono) for mono in from.monomials]
 end
 
-function BorderBasis(d::BasisDependence{LinearDependence}, null::MacaulayNullspace)
+function BorderBasis(
+    d::BasisDependence{LinearDependence},
+    null::MacaulayNullspace,
+)
     indep_rows = findall(d -> !is_dependent(d), d.dependence)
     dep_rows = findall(d -> is_dependent(d), d.dependence)
     @assert length(indep_rows) == size(null.matrix, 2)

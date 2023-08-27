@@ -26,7 +26,6 @@ struct BorderBasis{D,T,MT<:AbstractMatrix{T},B}
     end
 end
 
-
 function Base.show(io::IO, b::BorderBasis)
     println(io, "BorderBasis with independent rows and dependent columns in:")
     println(io, b.dependence)
@@ -40,7 +39,10 @@ end
 BorderBasis{D}(b::BorderBasis{D}) where {D} = b
 
 function BorderBasis{LinearDependence}(b::BorderBasis{StaircaseDependence})
-    return BorderBasis(convert(BasisDependence{Dependence}, b.dependence), b.matrix)
+    return BorderBasis(
+        convert(BasisDependence{Dependence}, b.dependence),
+        b.matrix,
+    )
 end
 
 function BorderBasis{StaircaseDependence}(b::BorderBasis{LinearDependence})
