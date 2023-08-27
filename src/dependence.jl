@@ -63,6 +63,7 @@ struct StaircaseDependence
 end
 
 is_dependent(d::StaircaseDependence) = is_dependent(d.linear)
+is_trivial(d::StaircaseDependence) = is_trivial(d.linear)
 
 _is_trivial(::Bool, ::Nothing) = true
 _is_trivial(a::Bool, b::Bool) = a == b

@@ -70,7 +70,10 @@ function BorderBasis(
     )
 end
 
-function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
+function BorderBasis(
+    d::BasisDependence{StaircaseDependence},
+    null::MacaulayNullspace,
+)
     indep_rows = _indices(null.basis, standard_basis(d; trivial = false))
     dep_rows = _indices(null.basis, dependent_basis(d))
     U = null.matrix

@@ -18,11 +18,11 @@ Foundations of Computational Mathematics 8 (2008): 607-647.
 struct BorderBasis{D,T,MT<:AbstractMatrix{T},B}
     dependence::BasisDependence{D,B}
     matrix::MT
-    function BorderBasis{D}(
+    function BorderBasis(
         dependence::BasisDependence{D,B},
-        matrix::AbstractMatrix{MT},
-    ) where {D,T,MT<:AbstractMatrix{T},B}
-        return new{D,T,MT,B}(dependence, matrix)
+        matrix::AbstractMatrix{T},
+    ) where {D,T,B}
+        return new{D,T,typeof(matrix),B}(dependence, matrix)
     end
 end
 
