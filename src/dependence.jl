@@ -57,42 +57,94 @@ function _markercolor(d::LinearDependence)
     end
 end
 
-@enum StaircasePosition STANDARD CORNER BORDER
+"""
+    struct StaircaseDependence
+        standard_or_corner::Bool
+        linear::LinearDependence
+    end
 
-function _shape(d::Tuple{StaircasePosition,LinearDependence})
-    if d[1] == STANDARD
+Dependence of the element of a basis representing the indices of the rows
+of a [`MacaulayNullspace`]. If the field `standard_or_corner` is true then
+the elements is either standard or is a corner (depending on the linear
+dependence encoded in the `linear` field). Otherwise, it is a border
+that is not a corner or it is not even a border.  See [`LinearDependence`](@ref)
+for the `linear` field.
+"""
+struct StaircaseDependence
+    standard_or_corner::Bool
+    linear::LinearDependence
+end
+
+function Base.isless(a::StaircaseDependence, b::StaircaseDependence)
+    return isless(
+        (!a.standard_or_corner, a.linear),
+        (!b.standard_or_corner, b.linear),
+    )
+end
+
+is_dependent(d::StaircaseDependence) = is_dependent(d.linear)
+is_trivial(d::StaircaseDependence) = is_trivial(d.linear)
+
+_is_trivial(::Bool, ::Nothing) = true
+_is_trivial(a::Bool, b::Bool) = a == b
+
+function is_standard(d::StaircaseDependence; trivial = nothing)
+    return d.standard_or_corner &&
+           !is_dependent(d) &&
+           _is_trivial(d.linear == TRIVIAL, trivial)
+end
+
+function is_corner(d::StaircaseDependence)
+    return d.standard_or_corner && is_dependent(d)
+end
+
+function _shape(d::StaircaseDependence)
+    if is_standard(d)
         return :circle
-    elseif d[1] == CORNER
+    elseif is_corner(d)
         return :diamond
     else
-        @assert d[1] == BORDER
         return :rect
     end
 end
 
-function _label(d::Tuple{StaircasePosition,LinearDependence})
-    if d[1] == CORNER
+function _label(d::StaircaseDependence)
+    if is_corner(d)
         return _upper("corners")
     else
         return _join(
-            _label(d[2], dependent = d[1] != STANDARD),
-            lowercase(string(d[1])),
+            _label(d.linear, dependent = !is_standard(d)),
+            _upper(is_standard(d) ? "standard" : "border"),
         )
     end
 end
 
-function _markercolor(d::Tuple{StaircasePosition,LinearDependence})
-    return _markercolor(d[2])
+function _markercolor(d::StaircaseDependence)
+    return _markercolor(d.linear)
 end
 
-abstract type AbstractDependence end
+"""
+    struct BasisDependence{D,B<:MB.AbstractPolynomialBasis}
+        basis::B
+        dependence::Vector{D}
+    end
 
-function Base.isempty(d::AbstractDependence)
+The dependence between the elements of a basis.
+
+!!! tip
+    If the number of variables is 2 or 3, it can be visualized with Plots.jl.
+"""
+struct BasisDependence{D,B<:MB.AbstractPolynomialBasis}
+    basis::B
+    dependence::Vector{D}
+end
+
+function Base.isempty(d::BasisDependence)
     return isempty(d.dependence)
 end
 
-function Base.show(io::IO, d::AbstractDependence)
-    print(io, "$(nameof(typeof(d))) for ")
+function Base.show(io::IO, d::BasisDependence)
+    print(io, "BasisDependence for ")
     if isempty(d)
         println(io, "an empty basis")
     else
@@ -105,91 +157,46 @@ function Base.show(io::IO, d::AbstractDependence)
     return
 end
 
-function sub_basis(d::AbstractDependence, I::AbstractVector{Int})
+function sub_basis(d::BasisDependence, I::AbstractVector{Int})
     @assert issorted(I)
     return typeof(d.basis)(d.basis.monomials[I])
 end
 
-function independent_basis(d::AbstractDependence)
-    return sub_basis(d, findall(d -> !is_dependent(d), d.dependence))
+function independent_basis(d::BasisDependence)
+    return sub_basis(d, findall(!is_dependent, d.dependence))
 end
 
-function dependent_basis(d::AbstractDependence)
-    return sub_basis(d, findall(d -> is_dependent(d), d.dependence))
+function dependent_basis(d::BasisDependence)
+    return sub_basis(d, findall(is_dependent, d.dependence))
 end
 
-"""
-    struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
-        basis::B
-        dependence::Vector{LinearDependence}
-    end
-
-The independent and dependent can be arbitrary disjoint bases.
-
-!!! tip
-    If the number of variables is 2 or 3, it can be visualized with Plots.jl.
-"""
-struct AnyDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
-    basis::B
-    dependence::Vector{LinearDependence}
-end
-
-function string_dependence(d::AnyDependence, i)
+function string_dependence(d::BasisDependence, i)
     return string(d.dependence[i])
 end
 
-_category_type(::AnyDependence) = LinearDependence
-_category(d::AnyDependence, i) = d.dependence[i]
-
-"""
-    struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
-        basis::B
-        dependence::Vector{LinearDependence}
-        position::Vector{StaircasePosition}
-    end
-
-No independent is a multiple of a dependent and each dependent can be obtained
-by multiplying an independent with a variable.
-
-!!! tip
-    If the number of variables is 2 or 3, it can be visualized with Plots.jl.
-"""
-struct StaircaseDependence{B<:MB.AbstractPolynomialBasis} <: AbstractDependence
-    basis::B
-    dependence::Vector{LinearDependence}
-    position::Vector{StaircasePosition}
-end
-
-_in_basis(::Bool, ::Nothing) = true
-_in_basis(a::Bool, b::Bool) = a == b
-
-function standard_basis(d::AbstractDependence; in_basis = nothing)
-    I = findall(eachindex(d.position)) do i
-        return d.position[i] == STANDARD &&
-               _in_basis(!is_trivial(d.dependence[i]), in_basis)
+function standard_basis(d::BasisDependence; kws...)
+    I = findall(d.dependence) do d
+        return is_standard(d; kws...)
     end
     return sub_basis(d, I)
 end
 
-function corners_basis(d::AbstractDependence)
-    return sub_basis(d, findall(isequal(CORNER), d.position))
+function corners_basis(d::BasisDependence)
+    return sub_basis(d, findall(is_corner, d.dependence))
 end
 
-function string_dependence(d::StaircaseDependence, i)
-    return string(d.position[i]) * " " * string(d.dependence[i])
+function Base.convert(
+    ::Type{BasisDependence{LinearDependence}},
+    d::BasisDependence{StaircaseDependence},
+)
+    return BasisDependence(d.basis, map(d -> d.linear, d.dependence))
 end
 
-function _category_type(::StaircaseDependence)
-    return Tuple{StaircasePosition,LinearDependence}
-end
-_category(d::StaircaseDependence, i) = d.position[i], d.dependence[i]
-
-function Base.convert(::Type{AnyDependence}, d::StaircaseDependence)
-    return AnyDependence(d.basis, d.dependence)
-end
-
-function AnyDependence(r, basis::MB.MonomialBasis{M}) where {M}
-    return AnyDependence(
+function BasisDependence{LinearDependence}(
+    r,
+    basis::MB.MonomialBasis{M},
+) where {M}
+    return BasisDependence(
         basis,
         LinearDependence[
             is_dependent!(r, i) ? DEPENDENT : INDEPENDENT for
@@ -198,18 +205,21 @@ function AnyDependence(r, basis::MB.MonomialBasis{M}) where {M}
     )
 end
 
-function is_dependent!(d::AbstractDependence, i)
+function is_dependent!(d::BasisDependence, i)
     return is_dependent(d.dependence[i])
 end
 
-column_compression!(::AbstractDependence, ::Any) = nothing
+column_compression!(::BasisDependence, ::Any) = nothing
 
-function Base.convert(::Type{StaircaseDependence}, d::AnyDependence)
-    return StaircaseDependence(d, d.basis)
+function Base.convert(
+    ::Type{BasisDependence{StaircaseDependence}},
+    d::BasisDependence{LinearDependence},
+)
+    return BasisDependence{StaircaseDependence}(d, d.basis)
 end
 
 """
-    function StaircaseDependence(
+    function BasisDependence{StaircaseDependence}(
         is_dependent::Function,
         basis::MB.AbstractPolynomialBasis,
     )
@@ -223,13 +233,12 @@ returns whether it is dependent.
 *Semidefinite characterization and computation of zero-dimensional real radical ideals.*
 Foundations of Computational Mathematics 8 (2008): 607-647.
 """
-function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
+function BasisDependence{StaircaseDependence}(
+    r,
+    basis::MB.MonomialBasis{M},
+) where {M}
     if isempty(basis.monomials)
-        return StaircaseDependence(
-            basis,
-            LinearDependence[],
-            StaircasePosition[],
-        )
+        return BasisDependence(basis, StaircaseDependence[])
     end
     function dependence(mono)
         i = _index(basis, mono)
@@ -242,8 +251,7 @@ function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
     vars = MP.variables(basis)
     full_basis =
         MB.maxdegree_basis(typeof(basis), vars, MP.maxdegree(basis.monomials))
-    d = LinearDependence[]
-    s = StaircasePosition[]
+    d = StaircaseDependence[]
     # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
     # It also ensures that the standard monomials have the "staircase structure".
     function is_corner_multiple(mono, indices, dependence)
@@ -260,8 +268,7 @@ function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
     for (i, mono) in enumerate(full_basis.monomials)
         if !is_corner_multiple(mono, keep, d)
             push!(keep, i)
-            push!(d, dependence(mono))
-            push!(s, is_dependent(d[end]) ? CORNER : STANDARD)
+            push!(d, StaircaseDependence(true, dependence(mono)))
         end
     end
     column_compression!(
@@ -272,31 +279,28 @@ function StaircaseDependence(r, basis::MB.MonomialBasis{M}) where {M}
     new_basis = MB.MonomialBasis(
         eltype(basis.monomials)[
             full_basis.monomials[i] * shift for
-            i in eachindex(s) if !is_dependent(d[i]) for shift in vars
+            i in eachindex(d) if !is_dependent(d[i]) for shift in vars
         ],
     )
     full_basis, I1, I2 = MB.merge_bases(full_basis, new_basis)
-    deps = Vector{LinearDependence}(undef, length(full_basis.monomials))
-    position = Vector{StaircasePosition}(undef, length(full_basis.monomials))
+    deps = Vector{StaircaseDependence}(undef, length(full_basis.monomials))
     for (i, mono) in enumerate(full_basis.monomials)
         if iszero(I1[i])
-            deps[i] = dependence(mono)
             @assert !iszero(I2[i])
             if is_corner_multiple(mono, 1:(i-1), view(deps, 1:(i-1)))
-                position[i] = BORDER
+                std = false
             else
                 # If it was not seen before, it means it is outside the basis
                 # so it is trivial standard
-                @assert !is_dependent(deps[i])
-                @assert is_trivial(deps[i])
-                position[i] = STANDARD
+                @assert isnothing(_index(basis, mono))
+                std = true
             end
+            deps[i] = StaircaseDependence(std, dependence(mono))
         else
             deps[i] = d[I1[i]]
-            position[i] = s[I1[i]]
         end
     end
-    return StaircaseDependence(full_basis, deps, position)
+    return BasisDependence(full_basis, deps)
 end
 
 function _exponents(monos, i)
@@ -308,25 +312,25 @@ function _split_exponents(monos)
     return ntuple(Base.Fix1(_exponents, monos), Val(N))
 end
 
-MP.variables(d::AbstractDependence) = MP.variables(d.basis.monomials)
+MP.variables(d::BasisDependence) = MP.variables(d.basis.monomials)
 
-function MP.mindegree(d::AbstractDependence, args...)
+function MP.mindegree(d::BasisDependence, args...)
     return MP.mindegree(d.basis.monomials, args...)
 end
 
-function MP.maxdegree(d::AbstractDependence, args...)
+function MP.maxdegree(d::BasisDependence, args...)
     return MP.maxdegree(d.basis.monomials, args...)
 end
 
-function _ticks(d::AbstractDependence, v)
+function _ticks(d::BasisDependence, v)
     return MP.mindegree(d, v):MP.maxdegree(d, v)
 end
 
-function _categories(d::AbstractDependence)
+function _categories(d::BasisDependence{D}) where {D}
     M = eltype(d.basis.monomials)
-    categories = Dict{_category_type(d),Vector{M}}()
+    categories = Dict{D,Vector{M}}()
     for (i, mono) in enumerate(d.basis.monomials)
-        cat = _category(d, i)
+        cat = d.dependence[i]
         if !haskey(categories, cat)
             categories[cat] = M[]
         end
@@ -335,7 +339,7 @@ function _categories(d::AbstractDependence)
     return sort!(collect(categories))
 end
 
-RecipesBase.@recipe function f(d::AbstractDependence)
+RecipesBase.@recipe function f(d::BasisDependence)
     vars = MP.variables(d)
     t = _ticks.(Ref(d), vars)
     aspect_ratio --> :equal # defaults to `:auto`

@@ -20,7 +20,7 @@ function test_dreesen1(x, y)
     ]
     basis = MB.MonomialBasis([1, y, x, y^2, x * y, x^2])
     null = MM.MacaulayNullspace(matrix, basis, 1e-8)
-    @testset "$D" for D in [MM.AnyDependence, MM.StaircaseDependence]
+    @testset "$D" for D in [MM.LinearDependence, MM.StaircaseDependence]
         @testset "$name" for (solver, name) in [
             (MM.ShiftNullspace{D}(), "shift"),
             #(MM.Echelon{D}(fallback = false), "echelon no fallback"),
@@ -42,7 +42,7 @@ function _test_univariate_infinity(x, y)
         (MM.MacaulayNullspace(Z[1:2, 1:1], b([1, x]), 1e-8), 2),
         (MM.MacaulayNullspace(zeros(1, 0), b([x]), 1e-8), 0),
     ]
-        @testset "$D" for D in [MM.AnyDependence, MM.StaircaseDependence]
+        @testset "$D" for D in [MM.LinearDependence, MM.StaircaseDependence]
             @testset "$name" for (solver, name) in [
                 (MM.ShiftNullspace{D}(), "shift"),
                 (MM.Echelon{D}(fallback = false), "echelon no fallback"),

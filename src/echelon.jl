@@ -21,13 +21,13 @@ function build_system(U::AbstractMatrix, basis::MB.MonomialBasis)
         U = U[keep, :]
     end
     set_pivots = Set(pivots)
-    d = AnyDependence(Pivots(set_pivots), basis)
+    d = BasisDependence{LinearDependence}(Pivots(set_pivots), basis)
     non_pivots = setdiff(eachindex(basis.monomials), set_pivots)
     return BorderBasis(d, U[:, non_pivots])
 end
 
 """
-    struct Echelon{D<:AbstractDependence,S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
+    struct Echelon{D,S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
         MacaulayNullspaceSolver
         solver::S
     end
@@ -81,10 +81,8 @@ Foundations of Computational Mathematics 8 (2008): 607-647.
 *Numerical polynomial algebra.*
 Society for Industrial and Applied Mathematics, 2004.
 """
-struct Echelon{
-    D<:AbstractDependence,
-    S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver},
-} <: MacaulayNullspaceSolver
+struct Echelon{D,S<:Union{Nothing,SemialgebraicSets.AbstractAlgebraicSolver}} <:
+       MacaulayNullspaceSolver
     fallback::Bool
     solver::S
 end
@@ -94,7 +92,7 @@ function Echelon{D}(;
 ) where {D}
     return Echelon{D,typeof(solver)}(fallback, solver)
 end
-Echelon(; kws...) = Echelon{AnyDependence}(; kws...)
+Echelon(; kws...) = Echelon{LinearDependence}(; kws...)
 
 # TODO remove
 Echelon(solver) = Echelon(; solver)

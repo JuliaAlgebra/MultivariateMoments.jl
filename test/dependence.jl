@@ -18,12 +18,12 @@ function MM.column_compression!(::FixedDependence, _) end
 function test_degree_error(x, y, z)
     M = typeof(x * y * z)
     m = b(M[])
-    a = MM.AnyDependence(_ -> true, m)
-    @test sprint(show, a) == "AnyDependence for an empty basis
+    a = MM.BasisDependence{MM.LinearDependence}(_ -> true, m)
+    @test sprint(show, a) == "BasisDependence for an empty basis
 "
     @test isempty(a)
-    s = MM.StaircaseDependence(_ -> true, m)
-    @test sprint(show, s) == "StaircaseDependence for an empty basis
+    s = MM.BasisDependence{MM.StaircaseDependence}(_ -> true, m)
+    @test sprint(show, s) == "BasisDependence for an empty basis
 "
     @test isempty(s)
     #    for (f, name) in [(MP.mindegree, "min"), (MP.maxdegree, "max")]
@@ -59,14 +59,23 @@ end
 
 function test_staircase(x, y, z)
     basis = b([1, x^2])
-    d = MM.StaircaseDependence(FixedDependence([2]), basis)
+    d = MM.BasisDependence{MM.StaircaseDependence}(FixedDependence([2]), basis)
     @test d.basis.monomials == [x^0, x, x^2]
-    @test d.dependence == [MM.INDEPENDENT, MM.TRIVIAL, MM.DEPENDENT]
-    @test d.position == [MM.STANDARD, MM.STANDARD, MM.CORNER]
-    d = MM.StaircaseDependence(FixedDependence(Int[]), b([1, x]))
+    @test d.dependence == [
+        MM.StaircaseDependence(true, MM.INDEPENDENT),
+        MM.StaircaseDependence(true, MM.TRIVIAL),
+        MM.StaircaseDependence(true, MM.DEPENDENT),
+    ]
+    d = MM.BasisDependence{MM.StaircaseDependence}(
+        FixedDependence(Int[]),
+        b([1, x]),
+    )
     @test d.basis.monomials == [x^0, x, x^2]
-    @test d.dependence == [MM.INDEPENDENT, MM.INDEPENDENT, MM.TRIVIAL]
-    @test d.position == [MM.STANDARD, MM.STANDARD, MM.STANDARD]
+    @test d.dependence == [
+        MM.StaircaseDependence(true, MM.INDEPENDENT),
+        MM.StaircaseDependence(true, MM.INDEPENDENT),
+        MM.StaircaseDependence(true, MM.TRIVIAL),
+    ]
 end
 
 function test_recipe(x, y, z)
@@ -90,22 +99,31 @@ function test_recipe(x, y, z)
     cd, _, _ = MB.merge_bases(b(c .* z^0), b(d))
     fecd, _, Idep = MB.merge_bases(fe, cd)
     _test_recipe(
-        MM.AnyDependence(FixedDependence(findall(!iszero, Ic)), ac),
+        MM.BasisDependence{MM.LinearDependence}(
+            FixedDependence(findall(!iszero, Ic)),
+            ac,
+        ),
         [0:1, 0:2],
         [A, C],
         ["Independent", "Dependent"],
         [:circle, :rect],
     )
     _test_recipe(
-        MM.AnyDependence(FixedDependence(findall(!iszero, Ie)), de),
+        MM.BasisDependence{MM.LinearDependence}(
+            FixedDependence(findall(!iszero, Ie)),
+            de,
+        ),
         [1:1, 0:1, 0:1],
         [D, E],
         ["Independent", "Dependent"],
         [:circle, :rect],
     )
-    dep = MM.StaircaseDependence(FixedDependence(findall(!iszero, Idep)), fecd)
+    dep = MM.BasisDependence{MM.StaircaseDependence}(
+        FixedDependence(findall(!iszero, Idep)),
+        fecd,
+    )
     @test sprint(show, dep) == """
-StaircaseDependence for bases:
+BasisDependence for bases:
  Standard:
  MonomialBasis([z])
  Trivial Standard:

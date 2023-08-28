@@ -1,6 +1,6 @@
 """
-    struct BorderBasis{D<:AbstractDependence,T,MT<:AbstractMatrix{T},BT}
-        dependence::D
+    struct BorderBasis{D,T,MT<:AbstractMatrix{T},B}
+        dependence::BasisDependence{D,B}
         matrix::MT
     end
 
@@ -15,9 +15,15 @@ sufficient for it to be the *border* of `standard`.
 *Semidefinite characterization and computation of zero-dimensional real radical ideals.*
 Foundations of Computational Mathematics 8 (2008): 607-647.
 """
-struct BorderBasis{D<:AbstractDependence,T,MT<:AbstractMatrix{T}}
-    dependence::D
+struct BorderBasis{D,T,MT<:AbstractMatrix{T},B}
+    dependence::BasisDependence{D,B}
     matrix::MT
+    function BorderBasis(
+        dependence::BasisDependence{D,B},
+        matrix::AbstractMatrix{T},
+    ) where {D,T,B}
+        return new{D,T,typeof(matrix),B}(dependence, matrix)
+    end
 end
 
 function Base.show(io::IO, b::BorderBasis)
@@ -30,24 +36,27 @@ function Base.show(io::IO, b::BorderBasis)
     return
 end
 
-BorderBasis{D}(b::BorderBasis{<:D}) where {D} = b
+BorderBasis{D}(b::BorderBasis{D}) where {D} = b
 
-function BorderBasis{AnyDependence}(b::BorderBasis{<:StaircaseDependence})
-    return BorderBasis(convert(AnyDependence, b.dependence), b.matrix)
+function BorderBasis{LinearDependence}(b::BorderBasis{StaircaseDependence})
+    return BorderBasis(
+        convert(BasisDependence{Dependence}, b.dependence),
+        b.matrix,
+    )
 end
 
-function BorderBasis{StaircaseDependence}(b::BorderBasis{<:AnyDependence})
-    d = convert(StaircaseDependence, b.dependence)
+function BorderBasis{StaircaseDependence}(b::BorderBasis{LinearDependence})
+    d = convert(BasisDependence{StaircaseDependence}, b.dependence)
     rows = _indices(
         independent_basis(b.dependence),
-        standard_basis(d, in_basis = true),
+        standard_basis(d, trivial = false),
     )
     cols = _indices(dependent_basis(b.dependence), dependent_basis(d))
     return BorderBasis(d, b.matrix[rows, cols])
 end
 
 function solve(
-    b::BorderBasis{<:AnyDependence,T},
+    b::BorderBasis{LinearDependence,T},
     solver::SemialgebraicSets.AbstractMultiplicationMatricesSolver = MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
         T,
     }(),
@@ -178,7 +187,7 @@ end
 
 """
     Base.@kwdef struct AlgebraicBorderSolver{
-        D<:AbstractDependence,
+        D,
         A<:Union{Nothing,SS.AbstractGröbnerBasisAlgorithm},
         S<:Union{Nothing,SS.AbstractAlgebraicSolver},
     }
@@ -190,7 +199,7 @@ Solve a border basis using `algorithm` and `solver by first converting it to a
 `BorderBasis{D}`.
 """
 struct AlgebraicBorderSolver{
-    D<:AbstractDependence,
+    D,
     A<:Union{Nothing,SS.AbstractGröbnerBasisAlgorithm},
     S<:Union{Nothing,SS.AbstractAlgebraicSolver},
 }
@@ -297,7 +306,7 @@ function solve(b::BorderBasis, solver::AlgebraicFallbackBorderSolver)
 end
 
 function solve(
-    b::BorderBasis{AnyDependence},
+    b::BorderBasis{LinearDependence},
     solver::AlgebraicFallbackBorderSolver{
         M,
         <:AlgebraicBorderSolver{StaircaseDependence},

@@ -37,21 +37,30 @@ function column_compression!(r::RankDependence, rows)
     end
 end
 
-function AnyDependence(null::MacaulayNullspace, rank_check::RankCheck)
+function BasisDependence{LinearDependence}(
+    null::MacaulayNullspace,
+    rank_check::RankCheck,
+)
     r = RankDependence(null.matrix, rank_check)
-    return AnyDependence(r, null.basis)
+    return BasisDependence{LinearDependence}(r, null.basis)
 end
 
-function StaircaseDependence(null::MacaulayNullspace, rank_check::RankCheck)
+function BasisDependence{StaircaseDependence}(
+    null::MacaulayNullspace,
+    rank_check::RankCheck,
+)
     r = RankDependence(null.matrix, rank_check)
-    return StaircaseDependence(r, null.basis)
+    return BasisDependence{StaircaseDependence}(r, null.basis)
 end
 
 function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
     return Int[_index(in, mono) for mono in from.monomials]
 end
 
-function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
+function BorderBasis(
+    d::BasisDependence{LinearDependence},
+    null::MacaulayNullspace,
+)
     indep_rows = findall(d -> !is_dependent(d), d.dependence)
     dep_rows = findall(d -> is_dependent(d), d.dependence)
     @assert length(indep_rows) == size(null.matrix, 2)
@@ -61,8 +70,11 @@ function BorderBasis(d::AnyDependence, null::MacaulayNullspace)
     )
 end
 
-function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
-    indep_rows = _indices(null.basis, standard_basis(d; in_basis = true))
+function BorderBasis(
+    d::BasisDependence{StaircaseDependence},
+    null::MacaulayNullspace,
+)
+    indep_rows = _indices(null.basis, standard_basis(d; trivial = false))
     dep_rows = _indices(null.basis, dependent_basis(d))
     U = null.matrix
     if length(indep_rows) < size(U, 2)
@@ -75,7 +87,7 @@ function BorderBasis(d::StaircaseDependence, null::MacaulayNullspace)
 end
 
 function BorderBasis{D}(null::MacaulayNullspace, check::RankCheck) where {D}
-    return BorderBasis(D(null, check), null)
+    return BorderBasis(BasisDependence{D}(null, check), null)
 end
 
 """
