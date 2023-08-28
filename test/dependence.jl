@@ -123,7 +123,7 @@ function test_recipe(x, y, z)
         fecd,
     )
     @test sprint(show, dep) == """
-StaircaseDependence for bases:
+BasisDependence for bases:
  Standard:
  MonomialBasis([z])
  Trivial Standard:

@@ -62,6 +62,10 @@ struct StaircaseDependence
     standard_or_corner::Bool
 end
 
+function Base.isless(a::StaircaseDependence, b::StaircaseDependence)
+    return isless((!a.standard_or_corner, a.linear), (!b.standard_or_corner, b.linear))
+end
+
 is_dependent(d::StaircaseDependence) = is_dependent(d.linear)
 is_trivial(d::StaircaseDependence) = is_trivial(d.linear)
 
@@ -272,8 +276,7 @@ function BasisDependence{StaircaseDependence}(
             else
                 # If it was not seen before, it means it is outside the basis
                 # so it is trivial standard
-                @assert !is_dependent(deps[i])
-                @assert is_trivial(deps[i])
+                @assert isnothing(_index(basis, mono))
                 std = true
             end
             deps[i] = StaircaseDependence(dependence(mono), std)
