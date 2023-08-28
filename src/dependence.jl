@@ -57,13 +57,29 @@ function _markercolor(d::LinearDependence)
     end
 end
 
+"""
+    struct StaircaseDependence
+        standard_or_corner::Bool
+        linear::LinearDependence
+    end
+
+Dependence of the element of a basis representing the indices of the rows
+of a [`MacaulayNullspace`]. If the field `standard_or_corner` is true then
+the elements is either standard or is a corner (depending on the linear
+dependence encoded in the `linear` field). Otherwise, it is a border
+that is not a corner or it is not even a border.  See [`LinearDependence`](@ref)
+for the `linear` field.
+"""
 struct StaircaseDependence
-    linear::LinearDependence
     standard_or_corner::Bool
+    linear::LinearDependence
 end
 
 function Base.isless(a::StaircaseDependence, b::StaircaseDependence)
-    return isless((!a.standard_or_corner, a.linear), (!b.standard_or_corner, b.linear))
+    return isless(
+        (!a.standard_or_corner, a.linear),
+        (!b.standard_or_corner, b.linear),
+    )
 end
 
 is_dependent(d::StaircaseDependence) = is_dependent(d.linear)
@@ -252,7 +268,7 @@ function BasisDependence{StaircaseDependence}(
     for (i, mono) in enumerate(full_basis.monomials)
         if !is_corner_multiple(mono, keep, d)
             push!(keep, i)
-            push!(d, StaircaseDependence(dependence(mono), true))
+            push!(d, StaircaseDependence(true, dependence(mono)))
         end
     end
     column_compression!(
@@ -279,7 +295,7 @@ function BasisDependence{StaircaseDependence}(
                 @assert isnothing(_index(basis, mono))
                 std = true
             end
-            deps[i] = StaircaseDependence(dependence(mono), std)
+            deps[i] = StaircaseDependence(std, dependence(mono))
         else
             deps[i] = d[I1[i]]
         end
