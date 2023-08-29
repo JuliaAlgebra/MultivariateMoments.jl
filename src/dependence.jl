@@ -137,7 +137,8 @@ The dependence between the elements of a basis.
 !!! tip
     If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
-struct BasisDependence{D,B<:MB.AbstractPolynomialBasis} <: AbstractBasisDependence
+struct BasisDependence{D,B<:MB.AbstractPolynomialBasis} <:
+       AbstractBasisDependence
     basis::B
     dependence::Vector{D}
 end
