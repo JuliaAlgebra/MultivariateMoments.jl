@@ -29,14 +29,6 @@ function is_dependent!(r::RankDependence, row)
     return !independent
 end
 
-function column_compression!(r::RankDependence, rows)
-    if length(rows) < size(r.matrix, 2)
-        # FIXME should we multiply by inv(Diagonal(s.S)) ?
-        s = LinearAlgebra.svd(r.matrix[rows, :], full = true)
-        r.matrix = r.matrix[dep_rows, :] * s.V
-    end
-end
-
 function BasisDependence{LinearDependence}(
     null::MacaulayNullspace,
     rank_check::RankCheck,
@@ -78,12 +70,19 @@ function BorderBasis(
     dep_rows = _indices(null.basis, dependent_basis(d))
     U = null.matrix
     if length(indep_rows) < size(U, 2)
-        U = LinearAlgebra.svd(U[indep_rows, :]).U
+        V = LinearAlgebra.svd(U[indep_rows, :], full = true).V[
+            :,
+            1:length(indep_rows),
+        ]
+        U = null.matrix * V
+        # U have the form
+        # standard  [Σ 0]
+        # dependent [? 0]
+        # other     [? ?]
+        # Since we are going to get rid of `other`, we can keep only the first
+        # `indep_rows` columns (which was done by taking `V[:, 1:length(indep_rows)]`)
     end
-    return BorderBasis(
-        d,
-        (null.matrix[dep_rows, :] / null.matrix[indep_rows, :])',
-    )
+    return BorderBasis(d, (U[dep_rows, :] / U[indep_rows, :])')
 end
 
 function BorderBasis{D}(null::MacaulayNullspace, check::RankCheck) where {D}

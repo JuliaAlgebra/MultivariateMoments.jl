@@ -9,6 +9,60 @@ b(x) = MB.MonomialBasis(x)
 
 include("utils.jl")
 
+function test_dependent_border(x, y)
+    matrix = Float64[
+        1 0 0 0 0 # 1
+        0 1 0 0 0 # y
+        0 0 1 0 0 # x
+        0 0 0 1 0 # y^2
+        -1 0 0 0 0 # x * y = -1
+        0 0 0 0 1 # x^2
+        0 1 0 0 0 # y^3 = y
+        0 0 1 0 0 # x * y^2 = x
+        0 1 0 0 0 # x^2 * y = y
+        0 0 1 0 0 # x^3 = x
+    ]
+    basis = MB.MonomialBasis(MP.monomials((x, y), 0:3))
+    null = MM.MacaulayNullspace(matrix, basis, 1e-8)
+    @testset "$D" for D in [MM.LinearDependence, MM.StaircaseDependence]
+        @testset "$name" for (solver, name) in [
+            (MM.ShiftNullspace{D}(), "shift"),
+            (MM.Echelon{D}(fallback = false), "echelon no fallback"),
+            (MM.Echelon{D}(fallback = true), "echelon fallback"),
+        ]
+            sol = MM.solve(null, solver)
+            testelements(sol, [[1, -1], [-1, 1]], 1e-8)
+        end
+    end
+end
+
+function test_independent_border(x, y)
+    matrix = Float64[
+        1 0 0 0 0 0 # 1
+        0 1 0 0 0 0 # y
+        0 0 1 0 0 0 # x
+        0 0 0 1 0 0 # y^2
+        -1 0 0 0 0 0 # x * y = -1
+        0 0 0 0 1 0 # x^2
+        0 1 0 0 0 0 # y^3 = y
+        0 0 1 0 0 0 # x * y^2 = x
+        0 0 0 0 0 1 # x^2 * y: indepedent border
+        0 0 1 0 0 0 # x^3 = x
+    ]
+    basis = MB.MonomialBasis(MP.monomials((x, y), 0:3))
+    null = MM.MacaulayNullspace(matrix, basis, 1e-8)
+    @testset "$D" for D in [MM.LinearDependence, MM.StaircaseDependence]
+        @testset "$name" for (solver, name) in [
+            (MM.ShiftNullspace{D}(), "shift"),
+            (MM.Echelon{D}(fallback = false), "echelon no fallback"),
+            (MM.Echelon{D}(fallback = true), "echelon fallback"),
+        ]
+            sol = MM.solve(null, solver)
+            testelements(sol, [[1, -1], [-1, 1]], 1e-8)
+        end
+    end
+end
+
 function test_dreesen1(x, y)
     matrix = Float64[
         1 0 0 0

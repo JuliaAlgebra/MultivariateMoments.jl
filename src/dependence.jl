@@ -209,8 +209,6 @@ function is_dependent!(d::BasisDependence, i)
     return is_dependent(d.dependence[i])
 end
 
-column_compression!(::BasisDependence, ::Any) = nothing
-
 function Base.convert(
     ::Type{BasisDependence{StaircaseDependence}},
     d::BasisDependence{LinearDependence},
@@ -271,10 +269,6 @@ function BasisDependence{StaircaseDependence}(
             push!(d, StaircaseDependence(true, dependence(mono)))
         end
     end
-    column_compression!(
-        r,
-        Int[keep[i] for i in eachindex(d) if !is_dependent(d[i])],
-    )
     full_basis = typeof(full_basis)(full_basis.monomials[keep])
     new_basis = MB.MonomialBasis(
         eltype(basis.monomials)[

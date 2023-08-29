@@ -16,6 +16,9 @@ struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT<:MB.AbstractPolynomialBasis}
     basis::BT
     accuracy::T
 end
+function MacaulayNullspace(matrix::AbstractMatrix{T}, basis) where {T}
+    return MacaulayNullspace(matrix, basis, Base.rtoldefault(T))
+end
 
 function Base.getindex(
     null::MacaulayNullspace{T,MT,<:MB.MonomialBasis},

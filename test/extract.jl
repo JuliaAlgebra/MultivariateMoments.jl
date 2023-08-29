@@ -1,7 +1,6 @@
 using Random, Test
 using MultivariatePolynomials
-import MultivariateBases
-const MB = MultivariateBases
+import MultivariateBases as MB
 using SemialgebraicSets
 using MultivariateMoments
 
