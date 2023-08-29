@@ -26,6 +26,13 @@ struct BorderBasis{D,T,MT<:AbstractMatrix{T},B}
     end
 end
 
+function independent_basis(b::BorderBasis{StaircaseDependence})
+    return standard_basis(b.dependence, trivial = false)
+end
+function independent_basis(b::BorderBasis{LinearDependence})
+    return independent_basis(b.dependence)
+end
+
 function Base.show(io::IO, b::BorderBasis)
     println(io, "BorderBasis with independent rows and dependent columns in:")
     println(io, b.dependence)
@@ -181,8 +188,65 @@ function solve(
         # In any case, we don't have all multiplication matrices so we abort
         return
     end
-    sols = SS.solve(SS.MultiplicationMatrices(mult), solver)
-    return ZeroDimensionalVariety(sols)
+    Uperp = commutation_fix(mult, solver.ε)
+    if isnothing(Uperp)
+        # The matrices commute, let's simultaneously diagonalize them
+        sols = SS.solve(SS.MultiplicationMatrices(mult), solver)
+        return ZeroDimensionalVariety(sols)
+    else
+        # The matrices don't commute, let's find the updated staircase and start again
+        new_basis, I1, I2 = MB.merge_bases(standard, dependent)
+        new_matrix = Matrix{T}(undef, length(new_basis), size(Uperp, 2))
+        for i in axes(new_matrix, 1)
+            if iszero(I1[i])
+                @assert !iszero(I2[i])
+                new_matrix[i, :] = b.matrix[:, I2[i]]' * Uperp
+            else
+                @assert iszero(I2[i])
+                new_matrix[i, :] = Uperp[I1[i], :]
+            end
+        end
+        null = MacaulayNullspace(new_matrix, new_basis)
+        return solve(null, ShiftNullspace{StaircaseDependence}())
+    end
+end
+
+function commutation_fix(matrices, ε)
+    if isempty(first(matrices))
+        return
+    end
+    leading_F = nothing
+    leading_ratio = ε
+    for i in eachindex(matrices)
+        A = matrices[i]
+        for j in eachindex(matrices)
+            B = matrices[j]
+            # We have 0 = A * B - B * A
+            # If it is not zero then left leading eigenvector `u` is a new identity
+            # with orthogonal space `Uperp`
+            # So if for the Macaulay matrix
+            # [M_standard M_border]
+            # the nullspace was the column space of
+            # [I; B]
+            # then for the new Macaulay matrix
+            # So if for the Macaulay matrix
+            # [M_standard M_border]
+            # [u          0       ]
+            # the nullspace is the column space of
+            # [Uperp; B * Uperp]
+            F = LinearAlgebra.svd(A * B - B * A, full = true)
+            ratio = first(F.S) / (norm(A) * norm(B))
+            if ratio > leading_ratio
+                leading_F = F
+                leading_ratio = ratio
+            end
+        end
+    end
+    if isnothing(leading_F)
+        return
+    else
+        return leading_F.U[:, 2:end]
+    end
 end
 
 """
@@ -234,7 +298,7 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     # [HL05] Henrion, D. & Lasserre, J-B.
     # *Detecting Global Optimality and Extracting Solutions of GloptiPoly*
     # 2005
-    ind = independent_basis(b.dependence)
+    ind = independent_basis(b)
     dep = dependent_basis(b.dependence)
     system = [
         dep.monomials[col] - MP.polynomial(b.matrix[:, col], ind) for
@@ -308,10 +372,10 @@ end
 function solve(
     b::BorderBasis{LinearDependence},
     solver::AlgebraicFallbackBorderSolver{
-        M,
+        <:Union{Nothing,SS.AbstractMultiplicationMatricesSolver},
         <:AlgebraicBorderSolver{StaircaseDependence},
     },
-) where {M}
+)
     # We will need to convert in both cases anyway
     return solve(BorderBasis{StaircaseDependence}(b), solver)
 end

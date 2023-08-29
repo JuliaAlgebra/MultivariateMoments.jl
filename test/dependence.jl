@@ -13,7 +13,6 @@ struct FixedDependence
 end
 
 MM.is_dependent!(d::FixedDependence, i) = i in d.dependent
-function MM.column_compression!(::FixedDependence, _) end
 
 function test_degree_error(x, y, z)
     M = typeof(x * y * z)
