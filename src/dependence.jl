@@ -124,6 +124,8 @@ function category_markercolor(d::StaircaseDependence)
     return category_markercolor(d.linear)
 end
 
+abstract type AbstractBasisDependence end
+
 """
     struct BasisDependence{D,B<:MB.AbstractPolynomialBasis}
         basis::B
@@ -135,7 +137,7 @@ The dependence between the elements of a basis.
 !!! tip
     If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
-struct BasisDependence{D,B<:MB.AbstractPolynomialBasis}
+struct BasisDependence{D,B<:MB.AbstractPolynomialBasis} <: AbstractBasisDependence
     basis::B
     dependence::Vector{D}
 end
@@ -146,14 +148,14 @@ end
 
 _first_arg(cat, _) = cat
 
-function Base.show(io::IO, d::BasisDependence; category::Function = _first_arg)
+function Base.show(io::IO, d::AbstractBasisDependence)
     print(io, "BasisDependence for ")
     if isempty(d)
         println(io, "an empty basis")
     else
         println(io, "bases:")
     end
-    for (cat, monos) in _categories(d)
+    for (cat, monos) in basis_categories(d)
         println(io, " ", category_label(cat), ":")
         println(io, " ", MB.MonomialBasis(monos))
     end
@@ -323,12 +325,9 @@ function _ticks(d::BasisDependence, v)
     return MP.mindegree(d, v):MP.maxdegree(d, v)
 end
 
-function _categories(
-    d::BasisDependence{D};
-    category::Function = _first_arg,
-) where {D}
+function basis_categories(d::BasisDependence{D}) where {D}
     M = eltype(d.basis.monomials)
-    categories = Dict{Base.promote_op(category, D, M),Vector{M}}()
+    categories = Dict{D,Vector{M}}()
     for (i, mono) in enumerate(d.basis.monomials)
         cat = category(d.dependence[i], mono)
         if !haskey(categories, cat)
@@ -339,10 +338,7 @@ function _categories(
     return sort!(collect(categories))
 end
 
-RecipesBase.@recipe function f(
-    d::BasisDependence;
-    category::Function = _first_arg,
-)
+RecipesBase.@recipe function f(d::AbstractBasisDependence)
     vars = MP.variables(d)
     t = _ticks.(Ref(d), vars)
     aspect_ratio --> :equal # defaults to `:auto`
@@ -351,7 +347,7 @@ RecipesBase.@recipe function f(
     if length(t) >= 3
         zticks --> t[3]
     end
-    for (cat, monos) in _categories(d; category)
+    for (cat, monos) in basis_categories(d; category)
         RecipesBase.@series begin
             seriestype --> :scatter
             markercolor --> category_markercolor(cat)
