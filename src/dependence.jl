@@ -330,7 +330,7 @@ function basis_categories(d::BasisDependence{D}) where {D}
     M = eltype(d.basis.monomials)
     categories = Dict{D,Vector{M}}()
     for (i, mono) in enumerate(d.basis.monomials)
-        cat = category(d.dependence[i], mono)
+        cat = d.dependence[i]
         if !haskey(categories, cat)
             categories[cat] = M[]
         end
