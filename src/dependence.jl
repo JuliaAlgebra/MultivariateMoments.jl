@@ -348,7 +348,7 @@ RecipesBase.@recipe function f(d::AbstractBasisDependence)
     if length(t) >= 3
         zticks --> t[3]
     end
-    for (cat, monos) in basis_categories(d; category)
+    for (cat, monos) in basis_categories(d)
         RecipesBase.@series begin
             seriestype --> :scatter
             markercolor --> category_markercolor(cat)
