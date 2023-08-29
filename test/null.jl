@@ -64,7 +64,6 @@ function test_independent_border(x, y)
 end
 
 function test_dreesen1(x, y)
-    return
     matrix = Float64[
         1 0 0 0
         0 1 0 0
@@ -87,7 +86,6 @@ function test_dreesen1(x, y)
 end
 
 function _test_univariate_infinity(x, y)
-    return
     Z = Float64[
         1 0
         2 0
