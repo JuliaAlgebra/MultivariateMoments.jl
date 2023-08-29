@@ -323,7 +323,10 @@ function _ticks(d::BasisDependence, v)
     return MP.mindegree(d, v):MP.maxdegree(d, v)
 end
 
-function _categories(d::BasisDependence{D}; category::Function = _first_arg) where {D}
+function _categories(
+    d::BasisDependence{D};
+    category::Function = _first_arg,
+) where {D}
     M = eltype(d.basis.monomials)
     categories = Dict{Base.promote_op(category, D, M),Vector{M}}()
     for (i, mono) in enumerate(d.basis.monomials)
@@ -336,7 +339,10 @@ function _categories(d::BasisDependence{D}; category::Function = _first_arg) whe
     return sort!(collect(categories))
 end
 
-RecipesBase.@recipe function f(d::BasisDependence; category::Function = _first_arg)
+RecipesBase.@recipe function f(
+    d::BasisDependence;
+    category::Function = _first_arg,
+)
     vars = MP.variables(d)
     t = _ticks.(Ref(d), vars)
     aspect_ratio --> :equal # defaults to `:auto`
