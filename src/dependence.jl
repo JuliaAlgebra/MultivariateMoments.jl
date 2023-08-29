@@ -124,8 +124,6 @@ function category_markercolor(d::StaircaseDependence)
     return category_markercolor(d.linear)
 end
 
-abstract type AbstractBasisDependence end
-
 """
     struct BasisDependence{D,B<:MB.AbstractPolynomialBasis}
         basis::B
@@ -137,8 +135,7 @@ The dependence between the elements of a basis.
 !!! tip
     If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
-struct BasisDependence{D,B<:MB.AbstractPolynomialBasis} <:
-       AbstractBasisDependence
+struct BasisDependence{D,B<:MB.AbstractPolynomialBasis}
     basis::B
     dependence::Vector{D}
 end
@@ -149,7 +146,7 @@ end
 
 _first_arg(cat, _) = cat
 
-function Base.show(io::IO, d::AbstractBasisDependence)
+function Base.show(io::IO, d::BasisDependence)
     print(io, "BasisDependence for ")
     if isempty(d)
         println(io, "an empty basis")
@@ -339,7 +336,7 @@ function basis_categories(d::BasisDependence{D}) where {D}
     return sort!(collect(categories))
 end
 
-RecipesBase.@recipe function f(d::AbstractBasisDependence)
+RecipesBase.@recipe function f(d::BasisDependence)
     vars = MP.variables(d)
     t = _ticks.(Ref(d), vars)
     aspect_ratio --> :equal # defaults to `:auto`
