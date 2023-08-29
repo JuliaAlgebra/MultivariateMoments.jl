@@ -16,7 +16,8 @@ was not in the original basis so it is trivially independent.
 is_dependent(d::LinearDependence) = d == DEPENDENT
 is_trivial(d::LinearDependence) = d == TRIVIAL
 
-_shape(d::LinearDependence) = is_dependent(d) ? :rect : :circle
+category_markerstrokewidth(_) = 1
+category_markershape(d::LinearDependence) = is_dependent(d) ? :rect : :circle
 
 function _upper(a)
     if isempty(a)
@@ -36,7 +37,7 @@ end
 
 _join(a, b) = __join(a, _upper(b))
 
-function _label(d::LinearDependence; dependent::Bool = true)
+function category_label(d::LinearDependence; dependent::Bool = true)
     s = ""
     s = _join(s, is_trivial(d) ? "trivial" : "")
     if dependent
@@ -45,14 +46,14 @@ function _label(d::LinearDependence; dependent::Bool = true)
     return s
 end
 
-function _markercolor(d::LinearDependence)
+function category_markercolor(d::LinearDependence)
     if is_trivial(d)
-        return Colors.JULIA_LOGO_COLORS.purple
+        return Colors.JULIA_LOGO_COLORS.blue
     else
         if is_dependent(d)
             return Colors.JULIA_LOGO_COLORS.green
         else
-            return Colors.JULIA_LOGO_COLORS.blue
+            return Colors.JULIA_LOGO_COLORS.red
         end
     end
 end
@@ -98,7 +99,7 @@ function is_corner(d::StaircaseDependence)
     return d.standard_or_corner && is_dependent(d)
 end
 
-function _shape(d::StaircaseDependence)
+function category_markershape(d::StaircaseDependence)
     if is_standard(d)
         return :circle
     elseif is_corner(d)
@@ -108,19 +109,19 @@ function _shape(d::StaircaseDependence)
     end
 end
 
-function _label(d::StaircaseDependence)
+function category_label(d::StaircaseDependence)
     if is_corner(d)
         return _upper("corners")
     else
         return _join(
-            _label(d.linear, dependent = !is_standard(d)),
+            category_label(d.linear, dependent = !is_standard(d)),
             _upper(is_standard(d) ? "standard" : "border"),
         )
     end
 end
 
-function _markercolor(d::StaircaseDependence)
-    return _markercolor(d.linear)
+function category_markercolor(d::StaircaseDependence)
+    return category_markercolor(d.linear)
 end
 
 """
@@ -143,6 +144,8 @@ function Base.isempty(d::BasisDependence)
     return isempty(d.dependence)
 end
 
+_first_arg(cat, _) = cat
+
 function Base.show(io::IO, d::BasisDependence)
     print(io, "BasisDependence for ")
     if isempty(d)
@@ -150,8 +153,8 @@ function Base.show(io::IO, d::BasisDependence)
     else
         println(io, "bases:")
     end
-    for (cat, monos) in _categories(d)
-        println(io, " ", _label(cat), ":")
+    for (cat, monos) in basis_categories(d)
+        println(io, " ", category_label(cat), ":")
         println(io, " ", MB.MonomialBasis(monos))
     end
     return
@@ -320,7 +323,7 @@ function _ticks(d::BasisDependence, v)
     return MP.mindegree(d, v):MP.maxdegree(d, v)
 end
 
-function _categories(d::BasisDependence{D}) where {D}
+function basis_categories(d::BasisDependence{D}) where {D}
     M = eltype(d.basis.monomials)
     categories = Dict{D,Vector{M}}()
     for (i, mono) in enumerate(d.basis.monomials)
@@ -342,11 +345,13 @@ RecipesBase.@recipe function f(d::BasisDependence)
     if length(t) >= 3
         zticks --> t[3]
     end
-    for (cat, monos) in _categories(d)
+    for (cat, monos) in basis_categories(d)
         RecipesBase.@series begin
             seriestype --> :scatter
-            markershape --> _shape(cat)
-            label := _label(cat)
+            markercolor --> category_markercolor(cat)
+            markershape --> category_markershape(cat)
+            markerstrokewidth --> category_markerstrokewidth(cat)
+            label := category_label(cat)
             _split_exponents(monos)
         end
     end
