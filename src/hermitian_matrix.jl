@@ -152,7 +152,7 @@ function Base.getindex(
         return convert(U, r)
     else
         c = _imag_getindex(Q, I, J)
-        # If `c` is `MathOptInterface.SingleVariable`, `-c` is not defined so
+        # If `c` is `MOI.VariableIndex`, `-c` is not defined so
         # we prefer calling `-one(S)`.
         return r + ((i < j ? one(S) : -one(S)) * im) * c
     end
