@@ -9,6 +9,23 @@ b(x) = MB.MonomialBasis(x)
 
 include("utils.jl")
 
+function test_partial_commutative_fix(x, y)
+    matrix = Float64[
+        1 0 0 0 # 1
+        0 1 0 0 # y
+        0 0 1 0 # x
+        0 0 0 1 # y^2
+        1 -1 -1 1 # x * y
+        -1 1 1 -1 # x^2
+    ]
+    basis = MB.MonomialBasis(MP.monomials((x, y), 0:2))
+    null = MM.MacaulayNullspace(matrix, basis, 1e-8)
+    D = MM.StaircaseDependence
+    solver = MM.ShiftNullspace{D}()
+    sol = MM.solve(null, solver)
+    @show sol
+end
+
 function test_dependent_border(x, y)
     matrix = Float64[
         1 0 0 0 0 # 1

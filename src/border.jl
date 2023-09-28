@@ -185,8 +185,22 @@ function solve(
         # 1) We could be missing corners,
         # 2) We have all corners but we could not complete the border because
         #    there is not topological order working
-        # In any case, we don't have all multiplication matrices so we abort
-        return
+        # We now try to build new relation by comparing partial multiplication matrices
+        for (k, shift) in enumerate(vars)
+            if k in view(order, 1:o)
+                continue
+            end
+            o += 1
+            order[o] = k
+            for (col, std) in enumerate(standard.monomials)
+                mono = shift * std
+                if known_border_coefficients(shift * std)
+                    mult[k][:, col] = border_coefficients(mono)
+                else
+                    mult[k][:, col] .= NaN
+                end
+            end
+        end
     end
     Uperp = commutation_fix(mult, solver.ε)
     if isnothing(Uperp)
