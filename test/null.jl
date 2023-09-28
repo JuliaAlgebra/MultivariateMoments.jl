@@ -85,7 +85,7 @@ function test_dreesen1(x, y)
     end
 end
 
-function _test_univariate_infinity(x, y)
+function test_univariate_infinity(x, y)
     Z = Float64[
         1 0
         2 0
