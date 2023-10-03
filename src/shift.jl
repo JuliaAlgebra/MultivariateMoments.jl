@@ -103,7 +103,8 @@ the row indices of the null space.
 *Back to the roots: Polynomial system solving, linear algebra, systems theory.*
 IFAC Proceedings Volumes 45.16 (2012): 1203-1208.
 """
-struct ShiftNullspace{D,C<:RankCheck} <: MacaulayNullspaceSolver
+struct ShiftNullspace{D,S,C<:RankCheck} <: MacaulayNullspaceSolver
+    solver::S
     check::C
 end
 # Because the matrix is orthogonal, we know the SVD of the whole matrix is
@@ -112,14 +113,25 @@ end
 # constant monomial) should be a standard monomial, `LeadingRelativeRankTol`
 # ensures that we will take it.
 function ShiftNullspace{D}(check::RankCheck) where {D}
-    return ShiftNullspace{D,typeof(check)}(check)
+    return ShiftNullspace{D,Nothing,typeof(check)}(nothing, check)
 end
-ShiftNullspace{D}() where {D} = ShiftNullspace{D}(LeadingRelativeRankTol(1e-8))
+function ShiftNullspace{D}(solver::StaircaseSolver) where {D}
+    check = solver.rank_check
+    return ShiftNullspace{D,typeof(solver),typeof(check)}(solver, check)
+end
+ShiftNullspace{D}() where {D} = ShiftNullspace{D}(LeadingRelativeRankTol(Base.rtoldefault(Float64)))
 ShiftNullspace(args...) = ShiftNullspace{StaircaseDependence}(args...)
 
+function _solver(shift::ShiftNullspace{StaircaseDependence,Nothing}, ::Type{T}) where {T}
+    return StaircaseSolver{T}(rank_check = shift.check)
+end
+function _solver(shift::ShiftNullspace, ::Type)
+    return shift.solver
+end
+
 function border_basis_and_solver(
-    null::MacaulayNullspace,
+    null::MacaulayNullspace{T},
     shift::ShiftNullspace{D},
-) where {D}
+) where {T,D}
     return BorderBasis{D}(null, shift.check), nothing
 end
