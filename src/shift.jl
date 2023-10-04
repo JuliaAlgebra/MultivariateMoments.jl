@@ -133,5 +133,5 @@ function border_basis_and_solver(
     null::MacaulayNullspace{T},
     shift::ShiftNullspace{D},
 ) where {T,D}
-    return BorderBasis{D}(null, shift.check), nothing
+    return BorderBasis{D}(null, shift.check), _solver(shift, T)
 end
