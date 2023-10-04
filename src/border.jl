@@ -62,20 +62,40 @@ function BorderBasis{StaircaseDependence}(b::BorderBasis{LinearDependence})
     return BorderBasis(d, b.matrix[rows, cols])
 end
 
+struct StaircaseSolver{
+    T,
+    R<:RankCheck,
+    M<:SemialgebraicSets.AbstractMultiplicationMatricesSolver,
+}
+    max_partial_iterations::Int
+    max_iterations::Int
+    rank_check::R
+    solver::M
+end
+function StaircaseSolver{T}(;
+    max_partial_iterations::Int = 0,
+    max_iterations::Int = -1,
+    rank_check::RankCheck = LeadingRelativeRankTol(Base.rtoldefault(T)),
+    solver = SS.ReorderedSchurMultiplicationMatricesSolver{T}(),
+) where {T}
+    return StaircaseSolver{T,typeof(rank_check),typeof(solver)}(
+        max_partial_iterations,
+        max_iterations,
+        rank_check,
+        solver,
+    )
+end
+
 function solve(
     b::BorderBasis{LinearDependence,T},
-    solver::SemialgebraicSets.AbstractMultiplicationMatricesSolver = MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
-        T,
-    }(),
+    solver::StaircaseSolver = StaircaseSolver{T}(),
 ) where {T}
     return solve(BorderBasis{StaircaseDependence}(b), solver)
 end
 
 function solve(
     b::BorderBasis{<:StaircaseDependence,T},
-    solver::SemialgebraicSets.AbstractMultiplicationMatricesSolver = MultivariateMoments.SemialgebraicSets.ReorderedSchurMultiplicationMatricesSolver{
-        T,
-    }(),
+    solver::StaircaseSolver{T} = StaircaseSolver{T}(),
 ) where {T}
     d = b.dependence
     dependent = dependent_basis(d)
@@ -180,34 +200,70 @@ function solve(
         end
     end
     @assert o <= length(vars)
-    if o < length(vars)
+    partial = o < length(vars)
+    if partial
         # Several things could have gone wrong here:
         # 1) We could be missing corners,
         # 2) We have all corners but we could not complete the border because
         #    there is not topological order working
-        # In any case, we don't have all multiplication matrices so we abort
-        return
+        # We now try to build new relation by comparing partial multiplication matrices
+        # We store them in a vector and reshape in a matrix after as it's easy to append to a vector in-place.
+        # a matrix after
+        if solver.max_partial_iterations == 0
+            return
+        else
+            com_fix = partial_commutation_fix(
+                known_border_coefficients,
+                border_coefficients,
+                T,
+                standard,
+                vars,
+                solver.rank_check,
+            )
+        end
+    else
+        if solver.max_iterations == 0
+            Uperp = nothing
+        else
+            Uperp = commutation_fix(mult, solver.solver.ε)
+        end
+        com_fix = if isnothing(Uperp)
+            nothing
+        else
+            Uperp, standard
+        end
     end
-    Uperp = commutation_fix(mult, solver.ε)
-    if isnothing(Uperp)
+    if isnothing(com_fix)
         # The matrices commute, let's simultaneously diagonalize them
-        sols = SS.solve(SS.MultiplicationMatrices(mult), solver)
+        sols = SS.solve(SS.MultiplicationMatrices(mult), solver.solver)
         return ZeroDimensionalVariety(sols)
     else
+        Uperp, Ubasis = com_fix
         # The matrices don't commute, let's find the updated staircase and start again
-        new_basis, I1, I2 = MB.merge_bases(standard, dependent)
+        new_basis, I1, I2 = MB.merge_bases(Ubasis, dependent)
         new_matrix = Matrix{T}(undef, length(new_basis), size(Uperp, 2))
+        I_nontrivial_standard = [
+            _index(Ubasis, std) for
+            std in standard_basis(b.dependence, trivial = false).monomials
+        ]
+        Uperpstd = Uperp[I_nontrivial_standard, :]
         for i in axes(new_matrix, 1)
             if iszero(I1[i])
                 @assert !iszero(I2[i])
-                new_matrix[i, :] = b.matrix[:, I2[i]]' * Uperp
+                new_matrix[i, :] = b.matrix[:, I2[i]]' * Uperpstd
             else
                 @assert iszero(I2[i])
                 new_matrix[i, :] = Uperp[I1[i], :]
             end
         end
         null = MacaulayNullspace(new_matrix, new_basis)
-        return solve(null, ShiftNullspace{StaircaseDependence}())
+        new_solver = StaircaseSolver{T}(;
+            max_partial_iterations = solver.max_partial_iterations - partial,
+            max_iterations = solver.max_iterations - !partial,
+            solver.rank_check,
+            solver.solver,
+        )
+        return solve(null, ShiftNullspace{StaircaseDependence}(new_solver))
     end
 end
 
@@ -247,6 +303,117 @@ function commutation_fix(matrices, ε)
     else
         return leading_F.U[:, 2:end]
     end
+end
+
+function partial_commutation_fix(
+    known_border_coefficients,
+    border_coefficients,
+    ::Type{T},
+    standard,
+    vars,
+    rank_check::RankCheck,
+) where {T}
+    function shifted_border_coefficients(mono, shift)
+        coef = border_coefficients(mono)
+        ret = zero(coef)
+        unknown = zero(MP.polynomial_type(mono, T))
+        for i in eachindex(coef)
+            if iszero(coef)
+                continue
+            end
+            shifted = shift * standard.monomials[i]
+            j = _index(standard, shifted)
+            if !isnothing(j)
+                ret[j] += coef[i]
+            elseif known_border_coefficients(shifted)
+                ret .+= coef[i] .* border_coefficients(shifted)
+            else
+                MA.operate!(MA.add_mul, unknown, coef[i], shifted)
+            end
+        end
+        return ret, unknown
+    end
+    new_relations = T[]
+    unknowns = MP.polynomial_type(prod(vars), T)[]
+    for std in standard.monomials
+        for x in vars
+            mono_x = x * std
+            if !known_border_coefficients(mono_x)
+                # FIXME what do we do if one of the two monomials is unknown
+                # but the other one is known ?
+                continue
+            end
+            for y in vars
+                mono_y = y * std
+                if !known_border_coefficients(mono_y)
+                    # FIXME what do we do if one of the two monomials is unknown
+                    # but the other one is known ?
+                    continue
+                end
+                if isnothing(_index(standard, mono_x))
+                    if isnothing(_index(standard, mono_y))
+                        coef_xy, unknowns_xy =
+                            shifted_border_coefficients(mono_y, x)
+                    else
+                        mono_xy = x * mono_y
+                        if known_border_coefficients(mono_xy)
+                            coef_xy = border_coefficients(mono_xy)
+                            unknowns_yx = zero(PT)
+                        else
+                            coef_xy = zeros(length(standard.monomials))
+                            unknowns_xy = mono_xy
+                        end
+                    end
+                    coef_yx, unknowns_yx =
+                        shifted_border_coefficients(mono_x, y)
+                else
+                    if !isnothing(_index(standard, mono_y))
+                        # Let `f` be `known_border_coefficients`.
+                        # They are both standard so we'll get
+                        # `f(y * mono_x) - f(x * mono_y)`
+                        # which will give a zero column, let's just ignore it
+                        continue
+                    end
+                    mono_yx = y * mono_x
+                    if known_border_coefficients(mono_yx)
+                        coef_yx = border_coefficients(mono_yx)
+                        unknowns_yx = zero(PT)
+                    else
+                        coef_yx = zeros(length(standard.monomials))
+                        unknowns_yx = mono_yx
+                    end
+                    coef_xy, unknowns_xy =
+                        shifted_border_coefficients(mono_y, x)
+                end
+                append!(new_relations, coef_xy - coef_yx)
+                push!(unknowns, unknowns_xy - unknowns_yx)
+            end
+        end
+    end
+    standard_part = reshape(
+        new_relations,
+        length(standard.monomials),
+        div(length(new_relations), length(standard.monomials)),
+    )
+    unknown_monos = MP.merge_monomial_vectors(MP.monomials.(unknowns))
+    unknown_part = Matrix{T}(undef, length(unknown_monos), length(unknowns))
+    for i in eachindex(unknowns)
+        unknown_part[:, i] = MP.coefficients(unknowns[i], unknown_monos)
+    end
+    basis, I1, I2 = MB.merge_bases(standard, MB.MonomialBasis(unknown_monos))
+    M = Matrix{T}(undef, length(basis.monomials), size(standard_part, 2))
+    for i in eachindex(basis.monomials)
+        if iszero(I1[i])
+            @assert !iszero(I2[i])
+            M[i, :] = unknown_part[I2[i], :]
+        else
+            @assert iszero(I2[i])
+            M[i, :] = standard_part[I1[i], :]
+        end
+    end
+    F = LinearAlgebra.svd(M, full = true)
+    r = rank_from_singular_values(F.S, rank_check)
+    return F.U[:, (r+1):end], basis
 end
 
 """
