@@ -62,7 +62,11 @@ function BorderBasis{StaircaseDependence}(b::BorderBasis{LinearDependence})
     return BorderBasis(d, b.matrix[rows, cols])
 end
 
-struct StaircaseSolver{T,R<:RankCheck,M<:SemialgebraicSets.AbstractMultiplicationMatricesSolver}
+struct StaircaseSolver{
+    T,
+    R<:RankCheck,
+    M<:SemialgebraicSets.AbstractMultiplicationMatricesSolver,
+}
     max_partial_iterations::Int
     max_iterations::Int
     rank_check::R
@@ -74,11 +78,7 @@ function StaircaseSolver{T}(;
     rank_check::RankCheck = LeadingRelativeRankTol(Base.rtoldefault(T)),
     solver = SS.ReorderedSchurMultiplicationMatricesSolver{T}(),
 ) where {T}
-    return StaircaseSolver{
-        T,
-        typeof(rank_check),
-        typeof(solver),
-    }(
+    return StaircaseSolver{T,typeof(rank_check),typeof(solver)}(
         max_partial_iterations,
         max_iterations,
         rank_check,
@@ -212,7 +212,14 @@ function solve(
         if solver.max_partial_iterations == 0
             return
         else
-            com_fix = partial_commutation_fix(known_border_coefficients, border_coefficients, T, standard, vars, solver.rank_check)
+            com_fix = partial_commutation_fix(
+                known_border_coefficients,
+                border_coefficients,
+                T,
+                standard,
+                vars,
+                solver.rank_check,
+            )
         end
     else
         if solver.max_iterations == 0
@@ -236,8 +243,8 @@ function solve(
         new_basis, I1, I2 = MB.merge_bases(Ubasis, dependent)
         new_matrix = Matrix{T}(undef, length(new_basis), size(Uperp, 2))
         I_nontrivial_standard = [
-            _index(Ubasis, std)
-            for std in standard_basis(b.dependence, trivial = false).monomials
+            _index(Ubasis, std) for
+            std in standard_basis(b.dependence, trivial = false).monomials
         ]
         Uperpstd = Uperp[I_nontrivial_standard, :]
         for i in axes(new_matrix, 1)
@@ -345,7 +352,8 @@ function partial_commutation_fix(
                 end
                 if isnothing(_index(standard, mono_x))
                     if isnothing(_index(standard, mono_y))
-                        coef_xy, unknowns_xy = shifted_border_coefficients(mono_y, x)
+                        coef_xy, unknowns_xy =
+                            shifted_border_coefficients(mono_y, x)
                     else
                         mono_xy = x * mono_y
                         if known_border_coefficients(mono_xy)
@@ -356,7 +364,8 @@ function partial_commutation_fix(
                             unknowns_xy = mono_xy
                         end
                     end
-                    coef_yx, unknowns_yx = shifted_border_coefficients(mono_x, y)
+                    coef_yx, unknowns_yx =
+                        shifted_border_coefficients(mono_x, y)
                 else
                     if !isnothing(_index(standard, mono_y))
                         # Let `f` be `known_border_coefficients`.
@@ -373,14 +382,19 @@ function partial_commutation_fix(
                         coef_yx = zeros(length(standard.monomials))
                         unknowns_yx = mono_yx
                     end
-                    coef_xy, unknowns_xy = shifted_border_coefficients(mono_y, x)
+                    coef_xy, unknowns_xy =
+                        shifted_border_coefficients(mono_y, x)
                 end
                 append!(new_relations, coef_xy - coef_yx)
                 push!(unknowns, unknowns_xy - unknowns_yx)
             end
         end
     end
-    standard_part = reshape(new_relations, length(standard.monomials), div(length(new_relations), length(standard.monomials)))
+    standard_part = reshape(
+        new_relations,
+        length(standard.monomials),
+        div(length(new_relations), length(standard.monomials)),
+    )
     unknown_monos = MP.merge_monomial_vectors(MP.monomials.(unknowns))
     unknown_part = Matrix{T}(undef, length(unknown_monos), length(unknowns))
     for i in eachindex(unknowns)

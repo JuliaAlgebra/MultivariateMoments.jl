@@ -24,7 +24,7 @@ function test_partial_commutative_fix(x, y)
     solver = MM.StaircaseSolver{Float64}(max_partial_iterations = 1)
     shift_solver = MM.ShiftNullspace{D}(solver)
     sol = MM.solve(null, shift_solver)
-    testelements(sol, [[1, 1], [-1, 1]], 1e-8)
+    return testelements(sol, [[1, 1], [-1, 1]], 1e-8)
 end
 
 function test_dependent_border(x, y)

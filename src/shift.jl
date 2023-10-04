@@ -119,10 +119,15 @@ function ShiftNullspace{D}(solver::StaircaseSolver) where {D}
     check = solver.rank_check
     return ShiftNullspace{D,typeof(solver),typeof(check)}(solver, check)
 end
-ShiftNullspace{D}() where {D} = ShiftNullspace{D}(LeadingRelativeRankTol(Base.rtoldefault(Float64)))
+function ShiftNullspace{D}() where {D}
+    return ShiftNullspace{D}(LeadingRelativeRankTol(Base.rtoldefault(Float64)))
+end
 ShiftNullspace(args...) = ShiftNullspace{StaircaseDependence}(args...)
 
-function _solver(shift::ShiftNullspace{StaircaseDependence,Nothing}, ::Type{T}) where {T}
+function _solver(
+    shift::ShiftNullspace{StaircaseDependence,Nothing},
+    ::Type{T},
+) where {T}
     return StaircaseSolver{T}(rank_check = shift.check)
 end
 function _solver(shift::ShiftNullspace, ::Type)
