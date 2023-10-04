@@ -62,11 +62,28 @@ function BorderBasis{StaircaseDependence}(b::BorderBasis{LinearDependence})
     return BorderBasis(d, b.matrix[rows, cols])
 end
 
-Base.@kwdef struct StaircaseSolver{T,R<:RankCheck,M<:SemialgebraicSets.AbstractMultiplicationMatricesSolver}
-    max_partial_commutation_fix_iterations::Int = 0
-    max_commutation_fix_iterations::Int = -1
-    rank_check::R = LeadingRelativeRankTol(Base.rtoldefault(T))
-    solver::M = SS.ReorderedSchurMultiplicationMatricesSolver{T}()
+struct StaircaseSolver{T,R<:RankCheck,M<:SemialgebraicSets.AbstractMultiplicationMatricesSolver}
+    max_partial_commutation_fix_iterations::Int
+    max_commutation_fix_iterations::Int
+    rank_check::R
+    solver::M
+end
+function StaircaseSolver{T}(;
+    max_partial_commutation_fix_iterations::Int = 0,
+    max_commutation_fix_iterations::Int = -1,
+    rank_check::RankCheck = LeadingRelativeRankTol(Base.rtoldefault(T)),
+    solver = SS.ReorderedSchurMultiplicationMatricesSolver{T}(),
+) where {T}
+    return StaircaseSolver{
+        T,
+        typeof(rank_check),
+        typeof(solver),
+    }(
+        max_partial_commutation_fix_iterations,
+        max_commutation_fix_iterations,
+        rank_check,
+        solver,
+    )
 end
 
 function solve(
@@ -192,15 +209,29 @@ function solve(
         # We now try to build new relation by comparing partial multiplication matrices
         # We store them in a vector and reshape in a matrix after as it's easy to append to a vector in-place.
         # a matrix after
-        Uperp, Ubasis = partial_commutation_fix(known_border_coefficients, border_coefficients, T, standard, vars, solver.rank_check)
+        if solver.max_partial_commutation_fix_iterations == 0
+            com_fix = nothing
+        else
+            com_fix = partial_commutation_fix(known_border_coefficients, border_coefficients, T, standard, vars, solver.rank_check)
+        end
     else
-        Uperp, Ubasis = commutation_fix(mult, solver.ε)
+        if solver.max_commutation_fix_iterations == 0
+            Uperp = nothing
+        else
+            Uperp = commutation_fix(mult, solver.solver.ε)
+        end
+        com_fix = if isnothing(Uperp)
+            nothing
+        else
+            Uperp, standard
+        end
     end
-    if isnothing(Uperp)
+    if isnothing(com_fix)
         # The matrices commute, let's simultaneously diagonalize them
-        sols = SS.solve(SS.MultiplicationMatrices(mult), solver)
+        sols = SS.solve(SS.MultiplicationMatrices(mult), solver.solver)
         return ZeroDimensionalVariety(sols)
     else
+        Uperp, Ubasis = com_fix
         # The matrices don't commute, let's find the updated staircase and start again
         new_basis, I1, I2 = MB.merge_bases(Ubasis, dependent)
         new_matrix = Matrix{T}(undef, length(new_basis), size(Uperp, 2))
@@ -220,7 +251,7 @@ function solve(
             solver.rank_check,
             solver.solver,
         )
-        return solve(null, ShiftNullspace{StaircaseDependence}())
+        return solve(null, ShiftNullspace{StaircaseDependence}(new_solver))
     end
 end
 
@@ -271,7 +302,10 @@ function partial_commutation_fix(
     rank_check::RankCheck,
 ) where {T}
     function shifted_border_coefficients(mono, shift)
+        @show mono
+        @show shift
         coef = border_coefficients(mono)
+        @show coef
         ret = zero(coef)
         unknown = zero(MP.polynomial_type(mono, T))
         for i in eachindex(coef)
@@ -280,7 +314,7 @@ function partial_commutation_fix(
             end
             shifted = shift * standard.monomials[i]
             j = _index(standard, shifted)
-            if isnothing(j)
+            if !isnothing(j)
                 ret[j] += coef[i]
             elseif known_border_coefficients(shifted)
                 ret .+= coef[i] .* border_coefficients(shifted)
