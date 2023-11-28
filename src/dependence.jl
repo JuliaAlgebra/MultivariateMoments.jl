@@ -219,6 +219,21 @@ function Base.convert(
     return BasisDependence{StaircaseDependence}(d, d.basis)
 end
 
+_full_basis(basis::MB.AbstractPolynomialBasis) = basis, eachindex(basis)
+
+function _full_basis(basis::MB.AbstractMonomialBasis)
+    full = MB.maxdegree_basis(
+        typeof(basis),
+        MP.variables(basis),
+        MP.maxdegree(basis.monomials),
+    )
+    index_map = Int[
+        something(_index(basis, full[i]), 0)
+        for i in eachindex(full)
+    ]
+    return full, index_map
+end
+
 """
     function BasisDependence{StaircaseDependence}(
         is_dependent::Function,
@@ -236,29 +251,28 @@ Foundations of Computational Mathematics 8 (2008): 607-647.
 """
 function BasisDependence{StaircaseDependence}(
     r,
-    basis::MB.MonomialBasis{M},
-) where {M}
-    if isempty(basis.monomials)
+    basis::MB.AbstractPolynomialBasis,
+)
+    if isempty(basis)
         return BasisDependence(basis, StaircaseDependence[])
     end
-    function dependence(mono)
-        i = _index(basis, mono)
+    vars = MP.variables(basis)
+    full_basis, index_map = _full_basis(basis)
+    function dependence(full_index)
+        i = index_map[full_index]
         return if isnothing(i)
             TRIVIAL
         else
             is_dependent!(r, i) ? DEPENDENT : INDEPENDENT
         end
     end
-    vars = MP.variables(basis)
-    full_basis =
-        MB.maxdegree_basis(typeof(basis), vars, MP.maxdegree(basis.monomials))
     d = StaircaseDependence[]
     # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
     # It also ensures that the standard monomials have the "staircase structure".
     function is_corner_multiple(mono, indices, dependence)
         for i in eachindex(dependence)
             if is_dependent(dependence[i]) &&
-               MP.divides(full_basis.monomials[indices[i]], mono)
+               MP.divides(full_basis.monomials[indices[i]], mono) # TODO tol
                 return true
             end
         end
@@ -266,10 +280,10 @@ function BasisDependence{StaircaseDependence}(
     end
     keep = Int[]
     # Compute standard monomials and corners
-    for (i, mono) in enumerate(full_basis.monomials)
-        if !is_corner_multiple(mono, keep, d)
+    for i in eachindex(full_basis)
+        if !is_corner_multiple(full_basis[i], keep, d)
             push!(keep, i)
-            push!(d, StaircaseDependence(true, dependence(mono)))
+            push!(d, StaircaseDependence(true, dependence(i)))
         end
     end
     full_basis = typeof(full_basis)(full_basis.monomials[keep])
