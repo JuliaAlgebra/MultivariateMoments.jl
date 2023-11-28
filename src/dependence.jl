@@ -153,16 +153,16 @@ function Base.show(io::IO, d::BasisDependence)
     else
         println(io, "bases:")
     end
-    for (cat, monos) in basis_categories(d)
+    for (cat, basis) in basis_categories(d)
         println(io, " ", category_label(cat), ":")
-        println(io, " ", MB.MonomialBasis(monos))
+        println(io, " ", basis)
     end
     return
 end
 
 function sub_basis(d::BasisDependence, I::AbstractVector{Int})
     @assert issorted(I)
-    return typeof(d.basis)(d.basis.monomials[I])
+    return d.basis[I]
 end
 
 function independent_basis(d::BasisDependence)
@@ -197,13 +197,13 @@ end
 
 function BasisDependence{LinearDependence}(
     r,
-    basis::MB.MonomialBasis{M},
-) where {M}
+    basis::MB.AbstractPolynomialBasis,
+)
     return BasisDependence(
         basis,
         LinearDependence[
             is_dependent!(r, i) ? DEPENDENT : INDEPENDENT for
-            i in eachindex(basis.monomials)
+            i in eachindex(basis)
         ],
     )
 end
@@ -238,7 +238,7 @@ function BasisDependence{StaircaseDependence}(
     r,
     basis::MB.MonomialBasis{M},
 ) where {M}
-    if isempty(basis.monomials)
+    if isempty(basis)
         return BasisDependence(basis, StaircaseDependence[])
     end
     function dependence(mono)
@@ -312,11 +312,11 @@ end
 MP.variables(d::BasisDependence) = MP.variables(d.basis.monomials)
 
 function MP.mindegree(d::BasisDependence, args...)
-    return MP.mindegree(d.basis.monomials, args...)
+    return MP.mindegree(d.basis, args...)
 end
 
 function MP.maxdegree(d::BasisDependence, args...)
-    return MP.maxdegree(d.basis.monomials, args...)
+    return MP.maxdegree(d.basis, args...)
 end
 
 function _ticks(d::BasisDependence, v)
@@ -324,16 +324,19 @@ function _ticks(d::BasisDependence, v)
 end
 
 function basis_categories(d::BasisDependence{D}) where {D}
-    M = eltype(d.basis.monomials)
-    categories = Dict{D,Vector{M}}()
-    for (i, mono) in enumerate(d.basis.monomials)
+    categories = Dict{D,Vector{Int}}()
+    for i in eachindex(d.basis)
         cat = d.dependence[i]
         if !haskey(categories, cat)
-            categories[cat] = M[]
+            categories[cat] = Int[]
         end
-        push!(categories[cat], mono)
+        push!(categories[cat], i)
     end
-    return sort!(collect(categories))
+    cats = [(cat, d.basis[I]) for (cat, I) in categories]
+    if eltype(cats) <: MP.AbstractMonomial
+        sort!(cats)
+    end
+    return cats
 end
 
 RecipesBase.@recipe function f(d::BasisDependence)
@@ -345,14 +348,14 @@ RecipesBase.@recipe function f(d::BasisDependence)
     if length(t) >= 3
         zticks --> t[3]
     end
-    for (cat, monos) in basis_categories(d)
+    for (cat, basis) in basis_categories(d)
         RecipesBase.@series begin
             seriestype --> :scatter
             markercolor --> category_markercolor(cat)
             markershape --> category_markershape(cat)
             markerstrokewidth --> category_markerstrokewidth(cat)
             label := category_label(cat)
-            _split_exponents(monos)
+            _split_exponents(MB.generators(basis))
         end
     end
 end
