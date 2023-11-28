@@ -1,6 +1,6 @@
-function _expectation(μ::Measure, p::_APL, f)
+function _expectation(μ::Measure{S}, p::_APL{T}, f) where {S,T}
     i = 1
-    s = 0
+    s = zero(MA.promote_operation(*, S, T))
     for t in MP.terms(p)
         while i <= length(μ.x) && MP.monomial(t) != μ.x[i]
             i += 1
