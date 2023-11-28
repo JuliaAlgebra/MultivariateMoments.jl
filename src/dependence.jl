@@ -355,7 +355,7 @@ RecipesBase.@recipe function f(d::BasisDependence)
             markershape --> category_markershape(cat)
             markerstrokewidth --> category_markerstrokewidth(cat)
             label := category_label(cat)
-            _split_exponents(generators(basis))
+            _split_exponents(MB.generators(basis))
         end
     end
 end
