@@ -19,7 +19,7 @@ function test_partial_commutative_fix(x, y)
         1 0 0 0 # x^2
     ]
     monos = MP.monomials((x, y), 0:2)
-    for basis in [MB.MonomialBasis(monos)] #, MB.OrthonormalCoefficientsBasis(monos)]
+    for basis in [MB.MonomialBasis(monos), MB.OrthonormalCoefficientsBasis(monos)]
         null = MM.MacaulayNullspace(matrix, basis, 1e-8)
         D = MM.StaircaseDependence
         solver = MM.StaircaseSolver{Float64}(max_partial_iterations = 1)
