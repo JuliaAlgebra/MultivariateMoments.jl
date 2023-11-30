@@ -260,58 +260,82 @@ function BasisDependence{StaircaseDependence}(
     full_basis, index_map = _full_basis(basis)
     function dependence(full_index)
         i = index_map[full_index]
-        return if isnothing(i)
+        return if iszero(i)
             TRIVIAL
         else
             is_dependent!(r, i) ? DEPENDENT : INDEPENDENT
         end
     end
-    d = StaircaseDependence[]
     # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
     # It also ensures that the standard monomials have the "staircase structure".
-    function is_corner_multiple(mono, indices, dependence)
-        for i in eachindex(dependence)
-            if is_dependent(dependence[i]) &&
-               MP.divides(full_basis.monomials[indices[i]], mono) # TODO tol
+    corners = Int[]
+    function is_corner_multiple(mono)
+        for corner in corners
+            if MP.divides(full_basis[corner], mono) # TODO tol
                 return true
             end
         end
         return false
     end
-    keep = Int[]
     # Compute standard monomials and corners
-    for i in eachindex(full_basis)
-        if !is_corner_multiple(full_basis[i], keep, d)
-            push!(keep, i)
-            push!(d, StaircaseDependence(true, dependence(i)))
-        end
-    end
-    full_basis = typeof(full_basis)(full_basis.monomials[keep])
-    new_basis = MB.MonomialBasis(
-        eltype(basis.monomials)[
-            full_basis.monomials[i] * shift for
-            i in eachindex(d) if !is_dependent(d[i]) for shift in vars
-        ],
-    )
-    full_basis, I1, I2 = MB.merge_bases(full_basis, new_basis)
-    deps = Vector{StaircaseDependence}(undef, length(full_basis.monomials))
-    for (i, mono) in enumerate(full_basis.monomials)
-        if iszero(I1[i])
-            @assert !iszero(I2[i])
-            if is_corner_multiple(mono, 1:(i-1), view(deps, 1:(i-1)))
-                std = false
-            else
-                # If it was not seen before, it means it is outside the basis
-                # so it is trivial standard
-                @assert isnothing(_index(basis, mono))
-                std = true
+    keep = falses(length(full_basis))
+    d = Vector{StaircaseDependence}(undef, length(full_basis))
+    for (i, mono) in enumerate(full_basis)
+        if !is_corner_multiple(mono)
+            keep[i] = true
+            dep = dependence(i)
+            d[i] = StaircaseDependence(true, dep)
+            if is_dependent(dep)
+                push!(corners, i)
             end
-            deps[i] = StaircaseDependence(std, dependence(mono))
-        else
-            deps[i] = d[I1[i]]
         end
     end
-    return BasisDependence(full_basis, deps)
+    new_basis = eltype(MB.generators(full_basis))[]
+    new_deps = StaircaseDependence[]
+    for (i, mono) in enumerate(full_basis)
+        if keep[i] && is_standard(d[i])
+            for shift in vars
+                shifted = mono * shift
+                j = _index(full_basis, shifted)
+                if isnothing(j)
+                    push!(new_basis, shifted)
+                    push!(new_deps, StaircaseDependence(
+                        is_corner_multiple(shifted),
+                        TRIVIAL,
+                    ))
+                else
+                    if keep[j]
+                        continue
+                    end
+                    keep[j] = true
+                    d[j] = StaircaseDependence(false, dependence(j))
+                end
+            end
+        end
+    end
+    I = findall(keep)
+    bd = BasisDependence(full_basis[I], d[I])
+    if isempty(new_basis)
+        return bd
+    else
+        return MB.merge_bases(
+            bd,
+            BasisDependence(MB.MonomialBasis(new_basis), new_deps),
+        )
+    end
+end
+
+function MB.merge_bases(b1::BasisDependence, b2::BasisDependence)
+    basis, I1, I2 = MB.merge_bases(b1.basis, b2.basis)
+    deps = Vector{StaircaseDependence}(undef, length(basis))
+    for i in eachindex(basis)
+        if iszero(I1[i])
+            deps[i] = b2.dependence[I2[i]]
+        else
+            deps[i] = b1.dependence[I1[i]]
+        end
+    end
+    return BasisDependence(basis, deps)
 end
 
 function _exponents(monos, i)
