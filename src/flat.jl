@@ -79,7 +79,7 @@ function compute_support!(
     solver::FlatExtension,
 ) where {T}
     μ = measure(ν)
-    d = MP.maxdegree(μ.x)
+    d = MP.maxdegree(μ)
     v = MP.variables(μ)
     d0 = div(d - 1, 2)
     d1 = d - 1 - d0
