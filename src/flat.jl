@@ -73,12 +73,11 @@ function hankel(μ::Measure{T}, rows, cols) where {T}
     ]
 end
 
-function compute_support!(
-    ν::MomentMatrix{T},
+function support(
+    μ::Measure{T},
     rank_check::RankCheck,
     solver::FlatExtension,
 ) where {T}
-    μ = measure(ν)
     d = MP.maxdegree(μ)
     v = MP.variables(μ)
     d0 = div(d - 1, 2)
@@ -91,8 +90,16 @@ function compute_support!(
         push!(H, hankel(μ, B0, [b * x for b in B1]))
     end
     λ = [one(T)]
-    ν.support = ZeroDimensionalVariety(
+    return ZeroDimensionalVariety(
         decompose(H, λ, rank_check, solver.multiplication_matrices_solver),
     )
+end
+
+function compute_support!(
+    ν::MomentMatrix,
+    rank_check::RankCheck,
+    solver::FlatExtension,
+)
+    ν.support = support(measure(ν), rank_check, solver)
     return
 end
