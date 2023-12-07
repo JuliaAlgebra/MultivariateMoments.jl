@@ -66,6 +66,27 @@ Returns an iterator over the monomials of `μ` sorted in the decreasing order.
 MP.monomials(μ::Measure) = μ.x
 
 """
+    maxdegree(μ::AbstractMeasureLike)
+
+Returns the maximal degree of the monomials of `μ`.
+"""
+MP.maxdegree(μ::Measure) = MP.maxdegree(MP.monomials(μ))
+
+"""
+    mindegree(μ::AbstractMeasureLike)
+
+Returns the minimal degree of the monomials of `μ`.
+"""
+MP.mindegree(μ::Measure) = MP.mindegree(MP.monomials(μ))
+
+"""
+    extdegree(μ::AbstractMeasureLike)
+
+Returns the extremal degrees of the monomials of `μ`.
+"""
+MP.extdegree(μ::Measure) = MP.extdegree(MP.monomials(μ))
+
+"""
     moments(μ::AbstractMeasureLike)
 
 Returns an iterator over the moments of `μ` sorted in decreasing order of monomial.

@@ -3,6 +3,9 @@
     @test_throws ArgumentError measure([1, 2], [x, x * y, y])
     @test_throws ArgumentError measure([1, 2, 3, 4], [x, x * y, y])
     μ = measure([1, 0, 2, 3], [x^2 * y^2, y * x^2, x * y * x^2, x * y^2])
+    @test MP.mindegree(μ) == 3
+    @test MP.maxdegree(μ) == 4
+    @test MP.extdegree(μ) == (3, 4)
     @test monomials(μ) ==
           monomial_vector([x^3 * y, x^2 * y^2, x^2 * y, x * y^2])
     @test monomial.(moments(μ)) ==

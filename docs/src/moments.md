@@ -30,6 +30,9 @@ that is, it implements the following two functions
 ```@docs
 MultivariatePolynomials.variables(::MultivariateMoments.Measure)
 MultivariatePolynomials.monomials(::MultivariateMoments.Measure)
+MultivariatePolynomials.maxdegree(::MultivariateMoments.Measure)
+MultivariatePolynomials.mindegree(::MultivariateMoments.Measure)
+MultivariatePolynomials.extdegree(::MultivariateMoments.Measure)
 moments
 ```
 
