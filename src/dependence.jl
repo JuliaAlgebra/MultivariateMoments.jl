@@ -195,10 +195,7 @@ function Base.convert(
     return BasisDependence(d.basis, map(d -> d.linear, d.dependence))
 end
 
-function BasisDependence{LinearDependence}(
-    r,
-    basis::MB.SubBasis,
-)
+function BasisDependence{LinearDependence}(r, basis::MB.SubBasis)
     return BasisDependence(
         basis,
         LinearDependence[

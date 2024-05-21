@@ -13,19 +13,13 @@ abstract type AbstractMomentMatrix{T,B<:SA.ExplicitBasis} <:
 Measure ``\\nu`` represented by the moments of the monomial matrix ``x x^\\top`` in the symmetric matrix `Q`.
 The set of points that are zeros of all the polynomials ``p`` such that ``\\mathbb{E}_{\\nu}[p] = 0`` is stored in the field `support` when it is computed.
 """
-mutable struct MomentMatrix{
-    T,
-    B<:SA.ExplicitBasis,
-    MT<:AbstractMatrix{T},
-} <: AbstractMomentMatrix{T,B}
+mutable struct MomentMatrix{T,B<:SA.ExplicitBasis,MT<:AbstractMatrix{T}} <:
+               AbstractMomentMatrix{T,B}
     Q::MT
     basis::B
     support::Union{Nothing,AbstractAlgebraicSet}
 end
-function MomentMatrix{T,B,MT}(
-    Q::MT,
-    basis::SA.ExplicitBasis,
-) where {T,B,MT}
+function MomentMatrix{T,B,MT}(Q::MT, basis::SA.ExplicitBasis) where {T,B,MT}
     return MomentMatrix{T,B,MT}(Q, basis, nothing)
 end
 function MomentMatrix{T,B}(
@@ -34,10 +28,7 @@ function MomentMatrix{T,B}(
 ) where {T,B}
     return MomentMatrix{T,B,typeof(Q)}(Q, basis)
 end
-function MomentMatrix(
-    Q::SymMatrix{T},
-    basis::SA.ExplicitBasis,
-) where {T}
+function MomentMatrix(Q::SymMatrix{T}, basis::SA.ExplicitBasis) where {T}
     return MomentMatrix{T,typeof(basis)}(Q, basis)
 end
 
@@ -80,7 +71,10 @@ end
 Creates a matrix the moment matrix for the moment matrix  ``x x^\\top`` using the moments of `μ`.
 """
 function moment_matrix(μ::MomentVector{T}, basis) where {T}
-    return MomentMatrix{T}((i, j) -> moment_value(μ, basis[i] * basis[j]), basis)
+    return MomentMatrix{T}(
+        (i, j) -> moment_value(μ, basis[i] * basis[j]),
+        basis,
+    )
 end
 
 function MomentMatrix(
@@ -98,7 +92,9 @@ moment_matrix(Q::AbstractMatrix, monos) = MomentMatrix(Q, monos)
 
 value_matrix(μ::MomentMatrix) = Matrix(μ.Q)
 
-function vectorized_basis(ν::MomentMatrix{T,<:MB.SubBasis{MB.Monomial}}) where {T}
+function vectorized_basis(
+    ν::MomentMatrix{T,<:MB.SubBasis{MB.Monomial}},
+) where {T}
     monos = ν.basis.monomials
     n = length(monos)
     # We don't wrap in `MB.SubBasis` as we don't want the monomials

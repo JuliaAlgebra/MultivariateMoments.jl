@@ -48,11 +48,15 @@ end
 
 function moment_vector(η::AtomicMeasure, basis::MB.SubBasis{MB.Monomial})
     return sum(
-        atom.weight * dirac(basis.monomials, η.variables => atom.center) for atom in η.atoms
+        atom.weight * dirac(basis.monomials, η.variables => atom.center) for
+        atom in η.atoms
     )
 end
 
-function moment_vector(η::AtomicMeasure, monos::AbstractVector{<:MP.AbstractTermLike})
+function moment_vector(
+    η::AtomicMeasure,
+    monos::AbstractVector{<:MP.AbstractTermLike},
+)
     return moment_vector(η, MB.SubBasis{MB.Monomial}(monos))
 end
 

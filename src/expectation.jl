@@ -1,4 +1,8 @@
-function _expectation(μ::MomentVector{S,<:MB.SubBasis{MB.Monomial}}, p::_APL{T}, f) where {S,T}
+function _expectation(
+    μ::MomentVector{S,<:MB.SubBasis{MB.Monomial}},
+    p::_APL{T},
+    f,
+) where {S,T}
     i = firstindex(μ.basis)
     s = zero(MA.promote_operation(*, S, T))
     for t in MP.terms(p)

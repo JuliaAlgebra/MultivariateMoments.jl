@@ -1,6 +1,10 @@
 function _check_length(values, basis)
     if length(values) != length(basis)
-        throw(DimensionMismatch("dimension must match: `values` has length `$(length(values))` and `basis` has length `$(length(basis))`"))
+        throw(
+            DimensionMismatch(
+                "dimension must match: `values` has length `$(length(values))` and `basis` has length `$(length(basis))`",
+            ),
+        )
     end
 end
 
@@ -17,7 +21,10 @@ struct MomentVector{T,B<:SA.AbstractBasis,V} <: AbstractMeasure{T}
     end
 end
 
-function moment_vector(values::AbstractVector{T}, basis::SA.AbstractBasis) where {T}
+function moment_vector(
+    values::AbstractVector{T},
+    basis::SA.AbstractBasis,
+) where {T}
     return MomentVector{T,typeof(basis),typeof(values)}(values, basis)
 end
 
@@ -99,10 +106,17 @@ function Base.:(+)(μ::MomentVector, ν::MomentVector)
     return moment_vector(μ.values + ν.values, SA.basis(μ))
 end
 
-moment_value(μ::MomentVector, t::MP.AbstractTerm) = MP.coefficient(t) * moment_value(μ, MP.monomial(t))
-moment_value(μ::MomentVector, mono::MP.AbstractMonomial) = moment_value(μ, MB.Polynomial{MB.Monomial}(mono))
+function moment_value(μ::MomentVector, t::MP.AbstractTerm)
+    return MP.coefficient(t) * moment_value(μ, MP.monomial(t))
+end
+function moment_value(μ::MomentVector, mono::MP.AbstractMonomial)
+    return moment_value(μ, MB.Polynomial{MB.Monomial}(mono))
+end
 
-function moment_value(μ::MomentVector{T,<:MB.SubBasis{B}}, p::MB.Polynomial{B}) where {T,B}
+function moment_value(
+    μ::MomentVector{T,<:MB.SubBasis{B}},
+    p::MB.Polynomial{B},
+) where {T,B}
     i = MB.monomial_index(SA.basis(μ), p.monomial)
     if isnothing(i)
         throw(ArgumentError("`$μ` does not have the moment `$p`"))
@@ -111,7 +125,10 @@ function moment_value(μ::MomentVector{T,<:MB.SubBasis{B}}, p::MB.Polynomial{B})
 end
 
 function moment_value(μ::MomentVector, p::SA.AlgebraElement)
-    return sum(coef * moment_value(μ, SA.basis(parent(p))[mono]) for (mono, coef) in SA.nonzero_pairs(p.coeffs))
+    return sum(
+        coef * moment_value(μ, SA.basis(parent(p))[mono]) for
+        (mono, coef) in SA.nonzero_pairs(p.coeffs)
+    )
 end
 
 """

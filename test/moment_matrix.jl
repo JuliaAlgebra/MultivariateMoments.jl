@@ -4,7 +4,9 @@ using Test
     Mod.@polyvar x y
     μ = moment_vector([1], [x])
     for mono in [x^0, x, y]
-        err = ArgumentError("`$μ` does not have the moment `$(MB.Polynomial{MB.Monomial}(mono^2))`")
+        err = ArgumentError(
+            "`$μ` does not have the moment `$(MB.Polynomial{MB.Monomial}(mono^2))`",
+        )
         @test_throws err moment_matrix(μ, [mono])
     end
     μ = moment_vector(1:3, [x^2, x * y, y^2])
