@@ -66,7 +66,7 @@ function FlatExtension()
     return FlatExtension(ReorderedSchurMultiplicationMatricesSolver{Float64}())
 end
 
-function hankel(μ::Measure{T}, rows, cols) where {T}
+function hankel(μ::MomentVector{T}, rows, cols) where {T}
     return T[
         moment_value(μ, rows[i] * cols[j]) for i in eachindex(rows),
         j in eachindex(cols)
@@ -74,7 +74,7 @@ function hankel(μ::Measure{T}, rows, cols) where {T}
 end
 
 function support(
-    μ::Measure{T},
+    μ::MomentVector{T},
     rank_check::RankCheck,
     solver::FlatExtension,
 ) where {T}

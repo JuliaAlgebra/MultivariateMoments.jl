@@ -1,54 +1,58 @@
-# If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
-struct Measure{T,MT<:MP.AbstractMonomial,MVT<:AbstractVector{MT}} <:
-       AbstractMeasure{T}
-    a::Vector{T}
-    x::MVT
-
-    function Measure{T,MT,MVT}(a::Vector{T}, x::MVT) where {T,MT,MVT}
-        @assert length(a) == length(x)
-        return new(a, x)
+function _check_length(values, basis)
+    if SA.basis(parent) <: SA.ExplicitBasis && length(values) != length(basis)
+        throw(DimensionMismatch("dimension must match: `values` has length `$(length(values))` and `basis` has length `$(length(basis))`"))
     end
 end
-function Measure(
-    a::AbstractVector{T},
-    x::AbstractVector{TT};
+
+# If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
+struct MomentVector{T,A,V} <: AbstractMomentArray{T,A}
+    values::V
+    parent::A
+
+    function MomentVector{T,A,V}(values::V, parent::A) where {T,A,V}
+        if SA.basis(parent) <: SA.ExplicitBasis
+            _check_length(values, SA.basis(parent))
+        end
+        return new{T,A,V}(values, parent)
+    end
+end
+
+function moment_vector(values::AbstractVector{T}, basis::MB.SubBasis) where {T}
+    parent = MB.algebra(basis)
+    return MomentVector{T,typeof(parent),typeof(values)}(values, parent)
+end
+
+"""
+    moment_vector(values::AbstractVector{T}, monos::AbstractVector{<:AbstractMonomial}; rtol=Base.rtoldefault(T), atol=zero(T))
+
+Creates a measure with moments `moment(values[i], monos[i])` for each `i`.
+An error is thrown if there exists `i` and `j` such that `monos[i] == monos[j]` but
+`!isapprox(values[i], values[j]; rtol=rtol, atol=atol)`.
+"""
+function moment_vector(
+    values::AbstractVector,
+    monos::AbstractVector{TT};
     kws...,
-) where {T,TT<:MP.AbstractTermLike}
+) where {TT<:MP.AbstractTermLike}
     # cannot use `monomial_vector(a, x)` as it would sum the entries
     # corresponding to the same monomial.
-    if length(a) != length(x)
-        throw(
-            ArgumentError("There should be as many coefficient than monomials"),
-        )
-    end
-    σ, X = MP.sort_monomial_vector(x)
-    b = a[σ]
-    if length(x) > length(X)
-        rev = Dict(X[j] => j for j in eachindex(σ))
-        for i in eachindex(x)
-            j = rev[x[i]]
+    _check_length(values, monos)
+    σ, sorted_monos = MP.sort_monomial_vector(monos)
+    sorted_values = values[σ]
+    if length(monos) > length(sorted_monos)
+        rev = Dict(sorted_monos[j] => j for j in eachindex(σ))
+        for i in eachindex(monos)
+            j = rev[monos[i]]
             if i != σ[j]
-                if !isapprox(b[j], a[i]; kws...)
+                if !isapprox(sorted_values[j], values[i]; kws...)
                     error(
-                        "The monomial `$(x[i])` occurs twice with different values: `$(a[i])` and `$(b[j])`",
+                        "The monomial `$(monos[i])` occurs twice with different values: `$(values[i])` and `$(sorted_values[j])`",
                     )
                 end
             end
         end
     end
-    return Measure{T,MP.monomial_type(TT),typeof(X)}(b, X)
-end
-
-"""
-    measure(a::AbstractVector{T}, X::AbstractVector{<:AbstractMonomial}; rtol=Base.rtoldefault(T), atol=zero(T))
-
-Creates a measure with moments `moment(a[i], X[i])` for each `i`.
-An error is thrown if there exists `i` and `j` such that `X[i] == X[j]` but
-`!isapprox(a[i], a[j]; rtol=rtol, atol=atol)`.
-"""
-measure(a, X; kws...) = Measure(a, X; kws...)
-function measure(a, basis::MB.MonomialBasis; kws...)
-    return measure(a, basis.monomials; kws...)
+    return moment_vector(values, MB.SubBasis{MB.Monomial}(sorted_monos))
 end
 
 """
@@ -56,47 +60,47 @@ end
 
 Returns the variables of `μ` in decreasing order. Just like in MultivariatePolynomials, it could contain variables of zero degree in every monomial.
 """
-MP.variables(μ::Measure) = MP.variables(μ.x)
+MP.variables(μ::MomentVector) = MP.variables(μ.x)
 
 """
     monomials(μ::AbstractMeasureLike)
 
 Returns an iterator over the monomials of `μ` sorted in the decreasing order.
 """
-MP.monomials(μ::Measure) = μ.x
+MP.monomials(μ::MomentVector) = μ.x
 
 """
     maxdegree(μ::AbstractMeasureLike)
 
 Returns the maximal degree of the monomials of `μ`.
 """
-MP.maxdegree(μ::Measure) = MP.maxdegree(MP.monomials(μ))
+MP.maxdegree(μ::MomentVector) = MP.maxdegree(MP.monomials(μ))
 
 """
     mindegree(μ::AbstractMeasureLike)
 
 Returns the minimal degree of the monomials of `μ`.
 """
-MP.mindegree(μ::Measure) = MP.mindegree(MP.monomials(μ))
+MP.mindegree(μ::MomentVector) = MP.mindegree(MP.monomials(μ))
 
 """
     extdegree(μ::AbstractMeasureLike)
 
 Returns the extremal degrees of the monomials of `μ`.
 """
-MP.extdegree(μ::Measure) = MP.extdegree(MP.monomials(μ))
+MP.extdegree(μ::MomentVector) = MP.extdegree(MP.monomials(μ))
 
 """
     moments(μ::AbstractMeasureLike)
 
 Returns an iterator over the moments of `μ` sorted in decreasing order of monomial.
 """
-moments(μ::Measure) = map((α, x) -> moment(α, x), μ.a, μ.x)
+moments(μ::MomentVector) = map((α, x) -> moment(α, x), μ.a, μ.x)
 
-Base.:(*)(α, μ::Measure) = measure(α * μ.a, μ.x)
-Base.:(*)(μ::Measure, α) = measure(μ.a * α, μ.x)
-Base.:(-)(μ::Measure) = measure(-μ.a, μ.x)
-function Base.:(+)(μ::Measure, ν::Measure)
+Base.:(*)(α, μ::MomentVector) = measure(α * μ.a, μ.x)
+Base.:(*)(μ::MomentVector, α) = measure(μ.a * α, μ.x)
+Base.:(-)(μ::MomentVector) = measure(-μ.a, μ.x)
+function Base.:(+)(μ::MomentVector, ν::MomentVector)
     @assert μ.x == ν.x
     return measure(μ.a + ν.a, μ.x)
 end

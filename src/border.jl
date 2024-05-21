@@ -309,7 +309,7 @@ function partial_commutation_fix(
     known_border_coefficients,
     border_coefficients,
     ::Type{T},
-    standard,
+    standard::MB.SubBasis{MB.Monomial},
     vars,
     rank_check::RankCheck,
 ) where {T}
@@ -400,7 +400,7 @@ function partial_commutation_fix(
     for i in eachindex(unknowns)
         unknown_part[:, i] = MP.coefficients(unknowns[i], unknown_monos)
     end
-    basis, I1, I2 = MB.merge_bases(standard, MB.MonomialBasis(unknown_monos))
+    basis, I1, I2 = MB.merge_bases(standard, MB.SubBasis{MB.Monomial}(unknown_monos))
     M = Matrix{T}(undef, length(basis.monomials), size(standard_part, 2))
     for i in eachindex(basis.monomials)
         if iszero(I1[i])

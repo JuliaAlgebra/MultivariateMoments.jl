@@ -28,11 +28,11 @@ However, it acts like a measure when taking its scalar product with a polynomial
 An `AbstractMeasureLike` is a type that can act like an `AbstractMeasure`,
 that is, it implements the following two functions
 ```@docs
-MultivariatePolynomials.variables(::MultivariateMoments.Measure)
-MultivariatePolynomials.monomials(::MultivariateMoments.Measure)
-MultivariatePolynomials.maxdegree(::MultivariateMoments.Measure)
-MultivariatePolynomials.mindegree(::MultivariateMoments.Measure)
-MultivariatePolynomials.extdegree(::MultivariateMoments.Measure)
+MultivariatePolynomials.variables(::MultivariateMoments.MomentVector)
+MultivariatePolynomials.monomials(::MultivariateMoments.MomentVector)
+MultivariatePolynomials.maxdegree(::MultivariateMoments.MomentVector)
+MultivariatePolynomials.mindegree(::MultivariateMoments.MomentVector)
+MultivariatePolynomials.extdegree(::MultivariateMoments.MomentVector)
 moments
 ```
 

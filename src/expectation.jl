@@ -1,4 +1,4 @@
-function _expectation(μ::Measure{S}, p::_APL{T}, f) where {S,T}
+function _expectation(μ::MomentVector{S}, p::_APL{T}, f) where {S,T}
     i = 1
     s = zero(MA.promote_operation(*, S, T))
     for t in MP.terms(p)
@@ -24,8 +24,8 @@ Computes the expectation ``\\mathbb{E}_{\\mu}[p]``.
 """
 function expectation end
 
-expectation(μ::Measure, p::_APL) = _expectation(μ, p, (*))
-expectation(p::_APL, μ::Measure) = _expectation(μ, p, (a, b) -> b * a) # a and b may be noncommutative
+expectation(μ::MomentVector, p::_APL) = _expectation(μ, p, (*))
+expectation(p::_APL, μ::MomentVector) = _expectation(μ, p, (a, b) -> b * a) # a and b may be noncommutative
 
 """
     dot(μ::AbstractMeasureLike, p::AbstractPolynomialLike)

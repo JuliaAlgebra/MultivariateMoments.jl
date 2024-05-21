@@ -46,7 +46,7 @@ function Base.show(io::IO, η::AtomicMeasure)
     end
 end
 
-measure(η::AtomicMeasure, x) = Measure(η, x)
+measure(η::AtomicMeasure, x) = moment_vector(η, x)
 function Measure(η::AtomicMeasure{T}, x::AbstractVector{TT}) where {T,TT}
     return Measure{T,MP.monomial_type(TT),MP.monomial_vector_type(x)}(η, x)
 end

@@ -75,11 +75,11 @@ function Base.show(io::IO, M::MomentMatrix)
 end
 
 """
-    moment_matrix(μ::Measure, x)
+    moment_matrix(μ::MomentVector, x)
 
 Creates a matrix the moment matrix for the moment matrix  ``x x^\\top`` using the moments of `μ`.
 """
-function moment_matrix(μ::Measure{T}, X) where {T}
+function moment_matrix(μ::MomentVector{T}, X) where {T}
     return MomentMatrix{T}((i, j) -> moment_value(μ, X[i] * X[j]), X)
 end
 
