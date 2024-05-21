@@ -1,25 +1,24 @@
 function _check_length(values, basis)
-    if SA.basis(parent) <: SA.ExplicitBasis && length(values) != length(basis)
+    if length(values) != length(basis)
         throw(DimensionMismatch("dimension must match: `values` has length `$(length(values))` and `basis` has length `$(length(basis))`"))
     end
 end
 
 # If a monomial is not in x, it does not mean that the moment is zero, it means that it is unknown/undefined
-struct MomentVector{T,A,V} <: AbstractMomentArray{T,A}
+struct MomentVector{T,B<:SA.AbstractBasis,V} <: AbstractMeasure{T}
     values::V
-    parent::A
+    basis::B
 
-    function MomentVector{T,A,V}(values::V, parent::A) where {T,A,V}
-        if SA.basis(parent) <: SA.ExplicitBasis
-            _check_length(values, SA.basis(parent))
+    function MomentVector{T,B,V}(values::V, basis::B) where {T,B,V}
+        if basis isa SA.ExplicitBasis
+            _check_length(values, basis)
         end
-        return new{T,A,V}(values, parent)
+        return new{T,B,V}(values, basis)
     end
 end
 
-function moment_vector(values::AbstractVector{T}, basis::MB.SubBasis) where {T}
-    parent = MB.algebra(basis)
-    return MomentVector{T,typeof(parent),typeof(values)}(values, parent)
+function moment_vector(values::AbstractVector{T}, basis::SA.AbstractBasis) where {T}
+    return MomentVector{T,typeof(basis),typeof(values)}(values, basis)
 end
 
 """
@@ -52,68 +51,67 @@ function moment_vector(
             end
         end
     end
-    return moment_vector(values, MB.SubBasis{MB.Monomial}(sorted_monos))
+    return moment_vector(sorted_values, MB.SubBasis{MB.Monomial}(sorted_monos))
 end
 
+SA.basis(μ::MomentVector) = μ.basis
+
 """
-    variables(μ::AbstractMeasureLike)
+    variables(μ::MomentVector)
 
 Returns the variables of `μ` in decreasing order. Just like in MultivariatePolynomials, it could contain variables of zero degree in every monomial.
 """
-MP.variables(μ::MomentVector) = MP.variables(μ.x)
-
-"""
-    monomials(μ::AbstractMeasureLike)
-
-Returns an iterator over the monomials of `μ` sorted in the decreasing order.
-"""
-MP.monomials(μ::MomentVector) = μ.x
+MP.variables(μ::MomentVector) = MP.variables(SA.basis(μ))
 
 """
     maxdegree(μ::AbstractMeasureLike)
 
 Returns the maximal degree of the monomials of `μ`.
 """
-MP.maxdegree(μ::MomentVector) = MP.maxdegree(MP.monomials(μ))
+MP.maxdegree(μ::MomentVector) = MP.maxdegree(SA.basis(μ))
 
 """
-    mindegree(μ::AbstractMeasureLike)
+    mindegree(μ::MomentVector)
 
 Returns the minimal degree of the monomials of `μ`.
 """
-MP.mindegree(μ::MomentVector) = MP.mindegree(MP.monomials(μ))
+MP.mindegree(μ::MomentVector) = MP.mindegree(SA.basis(μ))
 
 """
-    extdegree(μ::AbstractMeasureLike)
+    extdegree(μ::MomentVector)
 
 Returns the extremal degrees of the monomials of `μ`.
 """
-MP.extdegree(μ::MomentVector) = MP.extdegree(MP.monomials(μ))
+MP.extdegree(μ::MomentVector) = MP.extdegree(SA.basis(μ))
 
 """
-    moments(μ::AbstractMeasureLike)
+    moments(μ::MomentVector)
 
 Returns an iterator over the moments of `μ` sorted in decreasing order of monomial.
 """
-moments(μ::MomentVector) = map((α, x) -> moment(α, x), μ.a, μ.x)
+moments(μ::MomentVector) = map((α, x) -> moment(α, x), μ.values, SA.basis(μ))
 
-Base.:(*)(α, μ::MomentVector) = measure(α * μ.a, μ.x)
-Base.:(*)(μ::MomentVector, α) = measure(μ.a * α, μ.x)
-Base.:(-)(μ::MomentVector) = measure(-μ.a, μ.x)
+Base.:(*)(α, μ::MomentVector) = moment_vector(α * μ.values, SA.basis(μ))
+Base.:(*)(μ::MomentVector, α) = moment_vector(μ.values * α, SA.basis(μ))
+Base.:(-)(μ::MomentVector) = moment_vector(-μ.values, SA.basis(μ))
 function Base.:(+)(μ::MomentVector, ν::MomentVector)
-    @assert μ.x == ν.x
-    return measure(μ.a + ν.a, μ.x)
-end
-function _index(basis::MB.SubBasis{B}, mono) where {B}
-    return get(basis, MB.Polynomial{B}(mono), nothing)
+    @assert SA.basis(μ) == SA.basis(ν)
+    return moment_vector(μ.values + ν.values, SA.basis(μ))
 end
 
-function moment_value(μ, mono)
-    i = _index(SA.basis(μ.parent), mono)
+moment_value(μ::MomentVector, t::MP.AbstractTerm) = MP.coefficient(t) * moment_value(μ, MP.monomial(t))
+moment_value(μ::MomentVector, mono::MP.AbstractMonomial) = moment_value(μ, MB.Polynomial{MB.Monomial}(mono))
+
+function moment_value(μ::MomentVector{T,<:MB.SubBasis{B}}, p::MB.Polynomial{B}) where {T,B}
+    i = MB.monomial_index(SA.basis(μ), p.monomial)
     if isnothing(i)
-        throw(ArgumentError("`$μ` does not have the moment `$mono`"))
+        throw(ArgumentError("`$μ` does not have the moment `$p`"))
     end
-    return μ.a[i]
+    return μ.values[i]
+end
+
+function moment_value(μ::MomentVector, p::SA.AlgebraElement)
+    return sum(coef * moment_value(μ, SA.basis(parent(p))[mono]) for (mono, coef) in SA.nonzero_pairs(p.coeffs))
 end
 
 """
@@ -129,5 +127,5 @@ function dirac(
     x::AbstractVector{MT},
     s::MP.AbstractSubstitution...,
 ) where {MT<:MP.AbstractMonomial}
-    return Measure([m(s...) for m in x], x)
+    return moment_vector([m(s...) for m in x], x)
 end

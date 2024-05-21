@@ -121,21 +121,21 @@ function solve(
     mult = Matrix{T}[zeros(T, m, m) for _ in eachindex(vars)]
     completed_border = Dict{eltype(dependent.monomials),Vector{T}}()
     function known_border_coefficients(border)
-        return !isnothing(_index(standard, border)) ||
-               !isnothing(_index(dependent, border)) ||
+        return !isnothing(MB.monomial_index(standard, border)) ||
+               !isnothing(MB.monomial_index(dependent, border)) ||
                haskey(completed_border, border)
     end
     function border_coefficients(border)
-        k = _index(standard, border)
+        k = MB.monomial_index(standard, border)
         if !isnothing(k)
             return SparseArrays.sparsevec([k], [one(T)], m)
         end
-        k = _index(dependent, border)
+        k = MB.monomial_index(dependent, border)
         if !isnothing(k)
             v = zeros(T, m)
             row = 0
             for (i, std) in enumerate(standard.monomials)
-                j = _index(d.basis, std)
+                j = MB.monomial_index(d.basis, std)
                 if !is_trivial(d.dependence[j])
                     row += 1
                     v[i] = b.matrix[row, k]
@@ -243,7 +243,7 @@ function solve(
         new_basis, I1, I2 = MB.merge_bases(Ubasis, dependent)
         new_matrix = Matrix{T}(undef, length(new_basis), size(Uperp, 2))
         I_nontrivial_standard = [
-            _index(Ubasis, std) for
+            MB.monomial_index(Ubasis, std) for
             std in standard_basis(b.dependence, trivial = false).monomials
         ]
         Uperpstd = Uperp[I_nontrivial_standard, :]
@@ -322,7 +322,7 @@ function partial_commutation_fix(
                 continue
             end
             shifted = shift * standard.monomials[i]
-            j = _index(standard, shifted)
+            j = MB.monomial_index(standard, shifted)
             if !isnothing(j)
                 ret[j] += coef[i]
             elseif known_border_coefficients(shifted)
@@ -350,8 +350,8 @@ function partial_commutation_fix(
                     # but the other one is known ?
                     continue
                 end
-                if isnothing(_index(standard, mono_x))
-                    if isnothing(_index(standard, mono_y))
+                if isnothing(MB.monomial_index(standard, mono_x))
+                    if isnothing(MB.monomial_index(standard, mono_y))
                         coef_xy, unknowns_xy =
                             shifted_border_coefficients(mono_y, x)
                     else
@@ -367,7 +367,7 @@ function partial_commutation_fix(
                     coef_yx, unknowns_yx =
                         shifted_border_coefficients(mono_x, y)
                 else
-                    if !isnothing(_index(standard, mono_y))
+                    if !isnothing(MB.monomial_index(standard, mono_y))
                         # Let `f` be `known_border_coefficients`.
                         # They are both standard so we'll get
                         # `f(y * mono_x) - f(x * mono_y)`

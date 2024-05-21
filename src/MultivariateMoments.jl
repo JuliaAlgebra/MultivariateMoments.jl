@@ -4,6 +4,7 @@ using LinearAlgebra
 import SparseArrays
 
 import MutableArithmetics as MA
+import StarAlgebras as SA
 
 import MultivariatePolynomials as MP
 const _APL = MP.AbstractPolynomialLike

@@ -11,7 +11,7 @@ the image space of a moment matrix with rows and columns indexed by `basis`).
 The value of `matrix[i, j]` should be interpreted as the value of the `i`th
 element of `basis` for the `j`th generator of the null space (resp. image) space.
 """
-struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT<:MB.AbstractPolynomialBasis}
+struct MacaulayNullspace{T,MT<:AbstractMatrix{T},BT<:SA.ExplicitBasis}
     matrix::MT
     basis::BT
     accuracy::T

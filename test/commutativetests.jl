@@ -1,4 +1,4 @@
-include("measure.jl")
+include("moment_vector.jl")
 include("expectation.jl")
 include("moment_matrix.jl")
 include("rank.jl")

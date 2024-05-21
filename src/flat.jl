@@ -100,6 +100,6 @@ function compute_support!(
     rank_check::RankCheck,
     solver::FlatExtension,
 )
-    ν.support = support(measure(ν), rank_check, solver)
+    ν.support = support(moment_vector(ν), rank_check, solver)
     return
 end
