@@ -139,7 +139,7 @@ function hl05_3_3_1()
     # β will be [z, y, x, y*z, x*z, x*y]
     x = monomial_vector([z, y, x, z^2, y * z, y^2, x * z, x * y, x^2])
     # x*β contains x*y*z, x^2*z, x^2*y which are not present so it should fail
-    b = MultivariateMoments.build_system(U', MB.MonomialBasis(x))
+    b = MultivariateMoments.build_system(U', MB.SubBasis{MB.Monomial}(x))
     V = solve(b, AlgebraicBorderSolver{LinearDependence}())
     @test is_zero_dimensional(V)
     return testelements(

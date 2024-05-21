@@ -242,7 +242,7 @@ function BasisDependence{StaircaseDependence}(
         return BasisDependence(basis, StaircaseDependence[])
     end
     function dependence(mono)
-        i = _index(basis, mono)
+        i = get(basis, mono, nothing)
         return if isnothing(i)
             TRIVIAL
         else
@@ -289,7 +289,7 @@ function BasisDependence{StaircaseDependence}(
             else
                 # If it was not seen before, it means it is outside the basis
                 # so it is trivial standard
-                @assert isnothing(_index(basis, mono))
+                @assert isnothing(get(basis, mono, nothing))
                 std = true
             end
             deps[i] = StaircaseDependence(std, dependence(mono))

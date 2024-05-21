@@ -6,7 +6,7 @@ import MultivariatePolynomials as MP
 import MultivariateBases as MB
 import MultivariateMoments as MM
 
-b(x) = MB.MonomialBasis(x)
+b(x) = MB.SubBasis{MB.Monomial}(x)
 
 struct FixedDependence
     dependent::Vector{Int}

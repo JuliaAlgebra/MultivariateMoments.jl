@@ -104,23 +104,12 @@ function Base.:(+)(μ::MomentVector, ν::MomentVector)
     @assert μ.x == ν.x
     return measure(μ.a + ν.a, μ.x)
 end
-
-# TODO Move to MultivariateBases
-function _monomial_index(monos::AbstractVector, mono)
-    i = searchsortedfirst(monos, mono)
-    if i in eachindex(monos) && mono == monos[i]
-        return i
-    else
-        return
-    end
-end
-
-function _index(basis::MB.MonomialBasis, mono)
-    return _monomial_index(basis.monomials, mono)
+function _index(basis::MB.SubBasis{B}, mono) where {B}
+    return get(basis, MB.Polynomial{B}(mono), nothing)
 end
 
 function moment_value(μ, mono)
-    i = _monomial_index(μ.x, mono)
+    i = _index(SA.basis(μ.parent), mono)
     if isnothing(i)
         throw(ArgumentError("`$μ` does not have the moment `$mono`"))
     end

@@ -45,7 +45,7 @@ function BasisDependence{StaircaseDependence}(
     return BasisDependence{StaircaseDependence}(r, null.basis)
 end
 
-function _indices(in::MB.MonomialBasis, from::MB.MonomialBasis)
+function _indices(in::MB.SubBasis, from::MB.SubBasis)
     return Int[_index(in, mono) for mono in from.monomials]
 end
 

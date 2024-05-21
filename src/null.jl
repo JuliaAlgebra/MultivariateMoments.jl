@@ -21,13 +21,13 @@ function MacaulayNullspace(matrix::AbstractMatrix{T}, basis) where {T}
 end
 
 function Base.getindex(
-    null::MacaulayNullspace{T,MT,<:MB.MonomialBasis},
+    null::MacaulayNullspace{T,MT,<:MB.SubBasis{B}},
     monos,
-) where {T,MT}
+) where {T,MT,B}
     I = _index.(Ref(null.basis), monos)
     return MacaulayNullspace(
         null.matrix[I, :],
-        MB.MonomialBasis(null.basis.monomials[I]),
+        MB.SubBasis{B}(null.basis.monomials[I]),
         null.accuracy,
     )
 end
