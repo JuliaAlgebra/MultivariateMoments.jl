@@ -6,7 +6,7 @@ import MultivariatePolynomials as MP
 import MultivariateBases as MB
 import MultivariateMoments as MM
 
-b(x) = MB.MonomialBasis(x)
+b(x) = MB.SubBasis{MB.Monomial}(x)
 
 struct FixedDependence
     dependent::Vector{Int}
@@ -124,17 +124,17 @@ function test_recipe(x, y, z)
     @test sprint(show, dep) == """
 BasisDependence for bases:
  Standard:
- MonomialBasis([z])
+ SubBasis{Monomial}([z])
  Trivial Standard:
- MonomialBasis([1, y, z^2, y*z, z^3, y*z^2])
+ SubBasis{Monomial}([1, y, z^2, y*z, z^3, y*z^2])
  Corners:
- MonomialBasis([x, y^2])
+ SubBasis{Monomial}([x, y^2])
  Independent Border:
- MonomialBasis([x*z])
+ SubBasis{Monomial}([x*z])
  Trivial Independent Border:
- MonomialBasis([y^2*z, x*z^2, x*y*z])
+ SubBasis{Monomial}([y^2*z, x*z^2, x*y*z])
  Dependent Border:
- MonomialBasis([x*y])
+ SubBasis{Monomial}([x*y])
 """
     @test MM.corners_basis(dep).monomials == c
     _test_recipe(

@@ -12,27 +12,25 @@ An `AbstractMomentLike` is a type that can act like an `AbstractMoment` (it is s
 that is, it implements the following two functions
 ```@docs
 moment_value
-MultivariatePolynomials.monomial(::MultivariateMoments.Moment)
 ```
 
 ## Measure
 
-Given a monomials and a values for the moments, a "measure" can be created using the `measure` function
+Given a monomials and a values for the moments, a "moment vector" can be created using the `moment_vector` function
 ```@docs
-measure
+moment_vector
 ```
-The `measure` function returns an `AbstractMeasure` which is a subtype of `AbstractMeasureLike`.
+The `moment_vector` function returns an `AbstractMeasure` which is a subtype of `AbstractMeasureLike`.
 Note that it does not actually compute the probability density function of a measure having these moments, it simply stores a vector of moments belonging to a hypothetical measure.
 However, it acts like a measure when taking its scalar product with a polynomial.
 
 An `AbstractMeasureLike` is a type that can act like an `AbstractMeasure`,
 that is, it implements the following two functions
 ```@docs
-MultivariatePolynomials.variables(::MultivariateMoments.Measure)
-MultivariatePolynomials.monomials(::MultivariateMoments.Measure)
-MultivariatePolynomials.maxdegree(::MultivariateMoments.Measure)
-MultivariatePolynomials.mindegree(::MultivariateMoments.Measure)
-MultivariatePolynomials.extdegree(::MultivariateMoments.Measure)
+MultivariatePolynomials.variables(::MultivariateMoments.MomentVector)
+MultivariatePolynomials.maxdegree(::MultivariateMoments.MomentVector)
+MultivariatePolynomials.mindegree(::MultivariateMoments.MomentVector)
+MultivariatePolynomials.extdegree(::MultivariateMoments.MomentVector)
 moments
 ```
 

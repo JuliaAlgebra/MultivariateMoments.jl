@@ -47,11 +47,11 @@ end
     end
 
 Given a moment matrix `ν` and the atom centers, first convert the moment matrix
-to a vector of moments, using [`measure(ν; rtol=rtol, atol=atol)`](@ref measure)
+to a vector of moments, using [`moment_vector(ν; rtol=rtol, atol=atol)`](@ref moment_vector)
 and then determine the weights by solving a linear system over the monomials obtained.
 
 If the moment values corresponding to the same monomials can have small differences,
-[`measure`](@ref) can throw an error if `rtol` and `atol` are not small enough.
+[`moment_vector`](@ref) can throw an error if `rtol` and `atol` are not small enough.
 Alternatively to tuning these tolerances [`MomentVectorWeightSolver`](@ref) can be used instead.
 """
 struct MomentVectorWeightSolver{T}
@@ -82,17 +82,17 @@ function MomentVectorWeightSolver(; rtol = nothing, atol = nothing)
 end
 
 function solve_weight(
-    ν::MomentMatrix{T},
+    ν::MomentMatrix{T,<:MB.SubBasis{MB.Monomial}},
     centers,
     solver::MomentVectorWeightSolver,
 ) where {T}
-    μ = measure(ν; rtol = solver.rtol, atol = solver.atol)
+    μ = moment_vector(ν; rtol = solver.rtol, atol = solver.atol)
     vars = MP.variables(μ)
-    A = Matrix{T}(undef, length(μ.x), length(centers))
+    A = Matrix{T}(undef, length(μ.basis), length(centers))
     for i in eachindex(centers)
-        A[:, i] = dirac(μ.x, vars => centers[i]).a
+        A[:, i] = dirac(μ.basis.monomials, vars => centers[i]).values
     end
-    return A \ μ.a
+    return A \ μ.values
 end
 
 """

@@ -18,6 +18,6 @@
     p = x^2 + x + y + x * y^2 + 1
     @test dot(η, p) == 2 * p(x => 1, y => 0) + 3 * p(x => 1 / 2, y => 1 / 2)
     @test dot(η, p) == dot(p, η)
-    μ = measure(η, monomials(p))
+    μ = moment_vector(η, monomials(p))
     @test dot(μ, p) == 2 * p(x => 1, y => 0) + 3 * p(x => 1 / 2, y => 1 / 2)
 end

@@ -46,15 +46,18 @@ function Base.show(io::IO, η::AtomicMeasure)
     end
 end
 
-measure(η::AtomicMeasure, x) = Measure(η, x)
-function Measure(η::AtomicMeasure{T}, x::AbstractVector{TT}) where {T,TT}
-    return Measure{T,MP.monomial_type(TT),MP.monomial_vector_type(x)}(η, x)
-end
-function Measure{T,MT,MVT}(η::AtomicMeasure{T}, x) where {T,MT,MVT}
-    X = MP.monomial_vector(x)
+function moment_vector(η::AtomicMeasure, basis::MB.SubBasis{MB.Monomial})
     return sum(
-        atom.weight * dirac(X, η.variables => atom.center) for atom in η.atoms
+        atom.weight * dirac(basis.monomials, η.variables => atom.center) for
+        atom in η.atoms
     )
+end
+
+function moment_vector(
+    η::AtomicMeasure,
+    monos::AbstractVector{<:MP.AbstractTermLike},
+)
+    return moment_vector(η, MB.SubBasis{MB.Monomial}(monos))
 end
 
 function expectation(η::AtomicMeasure, p::_APL)

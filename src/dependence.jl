@@ -125,7 +125,7 @@ function category_markercolor(d::StaircaseDependence)
 end
 
 """
-    struct BasisDependence{D,B<:MB.AbstractPolynomialBasis}
+    struct BasisDependence{D,B<:SA.ExplicitBasis}
         basis::B
         dependence::Vector{D}
     end
@@ -135,7 +135,7 @@ The dependence between the elements of a basis.
 !!! tip
     If the number of variables is 2 or 3, it can be visualized with Plots.jl.
 """
-struct BasisDependence{D,B<:MB.AbstractPolynomialBasis}
+struct BasisDependence{D,B<:SA.ExplicitBasis}
     basis::B
     dependence::Vector{D}
 end
@@ -146,7 +146,7 @@ end
 
 _first_arg(cat, _) = cat
 
-function Base.show(io::IO, d::BasisDependence)
+function Base.show(io::IO, d::BasisDependence{D,<:MB.SubBasis{B}}) where {D,B}
     print(io, "BasisDependence for ")
     if isempty(d)
         println(io, "an empty basis")
@@ -155,7 +155,7 @@ function Base.show(io::IO, d::BasisDependence)
     end
     for (cat, monos) in basis_categories(d)
         println(io, " ", category_label(cat), ":")
-        println(io, " ", MB.MonomialBasis(monos))
+        println(io, " ", MB.SubBasis{B}(monos))
     end
     return
 end
@@ -195,10 +195,7 @@ function Base.convert(
     return BasisDependence(d.basis, map(d -> d.linear, d.dependence))
 end
 
-function BasisDependence{LinearDependence}(
-    r,
-    basis::MB.MonomialBasis{M},
-) where {M}
+function BasisDependence{LinearDependence}(r, basis::MB.SubBasis)
     return BasisDependence(
         basis,
         LinearDependence[
@@ -222,7 +219,7 @@ end
 """
     function BasisDependence{StaircaseDependence}(
         is_dependent::Function,
-        basis::MB.AbstractPolynomialBasis,
+        basis::SA.ExplicitBasis,
     )
 
 Computes the set of standard monomials using the *greedy sieve* algorithm
@@ -236,13 +233,13 @@ Foundations of Computational Mathematics 8 (2008): 607-647.
 """
 function BasisDependence{StaircaseDependence}(
     r,
-    basis::MB.MonomialBasis{M},
+    basis::MB.SubBasis{MB.Monomial,M},
 ) where {M}
     if isempty(basis.monomials)
         return BasisDependence(basis, StaircaseDependence[])
     end
     function dependence(mono)
-        i = _index(basis, mono)
+        i = MB.monomial_index(basis, mono)
         return if isnothing(i)
             TRIVIAL
         else
@@ -251,7 +248,7 @@ function BasisDependence{StaircaseDependence}(
     end
     vars = MP.variables(basis)
     full_basis =
-        MB.maxdegree_basis(typeof(basis), vars, MP.maxdegree(basis.monomials))
+        MB.maxdegree_basis(MB.Monomial, vars, MP.maxdegree(basis.monomials))
     d = StaircaseDependence[]
     # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
     # It also ensures that the standard monomials have the "staircase structure".
@@ -273,7 +270,7 @@ function BasisDependence{StaircaseDependence}(
         end
     end
     full_basis = typeof(full_basis)(full_basis.monomials[keep])
-    new_basis = MB.MonomialBasis(
+    new_basis = MB.SubBasis{MB.Monomial}(
         eltype(basis.monomials)[
             full_basis.monomials[i] * shift for
             i in eachindex(d) if !is_dependent(d[i]) for shift in vars
@@ -289,7 +286,7 @@ function BasisDependence{StaircaseDependence}(
             else
                 # If it was not seen before, it means it is outside the basis
                 # so it is trivial standard
-                @assert isnothing(_index(basis, mono))
+                @assert isnothing(MB.monomial_index(basis, mono))
                 std = true
             end
             deps[i] = StaircaseDependence(std, dependence(mono))

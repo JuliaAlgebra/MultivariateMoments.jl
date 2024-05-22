@@ -1,16 +1,20 @@
-function _expectation(μ::Measure{S}, p::_APL{T}, f) where {S,T}
-    i = 1
+function _expectation(
+    μ::MomentVector{S,<:MB.SubBasis{MB.Monomial}},
+    p::_APL{T},
+    f,
+) where {S,T}
+    i = firstindex(μ.basis)
     s = zero(MA.promote_operation(*, S, T))
     for t in MP.terms(p)
-        while i <= length(μ.x) && MP.monomial(t) != μ.x[i]
+        while i in eachindex(μ.basis) && MP.monomial(t) != μ.basis.monomials[i]
             i += 1
         end
-        if i > length(μ.x)
+        if !(i in eachindex(μ.basis))
             error(
-                "The polynomial $p has a nonzero term $t with monomial $(t.x) for which the expectation is not known in $μ",
+                "The polynomial $p has a nonzero term $t with monomial $(MP.monomial(t)) for which the expectation is not known in $μ",
             )
         end
-        s += f(μ.a[i], MP.coefficient(t))
+        s += f(μ.values[i], MP.coefficient(t))
         i += 1
     end
     return s
@@ -24,8 +28,8 @@ Computes the expectation ``\\mathbb{E}_{\\mu}[p]``.
 """
 function expectation end
 
-expectation(μ::Measure, p::_APL) = _expectation(μ, p, (*))
-expectation(p::_APL, μ::Measure) = _expectation(μ, p, (a, b) -> b * a) # a and b may be noncommutative
+expectation(μ::MomentVector, p::_APL) = _expectation(μ, p, (*))
+expectation(p::_APL, μ::MomentVector) = _expectation(μ, p, (a, b) -> b * a) # a and b may be noncommutative
 
 """
     dot(μ::AbstractMeasureLike, p::AbstractPolynomialLike)

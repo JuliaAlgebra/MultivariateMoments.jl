@@ -29,7 +29,7 @@ function _atoms(atoms, rank_check, solver)
     Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, WeightedDiracMeasure.(atoms, ones(length(atoms))))
     monos = monomials(x, 0:(length(atoms)+2))
-    μ = measure(η, monos)
+    μ = moment_vector(η, monos)
     ν = moment_matrix(μ, monomials(x, 0:(div(length(atoms), 2)+1)))
     atoms = atomic_measure(ν, rank_check, solver)
     @test atoms !== nothing
@@ -80,7 +80,7 @@ function hl05_2_3(rank_check, lrc, solver, perturb::Bool = true)
         y,
         1,
     ]
-    μ = measure(η, monos)
+    μ = moment_vector(η, monos)
     ν = moment_matrix(μ, [1, x, y, x^2, x * y, y^2])
     atoms = atomic_measure(ν, rank_check, lrc, Echelon(), solver)
     @test atoms !== nothing
@@ -139,7 +139,7 @@ function hl05_3_3_1()
     # β will be [z, y, x, y*z, x*z, x*y]
     x = monomial_vector([z, y, x, z^2, y * z, y^2, x * z, x * y, x^2])
     # x*β contains x*y*z, x^2*z, x^2*y which are not present so it should fail
-    b = MultivariateMoments.build_system(U', MB.MonomialBasis(x))
+    b = MultivariateMoments.build_system(U', MB.SubBasis{MB.Monomial}(x))
     V = solve(b, AlgebraicBorderSolver{LinearDependence}())
     @test is_zero_dimensional(V)
     return testelements(
@@ -173,7 +173,7 @@ function hl05_4(rank_check, lrc)
             [0.25, 0.25, 0.25, 0.25],
         ),
     )
-    μ = measure(
+    μ = moment_vector(
         [1 / 9, 0, 1 / 9, 0, 1 / 9, 0, 0, 0, 0, 1 / 3, 0, 1 / 3, 0, 0, 1],
         [
             x^4,
@@ -199,7 +199,7 @@ function hl05_4(rank_check, lrc)
     if lrc isa LowRankLDLTAlgorithm
         @test atoms ≈ η
     end
-    @test measure(atoms, μ.x).a ≈ μ.a rtol = 1e-3
+    @test moment_vector(atoms, μ.basis).values ≈ μ.values rtol = 1e-3
 end
 
 """
@@ -210,7 +210,7 @@ end
 function lpj20_3_8_0(rank_check, lrc, ok::Bool = true)
     Mod.@polyvar x[1:2]
     η = AtomicMeasure(x, [WeightedDiracMeasure([1.0, 0.0], 2.0)])
-    μ = measure([1e-6, 0.0, 2], monomials(x, 2))
+    μ = moment_vector([1e-6, 0.0, 2], monomials(x, 2))
     ν = moment_matrix(μ, monomials(x, 1))
     atoms = atomic_measure(ν, rank_check, lrc)
     if ok

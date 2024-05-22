@@ -4,7 +4,7 @@ end
 
 is_dependent!(p::Pivots, i) = !(i in p.pivots)
 
-function build_system(U::AbstractMatrix, basis::MB.MonomialBasis)
+function build_system(U::AbstractMatrix, basis::MB.SubBasis{MB.Monomial})
     # System is
     # `basis = [U' 0] * basis`
     # which is

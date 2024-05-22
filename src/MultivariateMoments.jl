@@ -4,6 +4,7 @@ using LinearAlgebra
 import SparseArrays
 
 import MutableArithmetics as MA
+import StarAlgebras as SA
 
 import MultivariatePolynomials as MP
 const _APL = MP.AbstractPolynomialLike
@@ -22,7 +23,7 @@ abstract type AbstractMoment{T} <: AbstractMomentLike{T} end
 abstract type AbstractMeasure{T} <: AbstractMeasureLike{T} end
 
 include("moment.jl")
-include("measure.jl")
+include("moment_vector.jl")
 include("expectation.jl")
 include("symmatrix.jl")
 include("hermitian_matrix.jl")

@@ -1,14 +1,14 @@
-struct Moment{T,MT<:MP.AbstractMonomial} <: AbstractMoment{T}
+struct Moment{T,P} <: AbstractMoment{T}
     α::T
-    x::MT
+    polynomial::P
 end
 
 """
-    moment(α, m::AbstractMonomial)
+    moment(α, p)
 
-Creates the moment of the monomial `m` of value `α`.
+Creates the moment of the polynomial `p` of value `α`.
 """
-moment(α, m::MP.AbstractMonomial) = Moment(α, m)
+moment(α, p) = Moment(α, p)
 
 """
     moment_value(m::AbstractMomentLike)
@@ -21,19 +21,8 @@ Calling `moment_value(moment(3.1, x*y^2))` should return `3.1`.
 """
 moment_value(m::Moment) = m.α
 
-"""
-    monomial(m::AbstractMomentLike)
-
-Returns the monomial of the moment `m`.
-
-## Examples
-
-Calling `monomial(moment(3.1, x*y^2))` should return `x*y^2`.
-"""
-MP.monomial(m::Moment) = m.x
-
-for f in [:variables, :nvariables, :exponents, :degree, :powers]
+for f in [:variables, :nvariables]
     @eval begin
-        MP.$f(m::AbstractMomentLike) = MP.$f(MP.monomial(m))
+        MP.$f(m::AbstractMomentLike) = MP.$f(m.polynomial)
     end
 end

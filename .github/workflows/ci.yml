@@ -42,6 +42,14 @@ jobs:
             ${{ runner.os }}-test-${{ env.cache-name }}-
             ${{ runner.os }}-test-
             ${{ runner.os }}-
+      - name: dev
+        shell: julia --project=@. {0}
+        run: |
+          using Pkg
+          Pkg.add([
+              PackageSpec(name="StarAlgebras", rev="mk/non_monomial_basis"),
+              PackageSpec(name="MultivariateBases", rev="master"),
+          ])
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         with:

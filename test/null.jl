@@ -5,7 +5,7 @@ import MultivariatePolynomials as MP
 import MultivariateBases as MB
 import MultivariateMoments as MM
 
-b(x) = MB.MonomialBasis(x)
+b(x) = MB.SubBasis{MB.Monomial}(x)
 
 include("utils.jl")
 
@@ -18,7 +18,7 @@ function test_partial_commutative_fix(x, y)
         0 0 1 0 # x * y
         1 0 0 0 # x^2
     ]
-    basis = MB.MonomialBasis(MP.monomials((x, y), 0:2))
+    basis = MB.SubBasis{MB.Monomial}(MP.monomials((x, y), 0:2))
     null = MM.MacaulayNullspace(matrix, basis, 1e-8)
     D = MM.StaircaseDependence
     solver = MM.StaircaseSolver{Float64}(max_partial_iterations = 1)
@@ -40,7 +40,7 @@ function test_dependent_border(x, y)
         0 1 0 0 0 # x^2 * y = y
         0 0 1 0 0 # x^3 = x
     ]
-    basis = MB.MonomialBasis(MP.monomials((x, y), 0:3))
+    basis = MB.SubBasis{MB.Monomial}(MP.monomials((x, y), 0:3))
     null = MM.MacaulayNullspace(matrix, basis, 1e-8)
     @testset "$D" for D in [MM.LinearDependence, MM.StaircaseDependence]
         @testset "$name" for (solver, name) in [
@@ -67,7 +67,7 @@ function test_independent_border(x, y)
         0 0 0 0 0 1 # x^2 * y: indepedent border
         0 0 1 0 0 0 # x^3 = x
     ]
-    basis = MB.MonomialBasis(MP.monomials((x, y), 0:3))
+    basis = MB.SubBasis{MB.Monomial}(MP.monomials((x, y), 0:3))
     null = MM.MacaulayNullspace(matrix, basis, 1e-8)
     @testset "$D" for D in [MM.LinearDependence, MM.StaircaseDependence]
         @testset "$name" for (solver, name) in [
@@ -90,7 +90,7 @@ function test_dreesen1(x, y)
         0 0 1 0
         1 0 0 0
     ]
-    basis = MB.MonomialBasis([1, y, x, y^2, x * y, x^2])
+    basis = MB.SubBasis{MB.Monomial}([1, y, x, y^2, x * y, x^2])
     null = MM.MacaulayNullspace(matrix, basis, 1e-8)
     @testset "$D" for D in [MM.LinearDependence, MM.StaircaseDependence]
         @testset "$name" for (solver, name) in [
