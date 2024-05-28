@@ -248,7 +248,7 @@ function BasisDependence{StaircaseDependence}(
     end
     vars = MP.variables(basis)
     full_basis =
-        MB.maxdegree_basis(MB.Monomial, vars, MP.maxdegree(basis.monomials))
+        MB.maxdegree_basis(MB.FullBasis{MB.Monomial,M}(), vars, MP.maxdegree(basis.monomials))
     d = StaircaseDependence[]
     # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
     # It also ensures that the standard monomials have the "staircase structure".
