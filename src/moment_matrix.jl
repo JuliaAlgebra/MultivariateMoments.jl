@@ -112,6 +112,10 @@ struct BlockDiagonalMomentMatrix{T,B<:SA.ExplicitBasis,MT} <:
     blocks::Vector{MomentMatrix{T,B,MT}}
 end
 
+function block_diagonal(blocks::Vector{<:MomentMatrix})
+    return BlockDiagonalMomentMatrix(blocks)
+end
+
 function show_basis_indexed_blocks(io::IO, blocks)
     print(io, " with $(length(blocks)) blocks:")
     nd = ndigits(length(blocks))

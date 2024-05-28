@@ -30,7 +30,7 @@ And entries in a 2×2 SymMatrix{$Int}:
         @test nvariables(ν) == 2
     end
     @test_throws ArgumentError moment_matrix(moment_vector([1], [x]), [y])
-    block_ν = BlockDiagonalMomentMatrix([ν1, ν2])
+    block_ν = block_diagonal([ν1, ν2])
     @test block_ν isa BlockDiagonalMomentMatrix{Int,typeof(ν1.basis)}
     @test sprint(show, block_ν) == """
 BlockDiagonalMomentMatrix with 2 blocks:
