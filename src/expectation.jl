@@ -27,15 +27,18 @@ function _expectation(
     f,
 ) where {S,B}
     basis = MB.FullBasis{B,MP.monomial_type(typeof(p))}()
-    return _expectation(
-        μ,
-        MB.algebra_element(SA.coeffs(p, basis), basis),
-        f,
-    )
+    return _expectation(μ, MB.algebra_element(SA.coeffs(p, basis), basis), f)
 end
 
 function _expectation(μ::MomentVector, p::MP.AbstractPolynomialLike, f)
-    return _expectation(μ, MB.algebra_element(MB.sparse_coefficients(MP.polynomial(p)), MB.FullBasis{MB.Monomial,MP.monomial_type(p)}()), f)
+    return _expectation(
+        μ,
+        MB.algebra_element(
+            MB.sparse_coefficients(MP.polynomial(p)),
+            MB.FullBasis{MB.Monomial,MP.monomial_type(p)}(),
+        ),
+        f,
+    )
 end
 
 """
@@ -55,8 +58,15 @@ expectation(p::_APL, μ::MomentVector) = _expectation(μ, p, (a, b) -> b * a) # 
 
 See [`expectation`](@ref)
 """
-LinearAlgebra.dot(μ::AbstractMeasureLike, p::MP.AbstractPolynomialLike) = expectation(μ, p)
-LinearAlgebra.dot(p::MP.AbstractPolynomialLike, μ::AbstractMeasureLike) = expectation(p, μ)
+LinearAlgebra.dot(μ::AbstractMeasureLike, p::MP.AbstractPolynomialLike) =
+    expectation(μ, p)
+function LinearAlgebra.dot(p::MP.AbstractPolynomialLike, μ::AbstractMeasureLike)
+    return expectation(p, μ)
+end
 # Need to split it and not use `_APL` to avoid ambiguity
-LinearAlgebra.dot(μ::AbstractMeasureLike, p::SA.AlgebraElement) = expectation(μ, p)
-LinearAlgebra.dot(p::SA.AlgebraElement, μ::AbstractMeasureLike) = expectation(p, μ)
+function LinearAlgebra.dot(μ::AbstractMeasureLike, p::SA.AlgebraElement)
+    return expectation(μ, p)
+end
+function LinearAlgebra.dot(p::SA.AlgebraElement, μ::AbstractMeasureLike)
+    return expectation(p, μ)
+end
