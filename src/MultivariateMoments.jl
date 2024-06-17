@@ -7,7 +7,7 @@ import MutableArithmetics as MA
 import StarAlgebras as SA
 
 import MultivariatePolynomials as MP
-const _APL = MP.AbstractPolynomialLike
+const _APL = Union{MP.AbstractPolynomialLike,SA.AlgebraElement}
 
 import MultivariateBases as MB
 

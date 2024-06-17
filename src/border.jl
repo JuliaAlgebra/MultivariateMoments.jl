@@ -468,8 +468,9 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     # 2005
     ind = independent_basis(b)
     dep = dependent_basis(b.dependence)
-    system = [
-        dep.monomials[col] - MP.polynomial(b.matrix[:, col], ind) for
+    system = MP.polynomial_type(ind, eltype(b.matrix))[
+        dep.monomials[col] -
+        MP.polynomial(MB.algebra_element(b.matrix[:, col], ind)) for
         col in eachindex(dep.monomials)
     ]
     filter!(!MP.isconstant, system)
