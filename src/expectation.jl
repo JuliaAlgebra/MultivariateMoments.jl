@@ -21,15 +21,6 @@ function _expectation(
     return s
 end
 
-function _expectation(
-    μ::MomentVector{S,<:MB.SubBasis{B}},
-    p::SA.AlgebraElement{<:MB.Algebra},
-    f,
-) where {S,B}
-    basis = MB.FullBasis{B,MP.monomial_type(typeof(p))}()
-    return _expectation(μ, MB.algebra_element(SA.coeffs(p, basis), basis), f)
-end
-
 function _expectation(μ::MomentVector, p::MP.AbstractPolynomialLike, f)
     return _expectation(
         μ,
