@@ -17,5 +17,10 @@
     @test (@inferred dot(0.5 * x[1] * x[2]^2, m)) == 2.0
     a = MB.algebra_element([0.5], MB.SubBasis{MB.Monomial}([x[1] * x[2]^2]))
     @test (@inferred dot(a, m)) == 2.0
+    a = MB.algebra_element(
+        [0.5],
+        MB.SubBasis{MB.ScaledMonomial}([x[1] * x[2]^2]),
+    )
+    @test (@inferred dot(a, m)) == 2 * √3
     @test (@inferred dot(m, x[1] * x[3])) == 3
 end
