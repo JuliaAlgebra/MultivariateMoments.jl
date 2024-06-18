@@ -21,6 +21,6 @@
         [0.5],
         MB.SubBasis{MB.ScaledMonomial}([x[1] * x[2]^2]),
     )
-    @test (@inferred dot(a, m)) == 2√3
+    @test (@inferred dot(a, m)) == 2 * √3
     @test (@inferred dot(m, x[1] * x[3])) == 3
 end
