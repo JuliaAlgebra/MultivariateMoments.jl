@@ -35,7 +35,7 @@ end
 function MacaulayNullspace(
     ν::MomentMatrix,
     rank_check::RankCheck,
-    ldlt::SVDLDLT,
+    ldlt::LowRankLDLTAlgorithm = SVDLDLT(),
 )
     M = value_matrix(ν)
     chol = low_rank_ldlt(M, ldlt, rank_check)
