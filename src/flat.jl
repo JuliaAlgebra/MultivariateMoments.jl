@@ -12,7 +12,7 @@ function Base.show(io::IO, ::MIME"text/plain", V::ZeroDimensionalVariety)
     return
 end
 function Base.show(io::IO, V::ZeroDimensionalVariety)
-    show(io, MIME"text/plain"(), V)
+    return show(io, MIME"text/plain"(), V)
 end
 
 # Decomposition of the pencil of matrices

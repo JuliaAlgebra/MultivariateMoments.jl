@@ -69,7 +69,8 @@ function compute_support!(
     rank_check::RankCheck,
     solver::ImageSpaceSolver,
 )
-    ν.support = solve(MacaulayNullspace(ν, rank_check, solver.ldlt), solver.null)
+    ν.support =
+        solve(MacaulayNullspace(ν, rank_check, solver.ldlt), solver.null)
     return
 end
 
