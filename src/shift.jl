@@ -17,7 +17,7 @@ function is_dependent!(r::RankDependence, row)
     new_rank = LinearAlgebra.rank(r.matrix[rows, :], r.check)
     if new_rank < r.old_rank
         @warn(
-            "After adding rows, the rank dropped from `$old_rank` to `$new_rank`. Correcting the rank to `$old_rank` and continuing."
+            "After adding rows, the rank dropped from `$(r.old_rank)` to `$new_rank`. Correcting the rank to `$(r.old_rank)` and continuing."
         )
         new_rank = r.old_rank
     end
