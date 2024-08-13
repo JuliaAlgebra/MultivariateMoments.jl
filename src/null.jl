@@ -21,7 +21,7 @@ function MacaulayNullspace(matrix::AbstractMatrix{T}, basis) where {T}
     return MacaulayNullspace(matrix, basis, Base.rtoldefault(T))
 end
 
-function MacaulayNullspace(
+function image_space(
     ν::MomentMatrix,
     rank_check::RankCheck,
     ldlt::LowRankLDLTAlgorithm = SVDLDLT(),
@@ -70,7 +70,7 @@ function compute_support!(
     rank_check::RankCheck,
     solver::ImageSpaceSolver,
 )
-    null = MacaulayNullspace(ν, rank_check, solver.ldlt)
+    null = image_space(ν, rank_check, solver.ldlt)
     ν.support = solve(null, solver.null)
     return
 end
