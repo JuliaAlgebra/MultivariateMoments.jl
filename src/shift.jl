@@ -118,10 +118,17 @@ function ShiftNullspace{D}(check::RankCheck; print_level = 1) where {D}
 end
 function ShiftNullspace{D}(solver::StaircaseSolver; print_level = 1) where {D}
     check = solver.rank_check
-    return ShiftNullspace{D,typeof(solver),typeof(check)}(solver, check, print_level)
+    return ShiftNullspace{D,typeof(solver),typeof(check)}(
+        solver,
+        check,
+        print_level,
+    )
 end
 function ShiftNullspace{D}(; kws...) where {D}
-    return ShiftNullspace{D}(LeadingRelativeRankTol(Base.rtoldefault(Float64)); kws...)
+    return ShiftNullspace{D}(
+        LeadingRelativeRankTol(Base.rtoldefault(Float64));
+        kws...,
+    )
 end
 ShiftNullspace(args...) = ShiftNullspace{StaircaseDependence}(args...)
 
@@ -132,7 +139,9 @@ function _solver(
 ) where {T}
     return StaircaseSolver{T}(;
         rank_check = shift.check,
-        solver = SS.ReorderedSchurMultiplicationMatricesSolver(convert(T, null.accuracy)),
+        solver = SS.ReorderedSchurMultiplicationMatricesSolver(
+            convert(T, null.accuracy),
+        ),
         print_level = shift.print_level,
     )
 end

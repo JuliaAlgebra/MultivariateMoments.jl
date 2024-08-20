@@ -228,7 +228,11 @@ function solve(
         if solver.max_iterations == 0
             Uperp = nothing
         else
-            Uperp = commutation_fix(mult, √solver.solver.ε; print_level = solver.print_level)
+            Uperp = commutation_fix(
+                mult,
+                √solver.solver.ε;
+                print_level = solver.print_level,
+            )
         end
         com_fix = if isnothing(Uperp)
             nothing
@@ -305,7 +309,9 @@ function commutation_fix(matrices, ε; print_level)
         return
     else
         if print_level >= 1
-            @info("Found multiplication matrices with commutation error of `$leading_ratio` which is larger than the tolerance of `$ε`. Adding this to the equations and continuing.")
+            @info(
+                "Found multiplication matrices with commutation error of `$leading_ratio` which is larger than the tolerance of `$ε`. Adding this to the equations and continuing."
+            )
         end
         return leading_F.U[:, 2:end]
     end
