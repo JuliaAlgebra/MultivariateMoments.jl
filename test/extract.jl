@@ -469,7 +469,7 @@ function test_extract()
     @testset "No comm fix $(_short(solver)) $T" for solver in
                                                     [ShiftNullspace()],
         T in [Float64]
- #, BigFloat]
+        #, BigFloat]
         no_com(solver, T)
     end
     return
