@@ -71,18 +71,21 @@ struct StaircaseSolver{
     max_iterations::Int
     rank_check::R
     solver::M
+    print_level::Int
 end
 function StaircaseSolver{T}(;
     max_partial_iterations::Int = 0,
     max_iterations::Int = -1,
     rank_check::RankCheck = LeadingRelativeRankTol(Base.rtoldefault(T)),
     solver = SS.ReorderedSchurMultiplicationMatricesSolver{T}(),
+    print_level::Int = 1,
 ) where {T}
     return StaircaseSolver{T,typeof(rank_check),typeof(solver)}(
         max_partial_iterations,
         max_iterations,
         rank_check,
         solver,
+        print_level,
     )
 end
 
@@ -225,7 +228,11 @@ function solve(
         if solver.max_iterations == 0
             Uperp = nothing
         else
-            Uperp = commutation_fix(mult, solver.solver.ε)
+            Uperp = commutation_fix(
+                mult,
+                √solver.solver.ε;
+                print_level = solver.print_level,
+            )
         end
         com_fix = if isnothing(Uperp)
             nothing
@@ -267,7 +274,7 @@ function solve(
     end
 end
 
-function commutation_fix(matrices, ε)
+function commutation_fix(matrices, ε; print_level)
     if isempty(first(matrices))
         return
     end
@@ -301,6 +308,11 @@ function commutation_fix(matrices, ε)
     if isnothing(leading_F)
         return
     else
+        if print_level >= 1
+            @info(
+                "Found multiplication matrices with commutation error of `$leading_ratio` which is larger than the tolerance of `$ε`. Adding this to the equations and continuing."
+            )
+        end
         return leading_F.U[:, 2:end]
     end
 end
