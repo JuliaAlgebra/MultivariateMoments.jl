@@ -3,6 +3,7 @@ using MultivariatePolynomials
 import MultivariateBases as MB
 using SemialgebraicSets
 using MultivariateMoments
+import GenericLinearAlgebra
 
 struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
 SemialgebraicSets.promote_for(::Type{T}, ::Type{DummySolver}) where {T} = T
@@ -34,18 +35,18 @@ function _atoms(atoms, rank_check, solver)
     atoms = atomic_measure(ν, rank_check, solver)
     @test atoms !== nothing
     if !isnothing(atoms)
-        @test atoms ≈ η
+        @test atoms ≈ η rtol = 1e-8
     end
 end
 
-function atoms_1(rank_check, solver)
-    atoms = [[1, 2]]
+function atoms_1(T, rank_check, solver)
+    atoms = [T[1, 2]]
     _atoms(atoms, rank_check, solver)
     return
 end
 
-function atoms_2(rank_check, solver)
-    atoms = [[1, 1], [1, -1]]
+function atoms_2(T, rank_check, solver)
+    atoms = [T[1, 1], T[1, -1]]
     _atoms(atoms, rank_check, solver)
     return
 end
@@ -351,10 +352,10 @@ function jcg14_6_1(rank_check, ok::Bool = true)
     end
 end
 
-function large_norm(rank_check)
+function large_norm(T, rank_check)
     # If the norm of `M` is given to `rref!` instead of `√||M||`, `atomic_measure` will error.
     Mod.@polyvar x[1:2]
-    Q = [
+    Q = T[
         586.8034549325414 -800.152792847183
         -800.152792847183 2749.376669556701
     ]
@@ -364,14 +365,12 @@ end
 
 function no_com(solver, T)
     Mod.@polyvar x[1:2]
-    Q = T[
-        1.0000000000000002 2.9999999777389235 1.408602019734018 8.999999911981313 4.225805987406138 3.043010098670093
-        2.9999999777389235 8.999999911981313 4.225805987406138 26.999999824988187 12.677417999642149 9.129030026074997
-        1.408602019734018 4.225805987406138 3.043010098670093 12.677417999642149 9.129030026074997 9.580642414414385
-        8.999999911981313 26.999999824988187 12.677417999642149 80.99999955990646 38.03225428611012 27.387090350285558
-        4.225805987406138 12.677417999642149 9.129030026074997 38.03225428611012 27.387090350285558 28.74192618075039
-        3.043010098670093 9.129030026074997 9.580642414414385 27.387090350285558 28.74192618075039 35.73117167739159
-    ]
+    Q = T[1.0000000000000002 2.9999999777389235 1.408602019734018 8.999999911981313 4.225805987406138 3.043010098670093
+          2.9999999777389235 8.999999911981313 4.225805987406138 26.999999824988187 12.677417999642149 9.129030026074997
+          1.408602019734018 4.225805987406138 3.043010098670093 12.677417999642149 9.129030026074997 9.580642414414385
+          8.999999911981313 26.999999824988187 12.677417999642149 80.99999955990646 38.03225428611012 27.387090350285558
+          4.225805987406138 12.677417999642149 9.129030026074997 38.03225428611012 27.387090350285558 28.74192618075039
+          3.043010098670093 9.129030026074997 9.580642414414385 27.387090350285558 28.74192618075039 35.73117167739159]
     ν = moment_matrix(Q, monomials(x, 0:2))
     η = AtomicMeasure(
         x,
@@ -390,7 +389,7 @@ _short(x) = _short(string(x))
 
 function test_extract()
     default_solver = SemialgebraicSets.default_algebraic_solver([1.0x - 1.0x])
-    @testset "$(_short(solver))" for solver in [
+    @testset "$T $(_short(solver))" for T in [Float64, BigFloat], solver in [
         FlatExtension(),
         FlatExtension(NewtonTypeDiagonalization()),
         Echelon(),
@@ -399,10 +398,10 @@ function test_extract()
         ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), ShiftNullspace()),
     ]
         @testset "Atom 1" begin
-            atoms_1(1e-10, solver)
+            atoms_1(T, 1e-10, solver)
         end
         @testset "Atom 2" begin
-            atoms_2(1e-10, solver)
+            atoms_2(T, 1e-10, solver)
         end
     end
     @testset "hl05_2_3 $(_short(lrc))" for lrc in
@@ -465,11 +464,12 @@ function test_extract()
     lpj20_3_9(FixedRank(7), 0)
     jcg14_6_1(6e-3)
     jcg14_6_1(8e-4, false)
-    large_norm(1e-2)
-    @testset "No comm fix $(_short(solver)) $T" for solver in
-                                                    [ShiftNullspace()],
-        T in [Float64]
-        #, BigFloat]
+    @testset "$T" for T in [Float64, BigFloat]
+        large_norm(T, 1e-2)
+    end
+    @testset "No comm fix $(_short(solver)) $T" for solver in [
+        ShiftNullspace(),
+    ], T in [Float64, BigFloat]
         no_com(solver, T)
     end
     return

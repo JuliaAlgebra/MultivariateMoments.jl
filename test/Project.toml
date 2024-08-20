@@ -1,5 +1,6 @@
 [deps]
 DynamicPolynomials = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
+GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MultivariateBases = "be282fd4-ad43-11e9-1d11-8bd9d7e43378"
 MultivariateMoments = "f4abf1af-0426-5881-a0da-e2f168889b5e"
