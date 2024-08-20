@@ -365,12 +365,14 @@ end
 
 function no_com(solver, T)
     Mod.@polyvar x[1:2]
-    Q = T[1.0000000000000002 2.9999999777389235 1.408602019734018 8.999999911981313 4.225805987406138 3.043010098670093
-          2.9999999777389235 8.999999911981313 4.225805987406138 26.999999824988187 12.677417999642149 9.129030026074997
-          1.408602019734018 4.225805987406138 3.043010098670093 12.677417999642149 9.129030026074997 9.580642414414385
-          8.999999911981313 26.999999824988187 12.677417999642149 80.99999955990646 38.03225428611012 27.387090350285558
-          4.225805987406138 12.677417999642149 9.129030026074997 38.03225428611012 27.387090350285558 28.74192618075039
-          3.043010098670093 9.129030026074997 9.580642414414385 27.387090350285558 28.74192618075039 35.73117167739159]
+    Q = T[
+        1.0000000000000002 2.9999999777389235 1.408602019734018 8.999999911981313 4.225805987406138 3.043010098670093
+        2.9999999777389235 8.999999911981313 4.225805987406138 26.999999824988187 12.677417999642149 9.129030026074997
+        1.408602019734018 4.225805987406138 3.043010098670093 12.677417999642149 9.129030026074997 9.580642414414385
+        8.999999911981313 26.999999824988187 12.677417999642149 80.99999955990646 38.03225428611012 27.387090350285558
+        4.225805987406138 12.677417999642149 9.129030026074997 38.03225428611012 27.387090350285558 28.74192618075039
+        3.043010098670093 9.129030026074997 9.580642414414385 27.387090350285558 28.74192618075039 35.73117167739159
+    ]
     ν = moment_matrix(Q, monomials(x, 0:2))
     η = AtomicMeasure(
         x,
@@ -389,14 +391,16 @@ _short(x) = _short(string(x))
 
 function test_extract()
     default_solver = SemialgebraicSets.default_algebraic_solver([1.0x - 1.0x])
-    @testset "$T $(_short(solver))" for T in [Float64, BigFloat], solver in [
-        FlatExtension(),
-        FlatExtension(NewtonTypeDiagonalization()),
-        Echelon(),
-        ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), Echelon()),
-        ShiftNullspace(),
-        ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), ShiftNullspace()),
-    ]
+    @testset "$T $(_short(solver))" for T in [Float64, BigFloat],
+        solver in [
+            FlatExtension(),
+            FlatExtension(NewtonTypeDiagonalization()),
+            Echelon(),
+            ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), Echelon()),
+            ShiftNullspace(),
+            ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), ShiftNullspace()),
+        ]
+
         @testset "Atom 1" begin
             atoms_1(T, 1e-10, solver)
         end
@@ -467,9 +471,10 @@ function test_extract()
     @testset "$T" for T in [Float64, BigFloat]
         large_norm(T, 1e-2)
     end
-    @testset "No comm fix $(_short(solver)) $T" for solver in [
-        ShiftNullspace(),
-    ], T in [Float64, BigFloat]
+    @testset "No comm fix $(_short(solver)) $T" for solver in
+                                                    [ShiftNullspace()],
+        T in [Float64, BigFloat]
+
         no_com(solver, T)
     end
     return
