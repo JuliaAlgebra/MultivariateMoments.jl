@@ -106,31 +106,47 @@ IFAC Proceedings Volumes 45.16 (2012): 1203-1208.
 struct ShiftNullspace{D,S,C<:RankCheck} <: MacaulayNullspaceSolver
     solver::S
     check::C
+    print_level::Int
 end
 # Because the matrix is orthogonal, we know the SVD of the whole matrix is
 # `ones(...)` so an `AbsoluteRankTol` would be fine here.
 # However, since we also know that the first row (which correspond to the
 # constant monomial) should be a standard monomial, `LeadingRelativeRankTol`
 # ensures that we will take it.
-function ShiftNullspace{D}(check::RankCheck) where {D}
-    return ShiftNullspace{D,Nothing,typeof(check)}(nothing, check)
+function ShiftNullspace{D}(check::RankCheck; print_level = 1) where {D}
+    return ShiftNullspace{D,Nothing,typeof(check)}(nothing, check, print_level)
 end
-function ShiftNullspace{D}(solver::StaircaseSolver) where {D}
+function ShiftNullspace{D}(solver::StaircaseSolver; print_level = 1) where {D}
     check = solver.rank_check
-    return ShiftNullspace{D,typeof(solver),typeof(check)}(solver, check)
+    return ShiftNullspace{D,typeof(solver),typeof(check)}(
+        solver,
+        check,
+        print_level,
+    )
 end
-function ShiftNullspace{D}() where {D}
-    return ShiftNullspace{D}(LeadingRelativeRankTol(Base.rtoldefault(Float64)))
+function ShiftNullspace{D}(; kws...) where {D}
+    return ShiftNullspace{D}(
+        LeadingRelativeRankTol(Base.rtoldefault(Float64));
+        kws...,
+    )
 end
 ShiftNullspace(args...) = ShiftNullspace{StaircaseDependence}(args...)
 
 function _solver(
+    null::MacaulayNullspace,
     shift::ShiftNullspace{StaircaseDependence,Nothing},
     ::Type{T},
 ) where {T}
-    return StaircaseSolver{T}(rank_check = shift.check)
+    return StaircaseSolver{T}(;
+        rank_check = shift.check,
+        solver = SS.ReorderedSchurMultiplicationMatricesSolver(
+            convert(T, null.accuracy),
+        ),
+        print_level = shift.print_level,
+    )
 end
-function _solver(shift::ShiftNullspace, ::Type)
+
+function _solver(::MacaulayNullspace, shift::ShiftNullspace, ::Type)
     return shift.solver
 end
 
@@ -138,5 +154,5 @@ function border_basis_and_solver(
     null::MacaulayNullspace{T},
     shift::ShiftNullspace{D},
 ) where {T,D}
-    return BorderBasis{D}(null, shift.check), _solver(shift, T)
+    return BorderBasis{D}(null, shift.check), _solver(null, shift, T)
 end
