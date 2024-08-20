@@ -3,7 +3,7 @@ using MultivariatePolynomials
 import MultivariateBases as MB
 using SemialgebraicSets
 using MultivariateMoments
-import GenericLinearAlgebra
+import GenericLinearAlgebra # Needed for `svd` to work on `Matrix{BigFloat}`
 
 struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
 SemialgebraicSets.promote_for(::Type{T}, ::Type{DummySolver}) where {T} = T
