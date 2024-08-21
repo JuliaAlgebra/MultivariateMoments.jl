@@ -30,6 +30,10 @@ function solve_weight(
     centers,
     ::MomentMatrixWeightSolver,
 ) where {T}
+    if isempty(centers)
+        # Failing for `BigFloat`
+        return T[]
+    end
     vars = MP.variables(ν)
     A = Matrix{T}(undef, length(ν.Q.Q), length(centers))
     vbasis = vectorized_basis(ν)

@@ -3,6 +3,7 @@ using MultivariatePolynomials
 import MultivariateBases as MB
 using SemialgebraicSets
 using MultivariateMoments
+import GenericLinearAlgebra # Needed for `svd` to work on `Matrix{BigFloat}`
 
 struct DummySolver <: SemialgebraicSets.AbstractAlgebraicSolver end
 SemialgebraicSets.promote_for(::Type{T}, ::Type{DummySolver}) where {T} = T
@@ -34,18 +35,18 @@ function _atoms(atoms, rank_check, solver)
     atoms = atomic_measure(ν, rank_check, solver)
     @test atoms !== nothing
     if !isnothing(atoms)
-        @test atoms ≈ η
+        @test atoms ≈ η rtol = 1e-8
     end
 end
 
-function atoms_1(rank_check, solver)
-    atoms = [[1, 2]]
+function atoms_1(T, rank_check, solver)
+    atoms = [T[1, 2]]
     _atoms(atoms, rank_check, solver)
     return
 end
 
-function atoms_2(rank_check, solver)
-    atoms = [[1, 1], [1, -1]]
+function atoms_2(T, rank_check, solver)
+    atoms = [T[1, 1], T[1, -1]]
     _atoms(atoms, rank_check, solver)
     return
 end
@@ -351,10 +352,10 @@ function jcg14_6_1(rank_check, ok::Bool = true)
     end
 end
 
-function large_norm(rank_check)
+function large_norm(T, rank_check)
     # If the norm of `M` is given to `rref!` instead of `√||M||`, `atomic_measure` will error.
     Mod.@polyvar x[1:2]
-    Q = [
+    Q = T[
         586.8034549325414 -800.152792847183
         -800.152792847183 2749.376669556701
     ]
@@ -390,19 +391,21 @@ _short(x) = _short(string(x))
 
 function test_extract()
     default_solver = SemialgebraicSets.default_algebraic_solver([1.0x - 1.0x])
-    @testset "$(_short(solver))" for solver in [
-        FlatExtension(),
-        FlatExtension(NewtonTypeDiagonalization()),
-        Echelon(),
-        ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), Echelon()),
-        ShiftNullspace(),
-        ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), ShiftNullspace()),
-    ]
+    @testset "$T $(_short(solver))" for T in [Float64, BigFloat],
+        solver in [
+            FlatExtension(),
+            FlatExtension(NewtonTypeDiagonalization()),
+            Echelon(),
+            ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), Echelon()),
+            ShiftNullspace(),
+            ImageSpaceSolver(ShiftCholeskyLDLT(1e-15), ShiftNullspace()),
+        ]
+
         @testset "Atom 1" begin
-            atoms_1(1e-10, solver)
+            atoms_1(T, 1e-10, solver)
         end
         @testset "Atom 2" begin
-            atoms_2(1e-10, solver)
+            atoms_2(T, 1e-10, solver)
         end
     end
     @testset "hl05_2_3 $(_short(lrc))" for lrc in
@@ -465,11 +468,13 @@ function test_extract()
     lpj20_3_9(FixedRank(7), 0)
     jcg14_6_1(6e-3)
     jcg14_6_1(8e-4, false)
-    large_norm(1e-2)
+    @testset "$T" for T in [Float64, BigFloat]
+        large_norm(T, 1e-2)
+    end
     @testset "No comm fix $(_short(solver)) $T" for solver in
                                                     [ShiftNullspace()],
-        T in [Float64]
-        #, BigFloat]
+        T in [Float64, BigFloat]
+
         no_com(solver, T)
     end
     return
