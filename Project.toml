@@ -1,7 +1,7 @@
 name = "MultivariateMoments"
 uuid = "f4abf1af-0426-5881-a0da-e2f168889b5e"
 repo = "https://github.com/JuliaAlgebra/MultivariateMoments.jl.git"
-version = "0.4.9"
+version = "0.4.10"
 
 [deps]
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
