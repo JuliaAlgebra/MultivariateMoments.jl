@@ -27,7 +27,8 @@ function accuracy(σ::Vector{T}, r, check::RankCheck) where {T}
     elseif r == lastindex(σ)
         return default_accuracy(σ, check)
     else
-        return σ[r+1] / σ[1]
+        # Even an exact zero pivot leaves roundoff in the computed factors.
+        return max(σ[r+1] / σ[1], eps(float(T)))
     end
 end
 
@@ -364,6 +365,20 @@ Method for computing a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`
 abstract type LowRankLDLTAlgorithm end
 
 """
+    AbsCholeskyLDLT <: LowRankLDLTAlgorithm
+
+Use the modified Cholesky decomposition from
+[PositiveFactorizations.jl](https://github.com/timholy/PositiveFactorizations.jl).
+Negative pivots are replaced by their absolute values and zero pivots are
+discarded before applying the rank check. Unlike [`ShiftCholeskyLDLT`](@ref),
+this does not require choosing a diagonal shift.
+
+Requires loading `PositiveFactorizations` with `using PositiveFactorizations`.
+Only real symmetric matrices are supported.
+"""
+struct AbsCholeskyLDLT <: LowRankLDLTAlgorithm end
+
+"""
     ShiftCholeskyLDLT <: LowRankLDLTAlgorithm
 
 Shift the matrix by `shift` times the identity matrix before cholesky.
@@ -417,6 +432,8 @@ Return the ratio `rtol = σ[r+1]/σ[1]` where `σ` is the vector of singular
 values of the matrix for which `chol` is the rank-`r` Cholesky decomposition.
 This is a good relative tolerance to use with the matrix as `σ[r+1]` is the
 first singular value that was discarded.
+For a truncated decomposition, the relative tolerance is at least machine
+precision to account for roundoff in the factors.
 """
 function accuracy(chol::LowRankLDLT)
     return accuracy(chol.singular_values, size(chol.L, 2), chol.rank_check)
