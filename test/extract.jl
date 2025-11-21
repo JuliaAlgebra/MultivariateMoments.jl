@@ -55,7 +55,7 @@ end
 
 [HL05, Section 2.3]
 """
-function hl05_2_3(rank_check, lrc, solver, perturb::Bool = true)
+#function hl05_2_3(rank_check, lrc, solver, perturb::Bool = true)
     Mod.@polyvar x y
     η = AtomicMeasure(
         [x, y],
@@ -81,7 +81,12 @@ function hl05_2_3(rank_check, lrc, solver, perturb::Bool = true)
         y,
         1,
     ]
-    μ = moment_vector(η, monos)
+    b = MB.SubBasis{MB.Monomial}(monos)
+    c = MB.SubBasis{MB.Monomial}(monos)
+    @edit SA.object(parent(b)) == SA.object(parent(c))
+    @edit moment_vector(η, b)
+    basis(η)
+    μ = @edit moment_vector(η, monos)
     ν = moment_matrix(μ, [1, x, y, x^2, x * y, y^2])
     atoms = atomic_measure(ν, rank_check, lrc, Echelon(), solver)
     @test atoms !== nothing

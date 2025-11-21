@@ -4,10 +4,11 @@ abstract type AbstractMomentMatrix{T,B<:SA.ExplicitBasis} <:
               AbstractMeasureLike{T} end
 
 """
-    mutable struct MomentMatrix{T,B<:SA.ExplicitBasis,MT<:AbstractMatrix{T}} <: AbstractMeasureLike{T}
+    mutable struct MomentMatrix{T,B<:SA.ExplicitBasis,MT<:AbstractMatrix{T}} <:
+                AbstractMomentMatrix{T,B}
         Q::MT
         basis::B
-        support::Union{Nothing, AlgebraicSet}
+        support::Union{Nothing,AbstractAlgebraicSet}
     end
 
 Measure ``\\nu`` represented by the moments of the monomial matrix ``x x^\\top`` in the symmetric matrix `Q`.
@@ -19,15 +20,18 @@ mutable struct MomentMatrix{T,B<:SA.ExplicitBasis,MT<:AbstractMatrix{T}} <:
     basis::B
     support::Union{Nothing,AbstractAlgebraicSet}
 end
+
 function MomentMatrix{T,B,MT}(Q::MT, basis::SA.ExplicitBasis) where {T,B,MT}
     return MomentMatrix{T,B,MT}(Q, basis, nothing)
 end
+
 function MomentMatrix{T,B}(
     Q::AbstractMatrix{T},
     basis::SA.ExplicitBasis,
 ) where {T,B}
     return MomentMatrix{T,B,typeof(Q)}(Q, basis)
 end
+
 function MomentMatrix(Q::SymMatrix{T}, basis::SA.ExplicitBasis) where {T}
     return MomentMatrix{T,typeof(basis)}(Q, basis)
 end
@@ -45,7 +49,8 @@ function MomentMatrix{T}(
         basis,
     )
 end
-function MomentMatrix{T}(f::Function, monos::AbstractVector) where {T}
+
+function MomentMatrix{T}(f::Function, monos::AbstractVector{<:MP.AbstractTermLike}) where {T}
     σ, sorted_monos = MP.sort_monomial_vector(monos)
     return MomentMatrix{T}(f, MB.SubBasis{MB.Monomial}(sorted_monos), σ)
 end
@@ -70,11 +75,30 @@ end
 
 Creates a matrix the moment matrix for the moment matrix  ``x x^\\top`` using the moments of `μ`.
 """
-function moment_matrix(μ::MomentVector{T}, basis) where {T}
+function moment_matrix(μ::MomentVector{T}, basis::SA.ExplicitBasis) where {T}
+    _μ, _basis = SA.promote_basis(μ, basis)
+    cache = zero(T, MB.algebra(parent(_basis)))
+    function entry_value(i, j)
+        MA.operate!(zero, cache)
+        MA.operate!(
+            SA.UnsafeAddMul(SA.mstructure(cache)),
+            cache,
+            SA.star(_basis[i]),
+            _basis[j],
+            true,
+        )
+        # No need to canonicalize, there was one term and we don't
+        # need it to be canonical since the expectation already sum
+        return expectation(_μ, cache)
+    end
     return MomentMatrix{T}(
-        (i, j) -> moment_value(μ, basis[i] * basis[j]),
-        basis,
+        entry_value,
+        _basis,
     )
+end
+
+function moment_matrix(μ::MomentVector, monos::AbstractVector{<:MP.AbstractTermLike})
+    return moment_matrix(μ, MB.SubBasis{MB.Monomial}(monos))
 end
 
 function MomentMatrix(
@@ -84,10 +108,12 @@ function MomentMatrix(
 ) where {T}
     return MomentMatrix{T}((i, j) -> Q[σ[i], σ[j]], basis)
 end
+
 function MomentMatrix(Q::AbstractMatrix, monos::AbstractVector)
     σ, sorted_monos = MP.sort_monomial_vector(monos)
     return MomentMatrix(Q, MB.SubBasis{MB.Monomial}(sorted_monos), σ)
 end
+
 moment_matrix(Q::AbstractMatrix, monos) = MomentMatrix(Q, monos)
 
 value_matrix(μ::MomentMatrix) = Matrix(μ.Q)
@@ -95,7 +121,7 @@ value_matrix(μ::MomentMatrix) = Matrix(μ.Q)
 function vectorized_basis(
     ν::MomentMatrix{T,<:MB.SubBasis{MB.Monomial}},
 ) where {T}
-    monos = ν.basis.monomials
+    monos = MB.keys_as_monomials(ν.basis)
     n = length(monos)
     # We don't wrap in `MB.SubBasis` as we don't want the monomials
     # to be `sort`ed and `uniq`ed.
@@ -103,7 +129,6 @@ function vectorized_basis(
 end
 
 function moment_vector(ν::MomentMatrix; kws...)
-    n = length(ν.basis)
     return moment_vector(ν.Q.Q, vectorized_basis(ν); kws...)
 end
 

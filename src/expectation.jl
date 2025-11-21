@@ -1,44 +1,52 @@
-function _expectation(
+const _AE{B} = SA.AlgebraElement{<:SA.StarAlgebra{<:MB.Variables{B}}}
+
+function SA.promote_with_map(μ::MomentVector, basis, map)
+    return moment_vector(μ.values, basis), map
+end
+
+function SA.promote_basis_with_maps(μ::MomentVector, p::Union{SA.AlgebraElement,SA.AbstractBasis,SA.AbstractStarAlgebra})
+    _μ, _p = SA.promote_basis_with_maps(SA.basis(μ), p)
+    return SA.maybe_promote(μ, _μ...), _p
+end
+
+function _same_basis_expectation(
     μ::MomentVector{S,<:MB.SubBasis{B}},
-    p::SA.AlgebraElement{<:MB.Algebra{BT,B},T},
+    p::_AE{B},
     f,
-) where {S,T,BT,B}
-    i = firstindex(μ.basis)
-    s = zero(MA.promote_operation(*, S, T))
+) where {S,B}
+    s = zero(MA.promote_operation(*, S, eltype(p)))
     for (k, v) in SA.nonzero_pairs(SA.coeffs(p))
-        mono = SA.basis(p)[k]
-        while i in eachindex(μ.basis) && mono != μ.basis[i]
-            i += 1
-        end
-        if !(i in eachindex(μ.basis))
+        el = SA.basis(p)[k]
+        i = get(μ.basis, el, nothing)
+        if isnothing(i)
             error(
-                "The polynomial $p has a nonzero term $mono with coefficient $v for which the expectation is not known in $μ",
+                "The polynomial $p has a nonzero term $el with coefficient $v for which the expectation is not known in $μ",
             )
         end
         s += f(μ.values[i], v)
-        i += 1
     end
     return s
 end
 
 function _expectation(
     μ::MomentVector{S,<:MB.SubBasis{B}},
-    p::SA.AlgebraElement{<:MB.Algebra},
+    p::_AE{B},
     f,
 ) where {S,B}
-    basis = MB.FullBasis{B,MP.monomial_type(typeof(p))}()
+    _same_basis_expectation(SA.promote_basis(μ, p)..., f)
+end
+
+function _expectation(
+    μ::MomentVector{S,<:MB.SubBasis{B}},
+    p::_AE,
+    f,
+) where {S,B}
+    basis = MB.FullBasis{B}(MP.variables(p))
     return _expectation(μ, MB.algebra_element(SA.coeffs(p, basis), basis), f)
 end
 
 function _expectation(μ::MomentVector, p::MP.AbstractPolynomialLike, f)
-    return _expectation(
-        μ,
-        MB.algebra_element(
-            MB.sparse_coefficients(MP.polynomial(p)),
-            MB.FullBasis{MB.Monomial,MP.monomial_type(p)}(),
-        ),
-        f,
-    )
+    return _expectation(μ, MB.algebra_element(p), f)
 end
 
 """

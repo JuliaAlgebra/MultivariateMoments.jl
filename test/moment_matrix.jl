@@ -3,9 +3,11 @@ using Test
 @testset "MomentMatrix" begin
     Mod.@polyvar x y
     μ = moment_vector([1], [x])
+    mono = x^0
     for mono in [x^0, x, y]
-        err = ArgumentError(
-            "`$μ` does not have the moment `$(MB.Polynomial{MB.Monomial}(mono^2))`",
+        el = mono^2
+        err = ErrorException(
+            "The polynomial 1·$(MB.Polynomial{MB.Monomial}(el)) has a nonzero term $el with coefficient 1 for which the expectation is not known in $μ",
         )
         @test_throws err moment_matrix(μ, [mono])
     end
@@ -29,7 +31,7 @@ And entries in a 2×2 SymMatrix{$Int}:
         @test variables(ν)[2] == y
         @test nvariables(ν) == 2
     end
-    @test_throws ArgumentError moment_matrix(moment_vector([1], [x]), [y])
+    @test_throws ErrorException moment_matrix(moment_vector([1], [x]), [y])
     block_ν = block_diagonal([ν1, ν2])
     @test block_ν isa BlockDiagonalMomentMatrix{Int,typeof(ν1.basis)}
     @test sprint(show, block_ν) == """

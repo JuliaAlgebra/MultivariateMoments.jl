@@ -102,6 +102,8 @@ Base.:(*)(α, μ::MomentVector) = moment_vector(α * μ.values, SA.basis(μ))
 Base.:(*)(μ::MomentVector, α) = moment_vector(μ.values * α, SA.basis(μ))
 Base.:(-)(μ::MomentVector) = moment_vector(-μ.values, SA.basis(μ))
 function Base.:(+)(μ::MomentVector, ν::MomentVector)
+    @show SA.basis(μ)
+    @show SA.basis(ν)
     @assert SA.basis(μ) == SA.basis(ν)
     return moment_vector(μ.values + ν.values, SA.basis(μ))
 end
@@ -117,7 +119,7 @@ function moment_value(
     μ::MomentVector{T,<:MB.SubBasis{B}},
     p::MB.Polynomial{B},
 ) where {T,B}
-    i = MB.monomial_index(SA.basis(μ), p.monomial)
+    i = SA.key_index(SA.basis(μ), p.exponents)
     if isnothing(i)
         throw(ArgumentError("`$μ` does not have the moment `$p`"))
     end
