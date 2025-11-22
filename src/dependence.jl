@@ -162,7 +162,7 @@ end
 
 function sub_basis(d::BasisDependence, I::AbstractVector{Int})
     @assert issorted(I)
-    return typeof(d.basis)(d.basis.monomials[I])
+    return SA.SubBasis(d.basis, I)
 end
 
 function independent_basis(d::BasisDependence)
@@ -200,7 +200,7 @@ function BasisDependence{LinearDependence}(r, basis::MB.SubBasis)
         basis,
         LinearDependence[
             is_dependent!(r, i) ? DEPENDENT : INDEPENDENT for
-            i in eachindex(basis.monomials)
+            i in eachindex(MB.keys_as_monomials(basis))
         ],
     )
 end
@@ -235,11 +235,11 @@ function BasisDependence{StaircaseDependence}(
     r,
     basis::MB.SubBasis{MB.Monomial,M},
 ) where {M}
-    if isempty(basis.monomials)
+    if isempty(basis)
         return BasisDependence(basis, StaircaseDependence[])
     end
     function dependence(mono)
-        i = MB.monomial_index(basis, mono)
+        i = SA.key_index(basis, MP.exponents(mono))
         return if isnothing(i)
             TRIVIAL
         else
@@ -248,9 +248,8 @@ function BasisDependence{StaircaseDependence}(
     end
     vars = MP.variables(basis)
     full_basis = MB.maxdegree_basis(
-        MB.FullBasis{MB.Monomial,M}(),
-        vars,
-        MP.maxdegree(basis.monomials),
+        MB.FullBasis{MB.Monomial}(vars),
+        MP.maxdegree(basis),
     )
     d = StaircaseDependence[]
     # This sieve of [LLR08, Algorithm 1] is a performance improvement but not only.
@@ -258,7 +257,7 @@ function BasisDependence{StaircaseDependence}(
     function is_corner_multiple(mono, indices, dependence)
         for i in eachindex(dependence)
             if is_dependent(dependence[i]) &&
-               MP.divides(full_basis.monomials[indices[i]], mono)
+               MP.divides(MP.monomial(full_basis[indices[i]]), mono)
                 return true
             end
         end
@@ -266,22 +265,22 @@ function BasisDependence{StaircaseDependence}(
     end
     keep = Int[]
     # Compute standard monomials and corners
-    for (i, mono) in enumerate(full_basis.monomials)
+    for (i, mono) in enumerate(MB.keys_as_monomials(full_basis))
         if !is_corner_multiple(mono, keep, d)
             push!(keep, i)
             push!(d, StaircaseDependence(true, dependence(mono)))
         end
     end
-    full_basis = typeof(full_basis)(full_basis.monomials[keep])
+    full_basis = SA.SubBasis(full_basis, keep)
     new_basis = MB.SubBasis{MB.Monomial}(
-        eltype(basis.monomials)[
-            full_basis.monomials[i] * shift for
+        MP.monomial_type(basis)[
+            MP.monomial(full_basis[i]) * shift for
             i in eachindex(d) if !is_dependent(d[i]) for shift in vars
         ],
     )
     full_basis, I1, I2 = MB.merge_bases(full_basis, new_basis)
-    deps = Vector{StaircaseDependence}(undef, length(full_basis.monomials))
-    for (i, mono) in enumerate(full_basis.monomials)
+    deps = Vector{StaircaseDependence}(undef, length(full_basis))
+    for (i, mono) in enumerate(MB.keys_as_monomials(full_basis))
         if iszero(I1[i])
             @assert !iszero(I2[i])
             if is_corner_multiple(mono, 1:(i-1), view(deps, 1:(i-1)))
@@ -289,7 +288,7 @@ function BasisDependence{StaircaseDependence}(
             else
                 # If it was not seen before, it means it is outside the basis
                 # so it is trivial standard
-                @assert isnothing(MB.monomial_index(basis, mono))
+                @assert isnothing(_monomial_index(basis, mono))
                 std = true
             end
             deps[i] = StaircaseDependence(std, dependence(mono))
@@ -309,14 +308,14 @@ function _split_exponents(monos)
     return ntuple(Base.Fix1(_exponents, monos), Val(N))
 end
 
-MP.variables(d::BasisDependence) = MP.variables(d.basis.monomials)
+MP.variables(d::BasisDependence) = MP.variables(d.basis)
 
 function MP.mindegree(d::BasisDependence, args...)
-    return MP.mindegree(d.basis.monomials, args...)
+    return MP.mindegree(MB.keys_as_monomials(d.basis), args...)
 end
 
 function MP.maxdegree(d::BasisDependence, args...)
-    return MP.maxdegree(d.basis.monomials, args...)
+    return MP.maxdegree(MB.keys_as_monomials(d.basis), args...)
 end
 
 function _ticks(d::BasisDependence, v)
@@ -324,9 +323,9 @@ function _ticks(d::BasisDependence, v)
 end
 
 function basis_categories(d::BasisDependence{D}) where {D}
-    M = eltype(d.basis.monomials)
+    M = MP.monomial_type(d.basis)
     categories = Dict{D,Vector{M}}()
-    for (i, mono) in enumerate(d.basis.monomials)
+    for (i, mono) in enumerate(MB.keys_as_monomials(d.basis))
         cat = d.dependence[i]
         if !haskey(categories, cat)
             categories[cat] = M[]

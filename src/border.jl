@@ -96,6 +96,8 @@ function solve(
     return solve(BorderBasis{StaircaseDependence}(b), solver)
 end
 
+_monomial_index(b::MB.SubBasis, mono::MP.AbstractMonomial) = SA.key_index(b, MP.exponents(mono))
+
 function solve(
     b::BorderBasis{<:StaircaseDependence,T},
     solver::StaircaseSolver{T} = StaircaseSolver{T}(),
@@ -122,23 +124,23 @@ function solve(
     # to hypergraphs.
     order = zeros(Int, length(vars))
     mult = Matrix{T}[zeros(T, m, m) for _ in eachindex(vars)]
-    completed_border = Dict{eltype(dependent.monomials),Vector{T}}()
+    completed_border = Dict{MP.monomial_type(dependent),Vector{T}}()
     function known_border_coefficients(border)
-        return !isnothing(MB.monomial_index(standard, border)) ||
-               !isnothing(MB.monomial_index(dependent, border)) ||
+        return !isnothing(_monomial_index(standard, border)) ||
+               !isnothing(_monomial_index(dependent, border)) ||
                haskey(completed_border, border)
     end
     function border_coefficients(border)
-        k = MB.monomial_index(standard, border)
+        k = _monomial_index(standard, border)
         if !isnothing(k)
             return SparseArrays.sparsevec([k], [one(T)], m)
         end
-        k = MB.monomial_index(dependent, border)
+        k = _monomial_index(dependent, border)
         if !isnothing(k)
             v = zeros(T, m)
             row = 0
-            for (i, std) in enumerate(standard.monomials)
-                j = MB.monomial_index(d.basis, std)
+            for (i, std) in enumerate(MB.keys_as_monomials(standard))
+                j = _monomial_index(d.basis, std)
                 if !is_trivial(d.dependence[j])
                     row += 1
                     v[i] = b.matrix[row, k]
@@ -179,7 +181,7 @@ function solve(
         # monomial order so that we know that if `try_add_to_border`
         # fails, it will fail again if we run this for loop again with the same `o`.
         # That allows to limit the number of iteration of the outer loop by `length(vars)`
-        for std in standard.monomials
+        for std in MB.keys_as_monomials(standard)
             for (k, shift) in enumerate(vars)
                 if k in view(order, 1:o)
                     continue
@@ -191,12 +193,12 @@ function solve(
             if k in view(order, 1:o)
                 continue
             end
-            if all(standard.monomials) do std
+            if all(MB.keys_as_monomials(standard)) do std
                 return known_border_coefficients(shift * std)
             end
                 o += 1
                 order[o] = k
-                for (col, std) in enumerate(standard.monomials)
+                for (col, std) in enumerate(MB.keys_as_monomials(standard))
                     mult[k][:, col] = border_coefficients(shift * std)
                 end
             end
@@ -250,8 +252,8 @@ function solve(
         new_basis, I1, I2 = MB.merge_bases(Ubasis, dependent)
         new_matrix = Matrix{T}(undef, length(new_basis), size(Uperp, 2))
         I_nontrivial_standard = [
-            MB.monomial_index(Ubasis, std) for
-            std in standard_basis(b.dependence, trivial = false).monomials
+            _monomial_index(Ubasis, std) for
+            std in MB.keys_as_monomials(standard_basis(b.dependence, trivial = false))
         ]
         Uperpstd = Uperp[I_nontrivial_standard, :]
         for i in axes(new_matrix, 1)
@@ -333,8 +335,8 @@ function partial_commutation_fix(
             if iszero(coef)
                 continue
             end
-            shifted = shift * standard.monomials[i]
-            j = MB.monomial_index(standard, shifted)
+            shifted = shift * MB.keys_as_monomials(standard)[i]
+            j = _monomial_index(standard, shifted)
             if !isnothing(j)
                 ret[j] += coef[i]
             elseif known_border_coefficients(shifted)
@@ -347,7 +349,7 @@ function partial_commutation_fix(
     end
     new_relations = T[]
     unknowns = MP.polynomial_type(prod(vars), T)[]
-    for std in standard.monomials
+    for std in MB.keys_as_monomials(standard)
         for x in vars
             mono_x = x * std
             if !known_border_coefficients(mono_x)
@@ -362,8 +364,8 @@ function partial_commutation_fix(
                     # but the other one is known ?
                     continue
                 end
-                if isnothing(MB.monomial_index(standard, mono_x))
-                    if isnothing(MB.monomial_index(standard, mono_y))
+                if isnothing(_monomial_index(standard, mono_x))
+                    if isnothing(_monomial_index(standard, mono_y))
                         coef_xy, unknowns_xy =
                             shifted_border_coefficients(mono_y, x)
                     else
@@ -372,14 +374,14 @@ function partial_commutation_fix(
                             coef_xy = border_coefficients(mono_xy)
                             unknowns_yx = zero(PT)
                         else
-                            coef_xy = zeros(length(standard.monomials))
+                            coef_xy = zeros(length(standard))
                             unknowns_xy = mono_xy
                         end
                     end
                     coef_yx, unknowns_yx =
                         shifted_border_coefficients(mono_x, y)
                 else
-                    if !isnothing(MB.monomial_index(standard, mono_y))
+                    if !isnothing(_monomial_index(standard, mono_y))
                         # Let `f` be `known_border_coefficients`.
                         # They are both standard so we'll get
                         # `f(y * mono_x) - f(x * mono_y)`
@@ -391,7 +393,7 @@ function partial_commutation_fix(
                         coef_yx = border_coefficients(mono_yx)
                         unknowns_yx = zero(PT)
                     else
-                        coef_yx = zeros(length(standard.monomials))
+                        coef_yx = zeros(length(standard))
                         unknowns_yx = mono_yx
                     end
                     coef_xy, unknowns_xy =
@@ -404,8 +406,8 @@ function partial_commutation_fix(
     end
     standard_part = reshape(
         new_relations,
-        length(standard.monomials),
-        div(length(new_relations), length(standard.monomials)),
+        length(standard),
+        div(length(new_relations), length(standard)),
     )
     unknown_monos = MP.merge_monomial_vectors(MP.monomials.(unknowns))
     unknown_part = Matrix{T}(undef, length(unknown_monos), length(unknowns))
@@ -414,8 +416,8 @@ function partial_commutation_fix(
     end
     basis, I1, I2 =
         MB.merge_bases(standard, MB.SubBasis{MB.Monomial}(unknown_monos))
-    M = Matrix{T}(undef, length(basis.monomials), size(standard_part, 2))
-    for i in eachindex(basis.monomials)
+    M = Matrix{T}(undef, length(basis), size(standard_part, 2))
+    for i in eachindex(basis)
         if iszero(I1[i])
             @assert !iszero(I2[i])
             M[i, :] = unknown_part[I2[i], :]
@@ -481,9 +483,9 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     ind = independent_basis(b)
     dep = dependent_basis(b.dependence)
     system = MP.polynomial_type(ind, eltype(b.matrix))[
-        dep.monomials[col] -
+        mono -
         MP.polynomial(MB.algebra_element(b.matrix[:, col], ind)) for
-        col in eachindex(dep.monomials)
+        (col, mono) in enumerate(MB.keys_as_monomials(dep))
     ]
     filter!(!MP.isconstant, system)
     V = if MP.mindegree(b.dependence) == MP.maxdegree(b.dependence)

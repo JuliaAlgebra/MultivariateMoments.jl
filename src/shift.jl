@@ -46,7 +46,7 @@ function BasisDependence{StaircaseDependence}(
 end
 
 function _indices(in::MB.SubBasis, from::MB.SubBasis)
-    return Int[MB.monomial_index(in, mono) for mono in from.monomials]
+    return Int[SA.key_index(in, key) for key in from.keys]
 end
 
 function BorderBasis(

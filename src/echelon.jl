@@ -22,7 +22,7 @@ function build_system(U::AbstractMatrix, basis::MB.SubBasis{MB.Monomial})
     end
     set_pivots = Set(pivots)
     d = BasisDependence{LinearDependence}(Pivots(set_pivots), basis)
-    non_pivots = setdiff(eachindex(basis.monomials), set_pivots)
+    non_pivots = setdiff(eachindex(MB.keys_as_monomials(basis)), set_pivots)
     return BorderBasis(d, U[:, non_pivots])
 end
 
