@@ -1,4 +1,4 @@
-const _AE{B} = SA.AlgebraElement{<:SA.StarAlgebra{<:MB.Variables{B}}}
+const _AE{B,T} = SA.AlgebraElement{T,<:SA.StarAlgebra{<:MB.Variables{B}}}
 
 function SA.promote_with_map(μ::MomentVector, basis, map)
     return moment_vector(μ.values, basis), map
