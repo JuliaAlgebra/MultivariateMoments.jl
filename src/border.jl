@@ -96,7 +96,9 @@ function solve(
     return solve(BorderBasis{StaircaseDependence}(b), solver)
 end
 
-_monomial_index(b::MB.SubBasis, mono::MP.AbstractMonomial) = SA.key_index(b, MP.exponents(mono))
+function _monomial_index(b::MB.SubBasis, mono::MP.AbstractMonomial)
+    return SA.key_index(b, MP.exponents(mono))
+end
 
 function solve(
     b::BorderBasis{<:StaircaseDependence,T},
@@ -252,8 +254,9 @@ function solve(
         new_basis, I1, I2 = MB.merge_bases(Ubasis, dependent)
         new_matrix = Matrix{T}(undef, length(new_basis), size(Uperp, 2))
         I_nontrivial_standard = [
-            _monomial_index(Ubasis, std) for
-            std in MB.keys_as_monomials(standard_basis(b.dependence, trivial = false))
+            _monomial_index(Ubasis, std) for std in MB.keys_as_monomials(
+                standard_basis(b.dependence, trivial = false),
+            )
         ]
         Uperpstd = Uperp[I_nontrivial_standard, :]
         for i in axes(new_matrix, 1)
@@ -483,8 +486,7 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     ind = independent_basis(b)
     dep = dependent_basis(b.dependence)
     system = MP.polynomial_type(ind, eltype(b.matrix))[
-        mono -
-        MP.polynomial(MB.algebra_element(b.matrix[:, col], ind)) for
+        mono - MP.polynomial(MB.algebra_element(b.matrix[:, col], ind)) for
         (col, mono) in enumerate(MB.keys_as_monomials(dep))
     ]
     filter!(!MP.isconstant, system)

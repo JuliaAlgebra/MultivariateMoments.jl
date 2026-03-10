@@ -4,7 +4,10 @@ function SA.promote_with_map(μ::MomentVector, basis, map)
     return moment_vector(μ.values, basis), map
 end
 
-function SA.promote_basis_with_maps(μ::MomentVector, p::Union{SA.AlgebraElement,SA.AbstractBasis,SA.AbstractStarAlgebra})
+function SA.promote_basis_with_maps(
+    μ::MomentVector,
+    p::Union{SA.AlgebraElement,SA.AbstractBasis,SA.AbstractStarAlgebra},
+)
     _μ, _p = SA.promote_basis_with_maps(SA.basis(μ), p)
     return SA.maybe_promote(μ, _μ...), _p
 end
@@ -33,7 +36,7 @@ function _expectation(
     p::_AE{B},
     f,
 ) where {S,B}
-    _same_basis_expectation(SA.promote_basis(μ, p)..., f)
+    return _same_basis_expectation(SA.promote_basis(μ, p)..., f)
 end
 
 function _expectation(
@@ -66,8 +69,9 @@ expectation(p::_APL, μ::MomentVector) = _expectation(μ, p, (a, b) -> b * a) # 
 
 See [`expectation`](@ref)
 """
-LinearAlgebra.dot(μ::AbstractMeasureLike, p::MP.AbstractPolynomialLike) =
-    expectation(μ, p)
+function LinearAlgebra.dot(μ::AbstractMeasureLike, p::MP.AbstractPolynomialLike)
+    return expectation(μ, p)
+end
 function LinearAlgebra.dot(p::MP.AbstractPolynomialLike, μ::AbstractMeasureLike)
     return expectation(p, μ)
 end

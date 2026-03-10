@@ -94,7 +94,8 @@ function solve_weight(
     vars = MP.variables(μ)
     A = Matrix{T}(undef, length(μ.basis), length(centers))
     for i in eachindex(centers)
-        A[:, i] = dirac(MB.keys_as_monomials(μ.basis), vars => centers[i]).values
+        A[:, i] =
+            dirac(MB.keys_as_monomials(μ.basis), vars => centers[i]).values
     end
     return A \ μ.values
 end

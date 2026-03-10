@@ -50,7 +50,10 @@ function MomentMatrix{T}(
     )
 end
 
-function MomentMatrix{T}(f::Function, monos::AbstractVector{<:MP.AbstractTermLike}) where {T}
+function MomentMatrix{T}(
+    f::Function,
+    monos::AbstractVector{<:MP.AbstractTermLike},
+) where {T}
     σ, sorted_monos = MP.sort_monomial_vector(monos)
     return MomentMatrix{T}(f, MB.SubBasis{MB.Monomial}(sorted_monos), σ)
 end
@@ -91,13 +94,13 @@ function moment_matrix(μ::MomentVector{T}, basis::SA.ExplicitBasis) where {T}
         # need it to be canonical since the expectation already sum
         return expectation(_μ, cache)
     end
-    return MomentMatrix{T}(
-        entry_value,
-        _basis,
-    )
+    return MomentMatrix{T}(entry_value, _basis)
 end
 
-function moment_matrix(μ::MomentVector, monos::AbstractVector{<:MP.AbstractTermLike})
+function moment_matrix(
+    μ::MomentVector,
+    monos::AbstractVector{<:MP.AbstractTermLike},
+)
     return moment_matrix(μ, MB.SubBasis{MB.Monomial}(monos))
 end
 
