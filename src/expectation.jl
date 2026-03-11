@@ -8,7 +8,7 @@ function SA.promote_basis_with_maps(
     μ::MomentVector,
     p::Union{SA.AlgebraElement,SA.AbstractBasis,SA.AbstractStarAlgebra},
 )
-    _μ, _p = SA.promote_basis_with_maps(SA.basis(μ), p)
+    _p, _μ = SA.promote_basis_with_maps(p, SA.basis(μ))
     return SA.maybe_promote(μ, _μ...), _p
 end
 

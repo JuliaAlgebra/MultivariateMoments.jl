@@ -162,7 +162,7 @@ end
 
 function sub_basis(d::BasisDependence, I::AbstractVector{Int})
     @assert issorted(I)
-    return SA.SubBasis(d.basis, I)
+    return SA.sub_basis(d.basis, I)
 end
 
 function independent_basis(d::BasisDependence)
@@ -269,7 +269,7 @@ function BasisDependence{StaircaseDependence}(
             push!(d, StaircaseDependence(true, dependence(mono)))
         end
     end
-    full_basis = SA.SubBasis(full_basis, keep)
+    full_basis = SA.sub_basis(full_basis, keep)
     new_basis = MB.SubBasis{MB.Monomial}(
         MP.monomial_type(basis)[
             MP.monomial(full_basis[i]) * shift for
