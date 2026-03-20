@@ -3,13 +3,15 @@ using Test
 @testset "MomentMatrix" begin
     Mod.@polyvar x y
     μ = moment_vector([1], [x])
+    μxy = moment_vector([1], [x * y^0])
     mono = x^0
     for mono in [x^0, x, y]
         el = mono^2
         err = ErrorException(
-            "The polynomial 1·$(MB.Polynomial{MB.Monomial}(el)) has a nonzero term $el with coefficient 1 for which the expectation is not known in $μ",
+            "The polynomial 1·$(MB.Polynomial{MB.Monomial}(el)) has a nonzero term $el with coefficient 1 for which the expectation is not known in $μxy",
         )
         @test_throws err moment_matrix(μ, [mono])
+        @test_throws err moment_matrix(μxy, [mono])
     end
     μ = moment_vector(1:3, [x^2, x * y, y^2])
     X = [x, y]
