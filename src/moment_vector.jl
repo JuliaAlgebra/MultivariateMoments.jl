@@ -117,7 +117,7 @@ function moment_value(
     μ::MomentVector{T,<:MB.SubBasis{B}},
     p::MB.Polynomial{B},
 ) where {T,B}
-    i = MB.monomial_index(SA.basis(μ), p.monomial)
+    i = SA.key_index(SA.basis(μ), p.exponents)
     if isnothing(i)
         throw(ArgumentError("`$μ` does not have the moment `$p`"))
     end

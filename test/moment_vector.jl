@@ -8,9 +8,9 @@ import StarAlgebras as SA
     @test MP.mindegree(μ) == 3
     @test MP.maxdegree(μ) == 4
     @test MP.extdegree(μ) == (3, 4)
-    @test SA.basis(μ).monomials ==
+    @test MB.keys_as_monomials(SA.basis(μ)) ==
           monomial_vector([x^3 * y, x^2 * y^2, x^2 * y, x * y^2])
-    @test map(m -> m.polynomial.monomial, moments(μ)) ==
+    @test map(m -> MP.monomial(m.polynomial), moments(μ)) ==
           monomial_vector([x^3 * y, x^2 * y^2, x^2 * y, x * y^2])
     @test MultivariateMoments.moment_value.(moments(μ)) == reverse([2, 1, 0, 3])
     @test all(m -> variables(m) == variables(x * y), moments(μ))

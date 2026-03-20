@@ -93,10 +93,10 @@ function test_dreesen1(x, y)
     basis = MB.SubBasis{MB.Monomial}([1, y, x, y^2, x * y, x^2])
     null = MM.MacaulayNullspace(matrix, basis, 1e-8)
     @testset "$D" for D in [MM.LinearDependence, MM.StaircaseDependence]
-        @testset "$name" for (solver, name) in [
-            (MM.ShiftNullspace{D}(), "shift"),
-            #(MM.Echelon{D}(fallback = false), "echelon no fallback"),
-            #(MM.Echelon{D}(fallback = true), "echelon fallback"),
+        @testset "$name" for (solver, name) in
+                             [(MM.ShiftNullspace{D}(), "shift"),
+        #(MM.Echelon{D}(fallback = false), "echelon no fallback"),
+        #(MM.Echelon{D}(fallback = true), "echelon fallback"),
         ]
             @test isnothing(MM.solve(null, solver))
         end

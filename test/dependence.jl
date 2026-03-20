@@ -59,7 +59,7 @@ end
 function test_staircase(x, y, z)
     basis = b([1, x^2])
     d = MM.BasisDependence{MM.StaircaseDependence}(FixedDependence([2]), basis)
-    @test d.basis.monomials == [x^0, x, x^2]
+    @test MB.keys_as_monomials(d.basis) == [x^0, x, x^2]
     @test d.dependence == [
         MM.StaircaseDependence(true, MM.INDEPENDENT),
         MM.StaircaseDependence(true, MM.TRIVIAL),
@@ -69,7 +69,7 @@ function test_staircase(x, y, z)
         FixedDependence(Int[]),
         b([1, x]),
     )
-    @test d.basis.monomials == [x^0, x, x^2]
+    @test MB.keys_as_monomials(d.basis) == [x^0, x, x^2]
     @test d.dependence == [
         MM.StaircaseDependence(true, MM.INDEPENDENT),
         MM.StaircaseDependence(true, MM.INDEPENDENT),
@@ -136,7 +136,7 @@ BasisDependence for bases:
  Dependent Border:
  SubBasis{Monomial}([x*y])
 """
-    @test MM.corners_basis(dep).monomials == c
+    @test MB.keys_as_monomials(MM.corners_basis(dep)) == c
     _test_recipe(
         dep,
         [0:1, 0:2, 0:3],

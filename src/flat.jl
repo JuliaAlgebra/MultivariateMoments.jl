@@ -72,8 +72,8 @@ end
 
 function hankel(μ::MomentVector{T}, rows, cols) where {T}
     return T[
-        moment_value(μ, rows[i] * cols[j]) for i in eachindex(rows),
-        j in eachindex(cols)
+        moment_value(μ, rows[i] * cols[j]) for
+        i in eachindex(rows), j in eachindex(cols)
     ]
 end
 

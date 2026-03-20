@@ -81,6 +81,8 @@ function hl05_2_3(rank_check, lrc, solver, perturb::Bool = true)
         y,
         1,
     ]
+    b = MB.SubBasis{MB.Monomial}(monos)
+    c = MB.SubBasis{MB.Monomial}(monos)
     μ = moment_vector(η, monos)
     ν = moment_matrix(μ, [1, x, y, x^2, x * y, y^2])
     atoms = atomic_measure(ν, rank_check, lrc, Echelon(), solver)
