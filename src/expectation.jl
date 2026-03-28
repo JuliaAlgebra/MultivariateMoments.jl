@@ -4,11 +4,11 @@ function SA.promote_with_map(μ::MomentVector, basis, map)
     return moment_vector(μ.values, basis), map
 end
 
-function SA.promote_basis_with_maps(
+function SA.promote_bases_with_maps(
     μ::MomentVector,
     p::Union{SA.AlgebraElement,SA.AbstractBasis,SA.AbstractStarAlgebra},
 )
-    _p, _μ = SA.promote_basis_with_maps(p, SA.basis(μ))
+    _p, _μ = SA.promote_bases_with_maps(p, SA.basis(μ))
     return SA.maybe_promote(μ, _μ...), _p
 end
 
@@ -36,7 +36,7 @@ function _expectation(
     p::_AE{B},
     f,
 ) where {S,B}
-    return _same_basis_expectation(SA.promote_basis(μ, p)..., f)
+    return _same_basis_expectation(SA.promote_bases(μ, p)..., f)
 end
 
 function _expectation(
