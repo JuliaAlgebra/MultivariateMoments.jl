@@ -79,7 +79,7 @@ end
 Creates a matrix the moment matrix for the moment matrix  ``x x^\\top`` using the moments of `μ`.
 """
 function moment_matrix(μ::MomentVector{T}, basis::SA.ExplicitBasis) where {T}
-    _μ, _basis = SA.promote_basis(μ, basis)
+    _μ, _basis = SA.promote_bases(μ, basis)
     cache = zero(T, MB.algebra(parent(_basis)))
     function entry_value(i, j)
         MA.operate!(zero, cache)
