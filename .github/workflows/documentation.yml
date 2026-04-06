@@ -14,16 +14,6 @@ jobs:
         with:
           # Build documentation on latest Julia release
           version: '1'
-      - name: Install dependencies
-        shell: julia --project=docs/ {0}
-        run: |
-          using Pkg
-          Pkg.add([
-              PackageSpec(name="StarAlgebras", rev="main"),
-              PackageSpec(name="MultivariateBases", rev="master"),
-              PackageSpec(path=pwd()),
-          ])
-          Pkg.instantiate()
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
