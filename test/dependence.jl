@@ -94,10 +94,10 @@ function test_recipe(x, y, z)
     f = [x^0 * y^0 * z]
     F = ([0], [0], [1])
     de, Id, Ie = SA.merge_bases_with_maps(b(d), b(e))
-    ae, _, _ = SA.merge_bases(b(a .* z^0), b(e))
-    fe, _, _ = SA.merge_bases(b(f), b(e))
-    cd, _, _ = SA.merge_bases(b(c .* z^0), b(d))
-    fecd, _, Idep = SA.merge_bases(fe, cd)
+    ae = SA.merge_bases(b(a .* z^0), b(e))
+    fe = SA.merge_bases(b(f), b(e))
+    cd = SA.merge_bases(b(c .* z^0), b(d))
+    fecd, _, Idep = SA.merge_bases_with_maps(fe, cd)
     _test_recipe(
         MM.BasisDependence{MM.LinearDependence}(
             FixedDependence(findall(!iszero, Ic)),
