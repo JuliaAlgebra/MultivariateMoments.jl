@@ -2,6 +2,7 @@ module TestDependence
 
 using Test
 import RecipesBase as RB
+import StarAlgebras as SA
 import MultivariatePolynomials as MP
 import MultivariateBases as MB
 import MultivariateMoments as MM
