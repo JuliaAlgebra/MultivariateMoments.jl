@@ -417,8 +417,10 @@ function partial_commutation_fix(
     for i in eachindex(unknowns)
         unknown_part[:, i] = MP.coefficients(unknowns[i], unknown_monos)
     end
-    basis, I1, I2 =
-        SA.merge_bases_with_maps(standard, MB.SubBasis{MB.Monomial}(unknown_monos))
+    basis, I1, I2 = SA.merge_bases_with_maps(
+        standard,
+        MB.SubBasis{MB.Monomial}(unknown_monos),
+    )
     M = Matrix{T}(undef, length(basis), size(standard_part, 2))
     for i in eachindex(basis)
         if iszero(I1[i])
