@@ -276,7 +276,7 @@ function BasisDependence{StaircaseDependence}(
             i in eachindex(d) if !is_dependent(d[i]) for shift in vars
         ],
     )
-    full_basis, I1, I2 = MB.merge_bases(full_basis, new_basis)
+    full_basis, I1, I2 = SA.merge_bases_with_maps(full_basis, new_basis)
     deps = Vector{StaircaseDependence}(undef, length(full_basis))
     for (i, mono) in enumerate(MB.keys_as_monomials(full_basis))
         if iszero(I1[i])

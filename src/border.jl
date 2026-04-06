@@ -251,7 +251,7 @@ function solve(
     else
         Uperp, Ubasis = com_fix
         # The matrices don't commute, let's find the updated staircase and start again
-        new_basis, I1, I2 = MB.merge_bases(Ubasis, dependent)
+        new_basis, I1, I2 = SA.merge_bases_with_maps(Ubasis, dependent)
         new_matrix = Matrix{T}(undef, length(new_basis), size(Uperp, 2))
         I_nontrivial_standard = [
             _monomial_index(Ubasis, std) for std in MB.keys_as_monomials(
@@ -418,7 +418,7 @@ function partial_commutation_fix(
         unknown_part[:, i] = MP.coefficients(unknowns[i], unknown_monos)
     end
     basis, I1, I2 =
-        MB.merge_bases(standard, MB.SubBasis{MB.Monomial}(unknown_monos))
+        SA.merge_bases_with_maps(standard, MB.SubBasis{MB.Monomial}(unknown_monos))
     M = Matrix{T}(undef, length(basis), size(standard_part, 2))
     for i in eachindex(basis)
         if iszero(I1[i])
