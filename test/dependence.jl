@@ -2,6 +2,7 @@ module TestDependence
 
 using Test
 import RecipesBase as RB
+import StarAlgebras as SA
 import MultivariatePolynomials as MP
 import MultivariateBases as MB
 import MultivariateMoments as MM
@@ -83,7 +84,7 @@ function test_recipe(x, y, z)
     # Corners
     c = [x, y^2]
     C = ([1, 0], [0, 2])
-    ac, Ia, Ic = MB.merge_bases(b(a), b(c))
+    ac, Ia, Ic = SA.merge_bases_with_maps(b(a), b(c))
     # Dependent border
     d = [x * y * z^0]
     D = ([1], [1], [0])
@@ -92,11 +93,11 @@ function test_recipe(x, y, z)
     E = ([1], [0], [1])
     f = [x^0 * y^0 * z]
     F = ([0], [0], [1])
-    de, Id, Ie = MB.merge_bases(b(d), b(e))
-    ae, _, _ = MB.merge_bases(b(a .* z^0), b(e))
-    fe, _, _ = MB.merge_bases(b(f), b(e))
-    cd, _, _ = MB.merge_bases(b(c .* z^0), b(d))
-    fecd, _, Idep = MB.merge_bases(fe, cd)
+    de, Id, Ie = SA.merge_bases_with_maps(b(d), b(e))
+    ae = SA.merge_bases(b(a .* z^0), b(e))
+    fe = SA.merge_bases(b(f), b(e))
+    cd = SA.merge_bases(b(c .* z^0), b(d))
+    fecd, _, Idep = SA.merge_bases_with_maps(fe, cd)
     _test_recipe(
         MM.BasisDependence{MM.LinearDependence}(
             FixedDependence(findall(!iszero, Ic)),
