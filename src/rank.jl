@@ -364,6 +364,15 @@ Method for computing a ``r \\times n`` matrix `U` of a ``n \\times n`` rank ``r`
 abstract type LowRankLDLTAlgorithm end
 
 """
+     <: LowRankLDLTAlgorithm
+
+Shift the matrix by `shift` times the identity matrix before cholesky.
+"""
+struct AbsCholeskyLDLT{T} <: LowRankLDLTAlgorithm
+    shift::T
+end
+
+"""
     ShiftCholeskyLDLT <: LowRankLDLTAlgorithm
 
 Shift the matrix by `shift` times the identity matrix before cholesky.
