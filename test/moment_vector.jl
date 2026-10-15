@@ -1,3 +1,4 @@
+include("setup.jl")
 import StarAlgebras as SA
 
 @testset "MomentVector" begin
@@ -25,5 +26,15 @@ import StarAlgebras as SA
         "The monomial `x` occurs twice with different values: `1` and `2`",
     )
     @test_throws err moment_vector([1, 2], [x, x])
+    μ = moment_vector([2, 3, 5], [x, y, x * y])
+    @test (@inferred moment_value(μ, x)) == 2
+    @test (@inferred moment_value(μ, y)) == 3
+    @test (@inferred moment_value(μ, x^1)) == 2
+    @test (@inferred moment_value(μ, y^1)) == 3
+    @test (@inferred moment_value(μ, 2y)) == 6
+    @test (@inferred moment_value(μ, x + 2y)) == 8
+    @test_throws ArgumentError moment_value(μ, x^2)
+    Mod.@polyvar z
+    @test_throws ArgumentError moment_value(μ, z^1)
     #@test_throws ArgumentError moment_vector([1], [x]) + moment_vector([1], [y])
 end

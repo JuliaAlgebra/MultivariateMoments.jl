@@ -488,7 +488,7 @@ function solve(b::BorderBasis{E}, solver::AlgebraicBorderSolver{D}) where {D,E}
     ind = independent_basis(b)
     dep = dependent_basis(b.dependence)
     system = MP.polynomial_type(ind, eltype(b.matrix))[
-        mono - MP.polynomial(MB.algebra_element(b.matrix[:, col], ind)) for
+        mono - MB.implicit(MB.algebra_element(b.matrix[:, col], ind)) for
         (col, mono) in enumerate(MB.keys_as_monomials(dep))
     ]
     filter!(!MP.isconstant, system)

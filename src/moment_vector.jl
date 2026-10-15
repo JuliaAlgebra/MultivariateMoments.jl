@@ -109,15 +109,15 @@ end
 function moment_value(μ::MomentVector, t::MP.AbstractTerm)
     return MP.coefficient(t) * moment_value(μ, MP.monomial(t))
 end
-function moment_value(μ::MomentVector, mono::MP.AbstractMonomial)
-    return moment_value(μ, MB.Polynomial{MB.Monomial}(mono))
+function moment_value(μ::MomentVector, v::MP.AbstractVariable)
+    return moment_value(μ, MP.monomial(v))
 end
 
 function moment_value(
     μ::MomentVector{T,<:MB.SubBasis{B}},
     p::MB.Polynomial{B},
 ) where {T,B}
-    i = SA.key_index(SA.basis(μ), p.exponents)
+    i = SA.key_index(SA.basis(μ), MP.exponents(p, MP.variables(μ)))
     if isnothing(i)
         throw(ArgumentError("`$μ` does not have the moment `$p`"))
     end

@@ -45,10 +45,10 @@ function _expectation(
     f,
 ) where {S,B}
     basis = MB.FullBasis{B}(MP.variables(p))
-    return _expectation(μ, MB.algebra_element(SA.coeffs(p, basis), basis), f)
+    return _expectation(μ, MB.convert_basis(basis, p), f)
 end
 
-function _expectation(μ::MomentVector, p::MP.AbstractPolynomialLike, f)
+function _expectation(μ::MomentVector, p::MP.AbstractTermLike, f)
     return _expectation(μ, MB.algebra_element(p), f)
 end
 
@@ -69,16 +69,9 @@ expectation(p::_APL, μ::MomentVector) = _expectation(μ, p, (a, b) -> b * a) # 
 
 See [`expectation`](@ref)
 """
-function LinearAlgebra.dot(μ::AbstractMeasureLike, p::MP.AbstractPolynomialLike)
+function LinearAlgebra.dot(μ::AbstractMeasureLike, p::_APL)
     return expectation(μ, p)
 end
-function LinearAlgebra.dot(p::MP.AbstractPolynomialLike, μ::AbstractMeasureLike)
-    return expectation(p, μ)
-end
-# Need to split it and not use `_APL` to avoid ambiguity
-function LinearAlgebra.dot(μ::AbstractMeasureLike, p::SA.AlgebraElement)
-    return expectation(μ, p)
-end
-function LinearAlgebra.dot(p::SA.AlgebraElement, μ::AbstractMeasureLike)
+function LinearAlgebra.dot(p::_APL, μ::AbstractMeasureLike)
     return expectation(p, μ)
 end

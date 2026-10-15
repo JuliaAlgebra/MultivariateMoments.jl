@@ -4,10 +4,24 @@ using Test
 import MultivariatePolynomials as MP
 import MultivariateBases as MB
 import MultivariateMoments as MM
+import StarAlgebras as SA
 
 b(x) = MB.SubBasis{MB.Monomial}(x)
 
 include("utils.jl")
+
+function test_subset(x, y)
+    basis = b(MP.monomials((x, y), 0:2))
+    matrix = reshape(collect(1.0:12.0), 6, 2)
+    null = MM.MacaulayNullspace(matrix, basis, 1e-8)
+    for (monos, indices) in [([1, x, x^2], [1, 3, 6]), ([y, y^2], [2, 4])]
+        subset = null[monos]
+        @test subset.matrix == matrix[indices, :]
+        @test subset.basis == SA.sub_basis(basis, indices)
+        @test parent(subset.basis) === parent(basis)
+        @test subset.accuracy == null.accuracy
+    end
+end
 
 function test_partial_commutative_fix(x, y)
     matrix = Float64[

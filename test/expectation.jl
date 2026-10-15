@@ -1,3 +1,5 @@
+include("setup.jl")
+
 @testset "Expectation" begin
     Mod.@polyvar x[1:3]
     p = x[3] - 2x[1] * x[2]^2 + 3x[3] * x[1] - 5x[1]^3
