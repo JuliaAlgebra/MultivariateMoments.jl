@@ -2,7 +2,12 @@ using Documenter, MultivariateMoments
 # Needed because we include docstrings for `monomial`, `variables` and `monomials`
 import MultivariatePolynomials
 
-DocMeta.setdocmeta!(MultivariateMoments, :DocTestSetup, :(using MultivariateMoments); recursive=true)
+DocMeta.setdocmeta!(
+    MultivariateMoments,
+    :DocTestSetup,
+    :(using MultivariateMoments);
+    recursive = true,
+)
 
 makedocs(
     sitename = "MultivariateMoments",
@@ -20,6 +25,6 @@ makedocs(
 )
 
 deploydocs(
-    repo   = "github.com/JuliaAlgebra/MultivariateMoments.jl.git",
+    repo = "github.com/JuliaAlgebra/MultivariateMoments.jl.git",
     push_preview = true,
 )
