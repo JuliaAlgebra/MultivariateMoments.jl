@@ -115,7 +115,7 @@ end
 
 function moment_value(
     μ::MomentVector{T,<:MB.SubBasis{B}},
-    p::MB.Polynomial{B},
+    p::MB.BasisElement{B},
 ) where {T,B}
     i = SA.key_index(SA.basis(μ), MP.exponents(p, MP.variables(μ)))
     if isnothing(i)
