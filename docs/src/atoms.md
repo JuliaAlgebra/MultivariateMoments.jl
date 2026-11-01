@@ -59,6 +59,7 @@ This decomposition can either be obtained by a cholesky or SVD decomposition fro
 ```@docs
 LowRankLDLTAlgorithm
 ShiftCholeskyLDLT
+AbsCholeskyLDLT
 SVDLDLT
 low_rank_ldlt
 LowRankLDLT

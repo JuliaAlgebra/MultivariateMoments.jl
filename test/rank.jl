@@ -1,3 +1,5 @@
+using Test, LinearAlgebra, MultivariateMoments
+
 @testset "low_rank_ldlt" begin
     v = [1, -1]
     M = v * v'
@@ -9,6 +11,15 @@
     M = v * v'
     ldlt = low_rank_ldlt(M, SVDLDLT(), 1e-10)
     @test ldlt.L ≈ -normalize(v)
+end
+
+@testset "Low-rank accuracy" begin
+    check = LeadingRelativeRankTol(1e-8)
+    for T in (Float32, Float64, BigFloat)
+        L = ones(T, 2, 1)
+        @test accuracy(LowRankLDLT(L, T[1, 0], check)) == eps(T)
+        @test accuracy(LowRankLDLT(L, T[1, 1e-4], check)) ≈ T(1e-4)
+    end
 end
 
 struct HardcodedRanks <: RankCheck
