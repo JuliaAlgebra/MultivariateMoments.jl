@@ -18,4 +18,3 @@ MathOptInterface = "1"
 
 [sources]
 MultivariateMoments = {path = ".."}
-SemialgebraicSets = {url = "https://github.com/JuliaAlgebra/SemialgebraicSets.jl", rev = "bl/rename_basis_element"}
