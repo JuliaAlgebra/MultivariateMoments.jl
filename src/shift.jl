@@ -46,6 +46,7 @@ function BasisDependence{StaircaseDependence}(
 end
 
 function _indices(in::MB.SubBasis, from::MB.SubBasis)
+    in, from = SA.promote_bases(in, from)
     return Int[SA.key_index(in, key) for key in from.keys]
 end
 

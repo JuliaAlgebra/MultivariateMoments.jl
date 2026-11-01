@@ -1,4 +1,4 @@
-using Test
+include("setup.jl")
 
 @testset "MomentMatrix" begin
     Mod.@polyvar x y
@@ -8,7 +8,7 @@ using Test
     for mono in [x^0, x, y]
         el = mono^2
         err = ErrorException(
-            "The polynomial 1·$(MB.Polynomial{MB.Monomial}(el)) has a nonzero term $el with coefficient 1 for which the expectation is not known in $μxy",
+            "The polynomial $el has a nonzero term $el with coefficient 1 for which the expectation is not known in $μxy",
         )
         @test_throws err moment_matrix(μ, [mono])
         @test_throws err moment_matrix(μxy, [mono])
@@ -19,7 +19,7 @@ using Test
     @test sprint(show, ν1) == """
 MomentMatrix with row/column basis:
  SubBasis{Monomial}([y, x])
-And entries in a 2×2 SymMatrix{$Int}:
+And entries in a 2×2 $(SymMatrix{Int}):
  3  2
  2  1"""
     ν2 = MomentMatrix{Int}((i, j) -> i + j - 1, X)
@@ -40,12 +40,12 @@ And entries in a 2×2 SymMatrix{$Int}:
 BlockDiagonalMomentMatrix with 2 blocks:
 [1] Block with row/column basis:
      SubBasis{Monomial}([y, x])
-    And entries in a 2×2 SymMatrix{$Int}:
+    And entries in a 2×2 $(SymMatrix{Int}):
      3  2
      2  1
 [2] Block with row/column basis:
      SubBasis{Monomial}([y, x])
-    And entries in a 2×2 SymMatrix{$Int}:
+    And entries in a 2×2 $(SymMatrix{Int}):
      3  2
      2  1"""
 end

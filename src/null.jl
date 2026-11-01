@@ -36,10 +36,10 @@ function Base.getindex(
     null::MacaulayNullspace{T,MT,<:MB.SubBasis{B}},
     monos,
 ) where {T,MT,B}
-    I = _index.(Ref(null.basis), monos)
+    I = _indices(null.basis, MB.SubBasis{B}(monos))
     return MacaulayNullspace(
         null.matrix[I, :],
-        MB.SubBasis{B}(null.basis.monomials[I]),
+        SA.sub_basis(null.basis, I),
         null.accuracy,
     )
 end
