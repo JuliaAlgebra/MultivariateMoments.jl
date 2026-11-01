@@ -40,7 +40,4 @@ StarAlgebras = "0.4"
 julia = "1.10"
 
 [sources]
-MultivariateBases = {url = "https://github.com/JuliaAlgebra/MultivariateBases.jl", rev = "bl/simple"}
-MultivariatePolynomials = {url = "https://github.com/JuliaAlgebra/MultivariatePolynomials.jl", rev = "bl/sa_poly"}
-SemialgebraicSets = {url = "https://github.com/JuliaAlgebra/SemialgebraicSets.jl", rev = "bl/sa_refactor"}
-StarAlgebras = {url = "https://github.com/JuliaAlgebra/StarAlgebras.jl", rev = "bl/term"}
+SemialgebraicSets = {url = "https://github.com/JuliaAlgebra/SemialgebraicSets.jl", rev = "bl/rename_basis_element"}
