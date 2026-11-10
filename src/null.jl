@@ -55,6 +55,49 @@ function MacaulayNullspace(
     return MacaulayNullspace(chol.L, ν.basis, accuracy(chol))
 end
 
+function _default_nullspace_rank_check(A::AbstractMatrix)
+    # This corresponds to the default of `LinearAlgebra.nullspace`
+    return LeadingRelativeRankTol(
+        min(size(A)...) * eps(real(float(oneunit(eltype(A))))),
+    )
+end
+
+"""
+    MacaulayNullspace(
+        M::MultivariateBases.LazyMatrix,
+        rank_check::RankCheck = LeadingRelativeRankTol(min(size(M)...) * eps(T)),
+    )
+
+Compute the right null space of the Macaulay matrix `M` with the singular
+value decomposition. The rank of `M` is determined from its singular values
+with `rank_check`. The columns of the resulting `matrix` are orthonormal.
+"""
+function MacaulayNullspace(
+    M::MB.LazyMatrix,
+    rank_check::Union{Nothing,RankCheck} = nothing,
+)
+    A = float(Matrix(SparseArrays.sparse(M)))
+    m, n = size(A)
+    if iszero(m) || iszero(n)
+        T = LinearAlgebra.eigtype(eltype(A))
+        Z = Matrix{T}(LinearAlgebra.I, n, n)
+        acc = zero(T)
+    else
+        if isnothing(rank_check)
+            rank_check = _default_nullspace_rank_check(A)
+        end
+        F = LinearAlgebra.svd(A; full = true)
+        r = rank_from_singular_values(F.S, rank_check)
+        Z = F.Vt[(r+1):end, :]'
+        acc = accuracy(F.S, r, rank_check)
+    end
+    return MacaulayNullspace(Z, M.column_basis, acc)
+end
+
+function LinearAlgebra.rank(M::MB.LazyMatrix, check::RankCheck)
+    return LinearAlgebra.rank(Matrix(SparseArrays.sparse(M)), check)
+end
+
 abstract type MacaulayNullspaceSolver end
 
 function solve(null::MacaulayNullspace, solver::MacaulayNullspaceSolver)
