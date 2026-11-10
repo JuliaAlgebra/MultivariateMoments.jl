@@ -5,6 +5,8 @@ import MultivariatePolynomials as MP
 import MultivariateBases as MB
 import MultivariateMoments as MM
 import StarAlgebras as SA
+import LinearAlgebra
+import SparseArrays
 
 b(x) = MB.SubBasis{MB.Monomial}(x)
 
@@ -21,6 +23,26 @@ function test_subset(x, y)
         @test parent(subset.basis) === parent(basis)
         @test subset.accuracy == null.accuracy
     end
+end
+
+function test_lazy_matrix(x, y)
+    p = x * y - 1
+    q = x^2 - y
+    M = MB.macaulay([p, q], 3)
+    null = MM.MacaulayNullspace(M)
+    @test null.basis == M.column_basis
+    @test size(null.matrix) == (9, 3)
+    A = Matrix(SparseArrays.sparse(M))
+    @test A * null.matrix ≈ zeros(6, 3) atol = 1e-12
+    @test null.matrix' * null.matrix ≈ LinearAlgebra.I
+    @test null.accuracy < 1e-12
+    @test LinearAlgebra.rank(M, MM.LeadingRelativeRankTol(1e-8)) == 6
+    null = MM.MacaulayNullspace(M, MM.FixedRank(5))
+    @test size(null.matrix) == (9, 4)
+    null = MM.MacaulayNullspace(MB.LazyMatrix([p, q]))
+    @test size(null.matrix) == (0, 0)
+    @test iszero(null.accuracy)
+    return
 end
 
 function test_partial_commutative_fix(x, y)
