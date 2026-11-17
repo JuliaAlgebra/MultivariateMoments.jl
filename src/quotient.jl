@@ -50,6 +50,22 @@ function MA.promote_operation(
     return MB.QuotientBasis{T,I,B,M}
 end
 
+"""
+    moment_vector(values::AbstractVector, basis::MB.QuotientBasis)
+
+Return the moments of the elements of `basis.basis` given the values `values`
+of the linear functional on the elements of `basis`. As the coefficients in
+`basis` are `basis.matrix` times the coefficients in `basis.basis`, the
+moments are obtained with the adjoint map `transpose(basis.matrix) * values`.
+"""
+function moment_vector(
+    values::AbstractVector{T},
+    basis::MB.QuotientBasis,
+) where {T}
+    _check_length(values, basis)
+    return moment_vector(transpose(basis.matrix) * values, basis.basis)
+end
+
 # Sparse matrix `R` such that `R[i, j]` is the coefficient of the `i`th
 # standard monomial in the remainder of the `j`th monomial of `basis` modulo
 # `I`. Its number of nonzeros is the total number of terms of the remainders.

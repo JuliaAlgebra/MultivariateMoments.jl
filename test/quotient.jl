@@ -53,6 +53,16 @@ function test_macaulay(x, y)
     return
 end
 
+function test_moment_vector(x, y)
+    domain = SS.@set x^2 + 1 == 0
+    q = MM.quotient_basis(b([1, x, x^2, x^3]), domain)
+    ν = MM.moment_vector([2.0, 3.0], q)
+    @test ν.basis == q.basis
+    @test ν.values == [2, 3, -2, -3]
+    @test_throws DimensionMismatch MM.moment_vector([1.0], q)
+    return
+end
+
 function test_degree_fall(x, y)
     # `y * (x * y - 1) - x * (y^2 - 1) = x - y` is in the ideal but it is not
     # in its truncation at degree 1 or 2
