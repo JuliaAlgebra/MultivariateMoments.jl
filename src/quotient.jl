@@ -3,15 +3,17 @@
 
 Return a `MultivariateBases.QuotientBasis` representing the quotient
 of the span of `basis` modulo the ideal of `domain`, which is either an
-algebraic set or a polynomial ideal. The matrix is a sparse matrix with
-`float` of the coefficient type of `domain` as element type.
+algebraic set, a polynomial ideal or a `SemialgebraicSets.TruncatedIdeal`. The
+matrix is a sparse matrix with `float` of the coefficient type of `domain` as
+element type.
 
 If a Gröbner basis of the ideal is known, the matrix gives the remainders
-of the elements of `basis` modulo the Gröbner basis. Otherwise, the Gröbner
-basis is not computed. The ideal is instead truncated at the maximal degree
-`d` of `basis`, i.e., the polynomials whose coefficients are in the kernel of
-the matrix are the polynomials in the row space of the Macaulay matrix of
-degree `d` of the equalities of `domain`.
+of the elements of `basis` modulo the Gröbner basis. For a truncated ideal,
+the polynomials whose coefficients are in the kernel of the matrix are the
+polynomials in the row space of the Macaulay matrix of its degree. If `domain`
+is an `AlgebraicSet` whose Gröbner basis is not known, it is not computed and
+the ideal is instead truncated at the maximal degree of `basis`, see
+`SemialgebraicSets.truncated`.
 """
 function quotient_basis(
     basis::MB.SubBasis{MB.Monomial},
@@ -36,8 +38,14 @@ function quotient_basis(
     if SS.is_gröbner_basis(I)
         return quotient_basis(basis, I)
     end
-    T = float(MP.coefficient_type(typeof(domain)))
-    W = _macaulay_zero_matrix(basis, SS.equalities(domain), T)
+    return quotient_basis(basis, SS.truncated(I, _maxdegree(basis)))
+end
+
+_maxdegree(basis) = isempty(basis) ? 0 : MP.maxdegree(basis)
+
+function quotient_basis(basis::MB.SubBasis{MB.Monomial}, I::SS.TruncatedIdeal)
+    T = float(MP.coefficient_type(typeof(I)))
+    W = _macaulay_zero_matrix(basis, I.generators, I.maxdegree, T)
     return MB.QuotientBasis(basis, W)
 end
 
@@ -96,8 +104,8 @@ end
 
 # Sparse matrix `W` such that a polynomial `t` with support in `basis` is in
 # the row space of the Macaulay matrix of degree `d` of `equalities` if and
-# only if `W * coefficients(t, basis) = 0` where `d = maxdegree(basis)`.
-function _macaulay_zero_matrix(basis, equalities, ::Type{T}) where {T}
+# only if `W * coefficients(t, basis) = 0`.
+function _macaulay_zero_matrix(basis, equalities, d, ::Type{T}) where {T}
     n = length(basis)
     if isempty(basis)
         return SparseArrays.spzeros(T, 0, 0)
@@ -107,7 +115,7 @@ function _macaulay_zero_matrix(basis, equalities, ::Type{T}) where {T}
     # of the equalities
     vars =
         MP.variables(MP.monomial_vector([monos; MP.monomials.(equalities)...]))
-    M = MB.macaulay(equalities, MP.maxdegree(basis), vars)
+    M = MB.macaulay(equalities, d, vars)
     null = MacaulayNullspace(M)
     columns = MP.variables(null.basis)
     rows = Int[]

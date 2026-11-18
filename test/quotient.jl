@@ -63,19 +63,49 @@ function test_moment_vector(x, y)
     return
 end
 
+function _in_kernel(q, p)
+    a = MP.coefficients(p, MB.keys_as_monomials(q.basis))
+    return isapprox(q.matrix * a, zeros(size(q.matrix, 1)), atol = 1e-12)
+end
+
 function test_degree_fall(x, y)
     # `y * (x * y - 1) - x * (y^2 - 1) = x - y` is in the ideal but it is not
     # in its truncation at degree 1 or 2
     domain = SS.@set x * y == 1.0 && y^2 == 1.0
+    linear = b(MP.monomials((x, y), 0:1))
+    # By default, the ideal is truncated at the maximal degree of the basis
     for d in 1:2
-        q = MM.quotient_basis(b(MP.monomials((x, y), 0:d)), domain)
-        @test !iszero(
-            q.matrix * MP.coefficients(x - y, MB.keys_as_monomials(q.basis)),
+        @test !_in_kernel(
+            MM.quotient_basis(b(MP.monomials((x, y), 0:d)), domain),
+            x - y,
+        )
+        @test !_in_kernel(
+            MM.quotient_basis(linear, SS.truncated(domain, d)),
+            x - y,
         )
     end
-    q = MM.quotient_basis(b(MP.monomials((x, y), 0:3)), domain)
-    a = MP.coefficients(x - y, MB.keys_as_monomials(q.basis))
-    @test q.matrix * a ≈ zeros(size(q.matrix, 1)) atol = 1e-12
+    @test _in_kernel(
+        MM.quotient_basis(b(MP.monomials((x, y), 0:3)), domain),
+        x - y,
+    )
+    # The truncation degree can be larger than the degree of the basis
+    q = MM.quotient_basis(linear, SS.truncated(domain, 3))
+    @test q isa MA.promote_operation(
+        MM.quotient_basis,
+        typeof(linear),
+        typeof(SS.truncated(domain, 3)),
+    )
+    @test _in_kernel(q, x - y)
+    @test !_in_kernel(q, x)
+    @test !SS.is_gröbner_basis(SS.ideal(domain))
+    return
+end
+
+function test_truncated_smaller_degree(x, y)
+    # The truncation is used even if the generator is a Gröbner basis
+    domain = SS.truncated(SS.@set(x^2 + 1.0 == 0), 2)
+    # `x^3` is not in the Macaulay matrix of degree 2 so it is independent
+    _test_quotient(b([1, x, x^2, x^3]), domain, [1 0 -1 0; 0 1 0 0; 0 0 0 1])
     return
 end
 
