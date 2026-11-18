@@ -168,3 +168,33 @@ function _macaulay_zero_matrix(basis, equalities, d, ::Type{T}) where {T}
     end
     return SparseArrays.sparse(W[sortperm(pivots), :])
 end
+
+"""
+    BasisDependence{LinearDependence}(I::SemialgebraicSets.TruncatedIdeal, vars)
+
+Return the [`BasisDependence`](@ref) of the monomials in the variables `vars`
+that are columns of the Macaulay matrix of degree `I.maxdegree` of the
+generators of `I`. A monomial `α` is dependent if there is a polynomial of
+`I` whose leading monomial is `α`, i.e., `α` is congruent modulo `I` to a
+combination of monomials smaller than `α`. Equivalently, the row of the null
+space of the Macaulay matrix corresponding to `α` is a linear combination of
+the rows of the monomials smaller than `α`. Monomials that are not columns
+of the Macaulay matrix are independent.
+"""
+function BasisDependence{LinearDependence}(I::SS.TruncatedIdeal, vars)
+    T = float(MP.coefficient_type(typeof(I)))
+    null = MacaulayNullspace(MB.macaulay(I.generators, I.maxdegree, vars))
+    # The pivots of the reduced row echelon form of the transpose are the rows
+    # that are not a linear combination of the previous rows
+    U = Matrix{T}(transpose(null.matrix))
+    tol = Base.rtoldefault(T)
+    RowEchelon.rref!(U, tol)
+    pivots = Set{Int}()
+    for k in axes(U, 1)
+        j = findfirst(x -> abs(x) > tol, view(U, k, :))
+        if !isnothing(j)
+            push!(pivots, j)
+        end
+    end
+    return BasisDependence{LinearDependence}(Pivots(pivots), null.basis)
+end

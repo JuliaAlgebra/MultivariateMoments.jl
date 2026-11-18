@@ -109,6 +109,33 @@ function test_truncated_smaller_degree(x, y)
     return
 end
 
+function _dependent(I, vars)
+    d = MM.BasisDependence{MM.LinearDependence}(I, vars)
+    return MB.keys_as_monomials(MM.dependent_basis(d))
+end
+
+function test_dependence(x, y)
+    I = SS.truncated(SS.ideal(SS.@set(x^2 + 1.0 == 0)), 2)
+    d = MM.BasisDependence{MM.LinearDependence}(I, MP.variables(x))
+    # `x` is not a column of the Macaulay matrix
+    @test MB.keys_as_monomials(d.basis) == [1, x^2]
+    @test _dependent(I, MP.variables(x)) == [x^2]
+    @test _dependent(I, MP.variables(x * y)) == [x^2]
+    # `x - y` is in the truncation at degree 3 but not 2
+    domain = SS.@set x * y == 1.0 && y^2 == 1.0
+    lead = MP.leading_monomial(x - y)
+    for d in 2:3
+        dep = _dependent(SS.truncated(SS.ideal(domain), d), MP.variables(x * y))
+        @test (lead in dep) == (d == 3)
+        @test y^2 in dep
+    end
+    # The Macaulay matrix of degree 1 has no rows
+    @test isempty(
+        _dependent(SS.truncated(SS.ideal(domain), 1), MP.variables(x * y)),
+    )
+    return
+end
+
 function runtests(args...)
     for name in names(@__MODULE__; all = true)
         if startswith("$name", "test_")
