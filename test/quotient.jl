@@ -18,7 +18,8 @@ function _test_quotient(basis, domain, expected)
     T = float(MP.coefficient_type(typeof(domain)))
     @test q.matrix isa SparseArrays.SparseMatrixCSC{T,Int}
     @test q.basis == basis
-    @test q.matrix == expected
+    # The Macaulay matrix path is numerical so the entries may be rounded
+    @test q.matrix ≈ expected
     return
 end
 
