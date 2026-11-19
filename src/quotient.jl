@@ -185,7 +185,12 @@ function BasisDependence{LinearDependence}(I::SS.TruncatedIdeal, vars)
     T = float(MP.coefficient_type(typeof(I)))
     null = MacaulayNullspace(MB.macaulay(I.generators, I.maxdegree, vars))
     # The pivots of the reduced row echelon form of the transpose are the rows
-    # that are not a linear combination of the previous rows
+    # that are not a linear combination of the previous rows. We do not use
+    # the sieve of `BasisDependence{StaircaseDependence}` which labels the
+    # multiples of dependent monomials as dependent. If `α` is `d`-dependent,
+    # `x * α` may only be `(d + 1)`-dependent so this is not valid for a
+    # truncated ideal, see
+    # https://github.com/JuliaAlgebra/MultivariateMoments.jl/issues/106
     U = Matrix{T}(transpose(null.matrix))
     tol = Base.rtoldefault(T)
     RowEchelon.rref!(U, tol)
