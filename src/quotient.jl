@@ -134,12 +134,18 @@ function _macaulay_zero_matrix(basis, equalities, d, ::Type{T}) where {T}
     end
     Z = null.matrix[rows, :]
     if isempty(Z)
-        r = 0
-    else
-        F = LinearAlgebra.svd(Z)
-        rank_check = LeadingRelativeRankTol(Base.rtoldefault(T))
-        r = rank_from_singular_values(F.S, rank_check)
+        # Only monomials outside the Macaulay support survive in the quotient.
+        return SparseArrays.sparse(
+            eachindex(others),
+            others,
+            one(T),
+            length(others),
+            n,
+        )
     end
+    F = LinearAlgebra.svd(Z)
+    rank_check = LeadingRelativeRankTol(Base.rtoldefault(T))
+    r = rank_from_singular_values(F.S, rank_check)
     if r == length(found)
         # No monomial of `basis` is dependent so the polynomial must be zero
         return SparseArrays.sparse(one(T) * LinearAlgebra.I, n, n)

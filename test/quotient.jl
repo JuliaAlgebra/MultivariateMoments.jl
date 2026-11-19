@@ -54,6 +54,13 @@ function test_macaulay(x, y)
     return
 end
 
+function test_full_column_rank_macaulay(x, y)
+    domain = SS.truncated(SS.@set(1.0 * x^2 == 0), 2)
+    _test_quotient(b([x^2]), domain, zeros(0, 1))
+    _test_quotient(b([1, x^2]), domain, [1 0])
+    return
+end
+
 function test_moment_vector(x, y)
     domain = SS.@set x^2 + 1 == 0
     q = MM.quotient_basis(b([1, x, x^2, x^3]), domain)
