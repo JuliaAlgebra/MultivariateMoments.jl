@@ -17,32 +17,19 @@ function rank_from_singular_values end
 """
     accuracy(σ, r, check::RankCheck)
 
-Returns a value measuring the accuracy of the rank check `check` returning rank
-`r` for a matrix with singular values `σ`. It estimates the error (i.e., the
-sine of the largest principal angle) of the computed space spanned by the
-first `r` (resp. last `length(σ) - r`) singular vectors.
+Return a relative tolerance for dependence calculations after selecting rank
+`r` from the decreasing singular values `σ`.
 
-The singular value `σ[j+1]` after the first gap, i.e., for the first `j ≥ r`
-such that `σ[j+1] < 1e-2 * σ[j]`, is the level of the noise of the matrix. Indeed,
-if `j > r`, the singular values `σ[r+1], ..., σ[j]` are not noise but they were
-discarded by the rank check. As the error of the space is the level of the
-noise divided by `σ[r]` [W72], the accuracy is `σ[j+1] / σ[r]`. This is the
-case for instance for the null space of a Macaulay matrix of exact equations
-which has a gap at `j = r`.
+When `σ[r+1] < 1e-2 * σ[r]`, use `σ[r+1] / σ[r]`. For a matrix close to
+rank `r`, this compares the discarded residual with the weakest retained
+direction. Otherwise use `σ[r+1] / σ[1]`. A gap later in the spectrum can
+separate a larger subspace while the retained directions remain sensitive
+to perturbations at the cutoff. Both ratios are heuristics for selecting
+pivots. Estimating a principal angle requires information about the
+perturbation.
 
-If there is no gap, the level of noise cannot be determined so the accuracy
-is `σ[r+1] / σ[1]`. This is the case for instance for moment matrices
-obtained by an SDP solver whose singular values decrease without any gap.
-
-This is used to determine the tolerance of the Gaussian elimination of
-[`Echelon`](@ref) and [`BasisDependence`](@ref).
-See the tutorial
-[Tolerance of the numerical dependence of monomials](@ref) for a comparison
-with other choices.
-
-[W72] Wedin, Per-Åke.
-*Perturbation bounds in connection with singular value decomposition.*
-BIT Numerical Mathematics 12 (1972): 99-111.
+For rank zero return zero. For full rank use the default for `check`.
+See [Tolerance of the numerical dependence of monomials](@ref) for examples.
 """
 function accuracy(σ::Vector{T}, r, check::RankCheck) where {T}
     if iszero(r)
@@ -50,12 +37,10 @@ function accuracy(σ::Vector{T}, r, check::RankCheck) where {T}
     elseif r == lastindex(σ)
         return default_accuracy(σ, check)
     end
-    # The first gap is between `σ[r+k-1]` and `σ[r+k]`
-    k = findfirst(j -> σ[j+1] < 1e-2 * σ[j], r:(lastindex(σ)-1))
-    if isnothing(k)
-        acc = σ[r+1] / σ[1]
+    if σ[r+1] < 1e-2 * σ[r]
+        acc = σ[r+1] / σ[r]
     else
-        acc = σ[r+k] / σ[r]
+        acc = σ[r+1] / σ[1]
     end
     # Even an exact zero pivot leaves roundoff in the computed factors.
     return max(acc, eps(float(T)))
@@ -457,9 +442,9 @@ end
 """
     accuracy(chol::LowRankLDLT)
 
-Return the accuracy of the space spanned by the columns of `chol.L` from the
-singular values of the matrix for which `chol` is the rank-`r` Cholesky
-decomposition, see [`accuracy`](@ref).
+Return the dependence tolerance derived from the retained rank and the
+spectrum stored by `chol`, see [`accuracy`](@ref). Cholesky-based
+factorizations use the sorted squared diagonal pivots.
 """
 function accuracy(chol::LowRankLDLT)
     return accuracy(chol.singular_values, size(chol.L, 2), chol.rank_check)
