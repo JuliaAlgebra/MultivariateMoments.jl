@@ -137,6 +137,35 @@ function test_dependence(x, y)
     return
 end
 
+function test_dependence_rank_check(x, y)
+    vars = MP.variables(x * y)
+    rank_check = MM.LeadingRelativeRankTol(Base.rtoldefault(Float64))
+    for (equalities, d) in [
+        ([x * y - 1.0, y^2 - 1.0], 4),
+        ([x^2 + 1 / 3 * y^2 - 0.7, x * y - 1 / 7 * y^3], 6),
+        # Full column rank so the null space is empty
+        ([1.0 * x^2], 2),
+        # No row
+        ([x * y - 1.0], 1),
+    ]
+        null = MM.MacaulayNullspace(MB.macaulay(equalities, d, vars))
+        rref = MM.BasisDependence{MM.LinearDependence}(null)
+        rank = MM.BasisDependence{MM.LinearDependence}(null, rank_check)
+        @test rref.basis == rank.basis
+        @test rref.dependence == rank.dependence
+    end
+    return
+end
+
+function test_build_system_zero_row(x, y)
+    basis = b([1, x, x^2])
+    # The zero row is removed and the pivots are `1` and `x`
+    border = MM.build_system([1.0 0.0 2.0; 0.0 1.0 3.0; 0.0 0.0 0.0], basis)
+    @test MM.is_dependent.(border.dependence.dependence) == [false, false, true]
+    @test border.matrix == reshape([2.0, 3.0], 2, 1)
+    return
+end
+
 function runtests(args...)
     for name in names(@__MODULE__; all = true)
         if startswith("$name", "test_")

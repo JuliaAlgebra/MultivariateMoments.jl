@@ -29,6 +29,37 @@ function is_dependent!(r::RankDependence, row)
     return !independent
 end
 
+"""
+    BasisDependence{LinearDependence}(null::MacaulayNullspace)
+    BasisDependence{LinearDependence}(null::MacaulayNullspace, rank_check::RankCheck)
+
+Return the [`BasisDependence`](@ref) of `null.basis` where a monomial is
+dependent if its row in `null.matrix` is a linear combination of the rows of
+the previous monomials.
+
+The second argument changes how this linear dependence is decided, which has
+a large impact on the computation time:
+
+* Without `rank_check`, the independent monomials are the pivots of the
+  reduced row echelon form of `transpose(null.matrix)`. It is computed with a
+  single Gaussian elimination where the entries smaller than
+  `null.accuracy` times the number of rows of `null.matrix` are considered to
+  be zero. This tolerance accounts for both the accuracy of the null space
+  and the round-off errors of the Gaussian elimination.
+* With `rank_check`, the rows are added one by one and a row is independent
+  if it increases the rank, as determined by `rank_check`, of the rows of
+  the independent monomials found so far. This allows to choose how the rank
+  is decided but a singular value decomposition is computed for each
+  monomial. For instance, for a null space with 1001 rows, this is about 10
+  times slower.
+"""
+function BasisDependence{LinearDependence}(null::MacaulayNullspace)
+    U = Matrix(transpose(null.matrix))
+    RowEchelon.rref!(U, null.accuracy * size(U, 2))
+    pivots = Set(_pivots(U))
+    return BasisDependence{LinearDependence}(Pivots(pivots), null.basis)
+end
+
 function BasisDependence{LinearDependence}(
     null::MacaulayNullspace,
     rank_check::RankCheck,
