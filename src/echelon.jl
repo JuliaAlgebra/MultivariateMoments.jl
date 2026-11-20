@@ -4,6 +4,18 @@ end
 
 is_dependent!(p::Pivots, i) = !(i in p.pivots)
 
+# Tolerance for the Gaussian elimination of `transpose(null.matrix)`. As the
+# columns of `null.matrix` are orthonormal, the error of the space they span is
+# about `null.accuracy` and the error of the entries of the rows of the
+# matrix in echelon form during the elimination is about `null.accuracy` times
+# a small growth factor. We multiply by the square root of the number of rows
+# of `null.matrix` to account for this growth. See the tutorial
+# `docs/src/tutorials/dependence_tolerance.jl` for a comparison with other
+# tolerances.
+function _rref_tolerance(null::MacaulayNullspace)
+    return null.accuracy * sqrt(size(null.matrix, 1))
+end
+
 # Columns of the pivots of a matrix `U` in reduced row echelon form computed
 # by `RowEchelon.rref!`. The entries below the tolerance are set to zero by
 # `RowEchelon.rref!` so the pivot of a row is its first nonzero entry.
@@ -133,10 +145,8 @@ function border_basis_and_solver(
     # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
     # Foundations of Computational Mathematics 8 (2008): 607-647.
 
-    # If M is multiplied by λ, W is multiplied by √λ
-    # so we take √||M|| = √nM
     Z = Matrix(null.matrix')
-    RowEchelon.rref!(Z, null.accuracy / sqrt(size(Z, 2)))
+    RowEchelon.rref!(Z, _rref_tolerance(null))
     #r, vals = solve_system(U', μ.x)
     # TODO determine what is better between rank_check and sqrt(rank_check) here
     algebraic_solver = AlgebraicBorderSolver{D}(
