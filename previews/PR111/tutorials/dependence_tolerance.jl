@@ -181,6 +181,16 @@ table([
 # The Gaussian elimination then amplifies these errors. The factor ``\sqrt{n}``
 # is a heuristic for this amplification, it is enough in all the cases of this
 # tutorial.
+#
+# For exact equations, the computed `σ[r+1]` is often below the machine
+# precision. It is not a reliable estimate of the noise since the singular
+# values are only computed with an error of about `length(σ) * eps * σ[1]`,
+# which is the default tolerance of `LinearAlgebra.rank`. For instance, for
+# the equations `x^2 + y^2 / 3 - 0.7` and `x * y - y^3 / 7` at degree 6, the
+# computed `σ[r+1] / σ[1]` changes from `1.0e-16` to `7.4e-17` between Julia
+# v1.13 and v1.15, and the noise of the Gaussian elimination, about
+# `1.9e-15`, exceeds `σ[r+1] / σ[r] · √n` with v1.15. The level of noise used
+# by [`accuracy`](@ref) is therefore at least `length(σ) * eps * σ[1]`.
 
 # ## Moment matrices with noise
 #
