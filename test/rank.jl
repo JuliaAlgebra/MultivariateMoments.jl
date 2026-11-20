@@ -17,7 +17,7 @@ end
     check = LeadingRelativeRankTol(1e-8)
     for T in (Float32, Float64, BigFloat)
         L = ones(T, 2, 1)
-        @test accuracy(LowRankLDLT(L, T[1, 0], check)) == eps(T)
+        @test accuracy(LowRankLDLT(L, T[1, 0], check)) == 2eps(T)
         @test accuracy(LowRankLDLT(L, T[1, 1e-4], check)) ≈ T(1e-4)
     end
     # Gap right after the rank
@@ -26,6 +26,8 @@ end
     @test accuracy([1.0, 1e-3, 1e-4, 1e-9], 2, check) ≈ 1e-6
     # No gap
     @test accuracy([1.0, 1e-3, 5e-4, 2e-4], 2, check) ≈ 5e-4
+    # The noise `1e-20` is smaller than the error `3eps` of the singular values
+    @test accuracy([1.0, 0.5, 1e-20], 2, check) ≈ 3eps() / 0.5
 end
 
 struct HardcodedRanks <: RankCheck

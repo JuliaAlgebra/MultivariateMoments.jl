@@ -34,6 +34,10 @@ If there is no gap, the level of noise cannot be determined so the accuracy
 is `σ[r+1] / σ[1]`. This is the case for instance for moment matrices
 obtained by an SDP solver whose singular values decrease without any gap.
 
+In both cases, the level of the noise is at least the error
+`length(σ) * eps * σ[1]` with which the singular values are computed, which
+is the default tolerance of `LinearAlgebra.rank`.
+
 This is used to determine the tolerance of the Gaussian elimination of
 [`Echelon`](@ref) and [`BasisDependence`](@ref).
 See the tutorial
@@ -53,12 +57,15 @@ function accuracy(σ::Vector{T}, r, check::RankCheck) where {T}
     # The first gap is between `σ[r+k-1]` and `σ[r+k]`
     k = findfirst(j -> σ[j+1] < 1e-2 * σ[j], r:(lastindex(σ)-1))
     if isnothing(k)
-        acc = σ[r+1] / σ[1]
+        noise, scale = σ[r+1], σ[1]
     else
-        acc = σ[r+k] / σ[r]
+        noise, scale = σ[r+k], σ[r]
     end
-    # Even an exact zero pivot leaves roundoff in the computed factors.
-    return max(acc, eps(float(T)))
+    # The singular values are computed with an error of about
+    # `length(σ) * eps * σ[1]` so a smaller computed singular value does not
+    # mean that the noise is smaller.
+    roundoff = length(σ) * eps(float(T)) * σ[1]
+    return max(noise, roundoff) / scale
 end
 
 """
