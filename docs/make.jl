@@ -1,4 +1,4 @@
-using Documenter, MultivariateMoments
+using Documenter, Literate, MultivariateMoments
 # Needed because we include docstrings for `monomial`, `variables` and `monomials`
 import MultivariatePolynomials
 
@@ -9,6 +9,21 @@ DocMeta.setdocmeta!(
     recursive = true,
 )
 
+const _TUTORIAL_DIR = joinpath(@__DIR__, "src", "tutorials")
+const _OUTPUT_DIR = joinpath(@__DIR__, "src", "generated")
+
+for filename in readdir(_TUTORIAL_DIR)
+    path = joinpath(_TUTORIAL_DIR, filename)
+    Literate.markdown(path, _OUTPUT_DIR; documenter = true)
+    Literate.notebook(path, _OUTPUT_DIR; documenter = true)
+    Literate.script(path, _OUTPUT_DIR; documenter = true)
+end
+
+const _TUTORIALS = [
+    joinpath("generated", file) for
+    file in sort(readdir(_OUTPUT_DIR)) if endswith(file, ".md")
+]
+
 makedocs(
     sitename = "MultivariateMoments",
     # See https://github.com/JuliaDocs/Documenter.jl/issues/868
@@ -17,6 +32,7 @@ makedocs(
         "Index" => "index.md"
         "Moments and expectation" => "moments.md"
         "Atoms extraction" => "atoms.md"
+        "Tutorials" => _TUTORIALS
     ],
     # The following ensures that we only include the docstrings from
     # this module for functions define in Base and MultivariatePolynomials that
