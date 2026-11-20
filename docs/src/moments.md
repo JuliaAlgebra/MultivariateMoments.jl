@@ -46,3 +46,12 @@ The expectation of polynomial with respect to a measure can be computed either u
 MultivariateMoments.expectation
 MultivariateMoments.dot
 ```
+
+## Quotient
+
+The moments of a measure supported on an algebraic set are only determined
+modulo the ideal of the set. The quotient of the span of monomials modulo this
+ideal is computed by `quotient_basis`.
+```@docs
+quotient_basis
+```

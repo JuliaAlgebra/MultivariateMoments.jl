@@ -4,21 +4,30 @@ end
 
 is_dependent!(p::Pivots, i) = !(i in p.pivots)
 
+# Columns of the pivots of a matrix `U` in reduced row echelon form computed
+# by `RowEchelon.rref!`. The entries below the tolerance are set to zero by
+# `RowEchelon.rref!` so the pivot of a row is its first nonzero entry.
+function _pivots(U::AbstractMatrix)
+    pivots = Int[]
+    for row in eachrow(U)
+        j = findfirst(!iszero, row)
+        if !isnothing(j)
+            push!(pivots, j)
+        end
+    end
+    return pivots
+end
+
 function build_system(U::AbstractMatrix, basis::MB.SubBasis{MB.Monomial})
     # System is
     # `basis = [U' 0] * basis`
     # which is
     # `y = U' * β`
     # where `β` contains the pivots
-    m = length(basis)
-    r = size(U, 1)
-    pivots = [findfirst(j -> U[i, j] != 0, 1:m) for i in 1:r]
-    if any(isnothing, pivots)
+    pivots = _pivots(U)
+    if length(pivots) < size(U, 1)
         # Remove zero rows of `U`
-        keep = map(!isnothing, pivots)
-        pivots = pivots[keep]
-        r = length(pivots)
-        U = U[keep, :]
+        U = U[findall(row -> any(!iszero, row), collect(eachrow(U))), :]
     end
     set_pivots = Set(pivots)
     d = BasisDependence{LinearDependence}(Pivots(set_pivots), basis)
