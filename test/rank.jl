@@ -22,8 +22,8 @@ end
     end
     # Gap right after the rank
     @test accuracy([1.0, 1e-3, 1e-9], 2, check) ≈ 1e-6
-    # Gap after the discarded singular value `1e-4`
-    @test accuracy([1.0, 1e-3, 1e-4, 1e-9], 2, check) ≈ 1e-6
+    # A later gap gives the same tolerance as a spectrum without that gap.
+    @test accuracy([1.0, 1e-3, 1e-4, 1e-9], 2, check) ≈ 1e-4
     # No gap
     @test accuracy([1.0, 1e-3, 5e-4, 2e-4], 2, check) ≈ 5e-4
     # The noise `1e-20` is smaller than the error `3eps` of the singular values

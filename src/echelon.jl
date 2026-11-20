@@ -4,10 +4,7 @@ end
 
 is_dependent!(p::Pivots, i) = !(i in p.pivots)
 
-# Tolerance for the Gaussian elimination of `transpose(null.matrix)`. As the
-# columns of `null.matrix` are orthonormal, the error of the space they span is
-# about `null.accuracy`, see `accuracy`. The Gaussian elimination then carries
-# and amplifies this error:
+# The initial tolerance uses a factor of √n for a basis with n monomials.
 #
 # * The backward error analysis of Gaussian elimination with partial pivoting
 #   (which is what `RowEchelon.rref!` does as it picks the largest entry of
@@ -35,8 +32,31 @@ is_dependent!(p::Pivots, i) = !(i in p.pivots)
 # [TS90] Trefethen, Lloyd N. and Schreiber, Robert S.
 # *Average-case stability of Gaussian elimination.*
 # SIAM Journal on Matrix Analysis and Applications 11.3 (1990): 335-360.
-function _rref_tolerance(null::MacaulayNullspace)
-    return null.accuracy * sqrt(size(null.matrix, 1))
+#
+# Start with the tolerance studied in the dependence tutorial. If it drops
+# directions, lower it only as much as needed to recover the numerical rank.
+function _nullspace_rref(null::MacaulayNullspace)
+    A = null.matrix'
+    tol = real(null.accuracy) * sqrt(size(A, 2))
+    U = RowEchelon.rref!(Matrix(A), tol)
+    if isempty(U) || !iszero(view(U, size(U, 1), :))
+        return U
+    end
+    # Restricting a null space to a subset of its rows can lower its rank.
+    # Determine the attainable rank by eliminating at roundoff tolerance.
+    scale = norm(A, Inf)
+    roundoff = eps(float(scale))
+    V = RowEchelon.rref!(Matrix(A), roundoff)
+    r = findlast(!iszero, eachrow(V))
+    tol = min(tol, scale)
+    while !isnothing(r) && iszero(view(U, r, :))
+        tol /= 2
+        if tol <= roundoff
+            return V
+        end
+        RowEchelon.rref!(copyto!(U, A), tol)
+    end
+    return U
 end
 
 # Columns of the pivots of a matrix `U` in reduced row echelon form computed
@@ -168,8 +188,7 @@ function border_basis_and_solver(
     # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
     # Foundations of Computational Mathematics 8 (2008): 607-647.
 
-    Z = Matrix(null.matrix')
-    RowEchelon.rref!(Z, _rref_tolerance(null))
+    Z = _nullspace_rref(null)
     #r, vals = solve_system(U', μ.x)
     # TODO determine what is better between rank_check and sqrt(rank_check) here
     algebraic_solver = AlgebraicBorderSolver{D}(
