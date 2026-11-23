@@ -54,40 +54,52 @@ function gap_pivots(Z, basis, σ, r; gap_tol = 1e-2)
     end
 end
 
-function row(name, Z, basis, σ, r, piv)
+function row(labels, Z, basis, σ, r, piv)
     A = Matrix(transpose(Z))
     n = size(Z, 1)
     noise, signal = noise_and_signal(A, piv)
-    s = @sprintf(
+    label = join(labels, " | ")
+    measurements = @sprintf(
         "| %s | %d | %.1e | %.1e | %.1e | %.1e |",
-        name,
+        label,
         n,
         σ[r+1] / σ[1],
         σ[r+1] / σ[r],
         noise,
         signal,
     )
+    recovery = "| $label |"
     for tol in (
         max(σ[r+1] / σ[1], eps()) / sqrt(n),
         max(σ[r+1] / σ[r], eps()) * sqrt(n),
     )
-        s *= pivots(A, tol) == piv ? " ✓ |" : " ✗ |"
+        recovery *= pivots(A, tol) == piv ? " ✓ |" : " ✗ |"
     end
     for found in gap_pivots(Z, basis, σ, r)
-        s *= found == piv ? " ✓ |" : " ✗ |"
+        recovery *= found == piv ? " ✓ |" : " ✗ |"
     end
-    return s
+    return (; measurements, recovery)
 end
 
-function table(rows)
-    header = "| Case | n | σ[r+1]/σ[1] | σ[r+1]/σ[r] | noise | signal | σ[r+1]/σ[1]/√n | σ[r+1]/σ[r]·√n | Gap at r | First gap at or after r |"
-    sep = "|" * repeat(" --- |", 10)
-    return Markdown.parse(join([header; sep; rows], "\n"))
+function table(rows, labels = ("Case",))
+    header = join(labels, " | ")
+    sep = repeat(" --- |", length(labels))
+    return Markdown.parse("""
+    | $header | n | ρ₁ | ρᵣ | Noise | Signal |
+    |$sep --- | --- | --- | --- | --- |
+    $(join((row.measurements for row in rows), "\n"))
+
+    **Recovery of the reference pivots**
+
+    | $header | ρ₁/√n | ρᵣ·√n | Gap at r | First gap |
+    |$sep --- | --- | --- | --- |
+    $(join((row.recovery for row in rows), "\n"))
+    """)
 end
 
 @polyvar x y z
 
-function macaulay(equalities, D)
+function macaulay(label, equalities, D)
     M = MB.macaulay(equalities, D, [x, y, z])
     A = float(Matrix(SparseArrays.sparse(M)))
     F = svd(A; full = true)
@@ -102,24 +114,17 @@ function macaulay(equalities, D)
     )
     @assert r == ref_rank
     piv = true_pivots(Matrix(ref.Vt[(ref_rank+1):end, :]))
-    return row(
-        join(equalities, ", ") * ", D = $D",
-        Z,
-        M.column_basis,
-        F.S,
-        r,
-        piv,
-    )
+    return row((label,), Z, M.column_basis, F.S, r, piv)
 end
 
 table([
-    macaulay([x^2 + y^2 - 1.0, x * y - z], 5),
-    macaulay([x^2 + 1 / 3 * y^2 - 0.7, x * y - 1 / 7 * z^3], 5),
-    macaulay([x^2 + 1e-3 * y^2 - 0.7, x * y - 1e3 * z^3], 6),
-    macaulay([x^3 - 0.3x * y + 1 / 7, y^2 - 3x * z, z^2 - x - 0.25], 5),
+    macaulay("M1", [x^2 + y^2 - 1.0, x * y - z], 5),
+    macaulay("M2", [x^2 + 1 / 3 * y^2 - 0.7, x * y - 1 / 7 * z^3], 5),
+    macaulay("M3", [x^2 + 1e-3 * y^2 - 0.7, x * y - 1e3 * z^3], 6),
+    macaulay("M4", [x^3 - 0.3x * y + 1 / 7, y^2 - 3x * z, z^2 - x - 0.25], 5),
 ])
 
-function moments(name, vars, d, atoms, δ)
+function moments(vars, d, atoms, δ; case = nothing)
     monos = monomials(vars, 0:d)
     k = length(atoms)
     V = [m(vars => a) for m in monos, a in atoms]
@@ -130,8 +135,10 @@ function moments(name, vars, d, atoms, δ)
     E = (E + E') / 2
     M = exact + δ * opnorm(exact) / opnorm(E) * E
     chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.FixedRank(k))
+    noise_level = @sprintf("%.0e", δ)
+    labels = isnothing(case) ? (noise_level,) : (case, noise_level)
     return row(
-        @sprintf("%s, δ = %.0e", name, δ),
+        labels,
         chol.L,
         MB.SubBasis{MB.Monomial}(monos),
         chol.singular_values,
@@ -160,23 +167,19 @@ sphere_atoms = [sphere() for _ in 1:12]
 table(
     [
         [
-            moments("circle, d = 4", [x, y], 4, circle_atoms, δ) for
+            moments([x, y], 4, circle_atoms, δ; case = "C₁") for
             δ in [1e-12, 1e-8, 1e-6, 1e-4]
         ]
         [
-            moments(
-                "circle of radius 3, d = 4",
-                [x, y],
-                4,
-                large_circle_atoms,
-                δ,
-            ) for δ in [1e-12, 1e-8, 1e-6]
+            moments([x, y], 4, large_circle_atoms, δ; case = "C₃") for
+            δ in [1e-12, 1e-8, 1e-6]
         ]
         [
-            moments("sphere, d = 4", [x, y, z], 4, sphere_atoms, δ) for
+            moments([x, y, z], 4, sphere_atoms, δ; case = "S") for
             δ in [1e-12, 1e-8, 1e-6, 1e-4]
         ]
     ],
+    ("Case", "δ"),
 )
 
 @polyvar a b
@@ -227,7 +230,7 @@ end
 Markdown.parse(
     join(
         [
-            "| Rank tolerance | r | σ[r+1]/σ[1] | σ[r+1]/σ[r] | b/a with σ[r+1]/σ[r] | b/a with `accuracy` |"
+            "| Rank tol. | r | ρ₁ | ρᵣ | b/a (ρᵣ) | b/a (default) |"
             "| --- | --- | --- | --- | --- | --- |"
             rows
         ],
@@ -258,15 +261,8 @@ atom_pivots = gap_pivots(Z_atoms, basis_atoms, F_atoms.S, 1)
 @assert atom_pivots == (Set([4]), Set([1]))
 
 table([
-    row(
-        "coupled diagonal matrix",
-        Z_coupled,
-        basis_coupled,
-        F_coupled.S,
-        2,
-        Set([1, 3]),
-    ),
-    row("two-atom moment matrix", Z_atoms, basis_atoms, F_atoms.S, 1, Set([1])),
+    row(("A",), Z_coupled, basis_coupled, F_coupled.S, 2, Set([1, 3])),
+    row(("B",), Z_atoms, basis_atoms, F_atoms.S, 1, Set([1])),
 ])
 
 measure_moments = MM.moment_matrix(Q, monomials([x, y], 0:2))
@@ -280,9 +276,12 @@ d = MM.BasisDependence{MM.LinearDependence}(image)
 
 twisted_cubic_atoms =
     [[t, t^2, t^3] for t in big.([-0.9, -0.4, 0.1, 0.5, 0.5001, 0.95])]
-table([
-    moments("twisted cubic, d = 3", [x, y, z], 3, twisted_cubic_atoms, δ) for
-    δ in [1e-12, 1e-8, 1e-6]
-])
+table(
+    [
+        moments([x, y, z], 3, twisted_cubic_atoms, δ) for
+        δ in [1e-12, 1e-8, 1e-6]
+    ],
+    ("δ",),
+)
 
 # This file was generated using Literate.jl, https://github.com/fredrikekre/Literate.jl

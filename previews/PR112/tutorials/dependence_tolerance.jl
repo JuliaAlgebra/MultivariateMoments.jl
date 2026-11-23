@@ -83,13 +83,17 @@ function noise_and_signal(A, piv)
     return noise, signal
 end
 
-# We compare two fixed tolerances with the pivots selected by the package.
-# Here `σ` contains the singular values, `r` is the selected rank, and `n` is
-# the number of monomials. The first tolerance was previously used by
-# [`Echelon`](@ref). The second uses the smallest retained singular value to
-# scale the first discarded one. Both apply a single Gaussian elimination.
-# The last two columns use the gap at the selected rank or search for a
-# later gap, respectively. Both call [`BasisDependence`](@ref) and retry at a
+# For each case, the first table gives the number of monomials `n`, the
+# measured noise and signal, and two ratios. With `r` the selected rank,
+# `ρ₁ = σ[r+1] / σ[1]` scales the first discarded singular value by the
+# largest one, and `ρᵣ = σ[r+1] / σ[r]` scales it by the weakest retained one.
+#
+# The second table shows which tolerances recover the reference pivots (✓).
+# The first two columns of results use `ρ₁/√n` (previously used by
+# [`Echelon`](@ref)) and `ρᵣ·√n`. Both floor the ratio at machine precision
+# before scaling and apply a single elimination. **Gap at r** checks for
+# a gap at the selected rank, and **First gap** uses the first gap at or
+# after that rank. Both call [`BasisDependence`](@ref) and retry at a
 # lower tolerance if the initial elimination loses rank. For example,
 # a rank-one space spanned by a vector with 128 equal entries has unit
 # norm after normalization, but each entry is only about 0.088. If the
@@ -104,35 +108,47 @@ function gap_pivots(Z, basis, σ, r; gap_tol = 1e-2)
     end
 end
 
-function row(name, Z, basis, σ, r, piv)
+function row(labels, Z, basis, σ, r, piv)
     A = Matrix(transpose(Z))
     n = size(Z, 1)
     noise, signal = noise_and_signal(A, piv)
-    s = @sprintf(
+    label = join(labels, " | ")
+    measurements = @sprintf(
         "| %s | %d | %.1e | %.1e | %.1e | %.1e |",
-        name,
+        label,
         n,
         σ[r+1] / σ[1],
         σ[r+1] / σ[r],
         noise,
         signal,
     )
+    recovery = "| $label |"
     for tol in (
         max(σ[r+1] / σ[1], eps()) / sqrt(n),
         max(σ[r+1] / σ[r], eps()) * sqrt(n),
     )
-        s *= pivots(A, tol) == piv ? " ✓ |" : " ✗ |"
+        recovery *= pivots(A, tol) == piv ? " ✓ |" : " ✗ |"
     end
     for found in gap_pivots(Z, basis, σ, r)
-        s *= found == piv ? " ✓ |" : " ✗ |"
+        recovery *= found == piv ? " ✓ |" : " ✗ |"
     end
-    return s
+    return (; measurements, recovery)
 end
 
-function table(rows)
-    header = "| Case | n | σ[r+1]/σ[1] | σ[r+1]/σ[r] | noise | signal | σ[r+1]/σ[1]/√n | σ[r+1]/σ[r]·√n | Gap at r | First gap at or after r |"
-    sep = "|" * repeat(" --- |", 10)
-    return Markdown.parse(join([header; sep; rows], "\n"))
+function table(rows, labels = ("Case",))
+    header = join(labels, " | ")
+    sep = repeat(" --- |", length(labels))
+    return Markdown.parse("""
+    | $header | n | ρ₁ | ρᵣ | Noise | Signal |
+    |$sep --- | --- | --- | --- | --- |
+    $(join((row.measurements for row in rows), "\n"))
+
+    **Recovery of the reference pivots**
+
+    | $header | ρ₁/√n | ρᵣ·√n | Gap at r | First gap |
+    |$sep --- | --- | --- | --- |
+    $(join((row.recovery for row in rows), "\n"))
+    """)
 end
 
 # ## Macaulay null spaces
@@ -143,7 +159,7 @@ end
 
 @polyvar x y z
 
-function macaulay(equalities, D)
+function macaulay(label, equalities, D)
     M = MB.macaulay(equalities, D, [x, y, z])
     A = float(Matrix(SparseArrays.sparse(M)))
     F = svd(A; full = true)
@@ -158,24 +174,25 @@ function macaulay(equalities, D)
     )
     @assert r == ref_rank
     piv = true_pivots(Matrix(ref.Vt[(ref_rank+1):end, :]))
-    return row(
-        join(equalities, ", ") * ", D = $D",
-        Z,
-        M.column_basis,
-        F.S,
-        r,
-        piv,
-    )
+    return row((label,), Z, M.column_basis, F.S, r, piv)
 end
 
+# The four systems below are truncated at degree `D`.
+#
+# * **M1** (D = 5) uses `x² + y² = 1` and `xy = z`.
+# * **M2** (D = 5) uses `x² + y²/3 = 0.7` and `xy = z³/7`.
+# * **M3** (D = 6) uses `x² + 0.001y² = 0.7` and `xy = 1000z³`.
+# * **M4** (D = 5) uses `x³ − 0.3xy + 1/7 = 0`, `y² = 3xz`, and
+#   `z² = x + 0.25`.
+
 table([
-    macaulay([x^2 + y^2 - 1.0, x * y - z], 5),
-    macaulay([x^2 + 1 / 3 * y^2 - 0.7, x * y - 1 / 7 * z^3], 5),
-    macaulay([x^2 + 1e-3 * y^2 - 0.7, x * y - 1e3 * z^3], 6),
-    macaulay([x^3 - 0.3x * y + 1 / 7, y^2 - 3x * z, z^2 - x - 0.25], 5),
+    macaulay("M1", [x^2 + y^2 - 1.0, x * y - z], 5),
+    macaulay("M2", [x^2 + 1 / 3 * y^2 - 0.7, x * y - 1 / 7 * z^3], 5),
+    macaulay("M3", [x^2 + 1e-3 * y^2 - 0.7, x * y - 1e3 * z^3], 6),
+    macaulay("M4", [x^3 - 0.3x * y + 1 / 7, y^2 - 3x * z, z^2 - x - 0.25], 5),
 ])
 
-# In the third example the equations have very different scales. The noise
+# In M3 the equations have very different scales. The noise
 # in the elimination is about `1e-13` even though `σ[r+1] / σ[1]` is close to
 # machine precision. Scaling by `σ[r]` gives a larger tolerance.
 #
@@ -223,7 +240,7 @@ table([
 # the pivots. The atoms and the true pivots are computed in `BigFloat` so that
 # roundoff in the reference pivots is small compared with the perturbation.
 
-function moments(name, vars, d, atoms, δ)
+function moments(vars, d, atoms, δ; case = nothing)
     monos = monomials(vars, 0:d)
     k = length(atoms)
     V = [m(vars => a) for m in monos, a in atoms]
@@ -234,8 +251,10 @@ function moments(name, vars, d, atoms, δ)
     E = (E + E') / 2
     M = exact + δ * opnorm(exact) / opnorm(E) * E
     chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.FixedRank(k))
+    noise_level = @sprintf("%.0e", δ)
+    labels = isnothing(case) ? (noise_level,) : (case, noise_level)
     return row(
-        @sprintf("%s, δ = %.0e", name, δ),
+        labels,
         chol.L,
         MB.SubBasis{MB.Monomial}(monos),
         chol.singular_values,
@@ -257,6 +276,11 @@ function sphere()
     return [cos(u) * cos(v), cos(u) * sin(v), sin(u)]
 end
 
+# All three cases use monomials through degree four. **C₁** and **C₃** each
+# have seven atoms on a circle of radius one and three, respectively.
+# **S** has twelve atoms on the unit sphere. Each row gives the relative
+# perturbation `δ` for that case.
+
 Random.seed!(0)
 circle_atoms = circle(1, 7)
 large_circle_atoms = circle(3, 7)
@@ -264,23 +288,19 @@ sphere_atoms = [sphere() for _ in 1:12]
 table(
     [
         [
-            moments("circle, d = 4", [x, y], 4, circle_atoms, δ) for
+            moments([x, y], 4, circle_atoms, δ; case = "C₁") for
             δ in [1e-12, 1e-8, 1e-6, 1e-4]
         ]
         [
-            moments(
-                "circle of radius 3, d = 4",
-                [x, y],
-                4,
-                large_circle_atoms,
-                δ,
-            ) for δ in [1e-12, 1e-8, 1e-6]
+            moments([x, y], 4, large_circle_atoms, δ; case = "C₃") for
+            δ in [1e-12, 1e-8, 1e-6]
         ]
         [
-            moments("sphere, d = 4", [x, y, z], 4, sphere_atoms, δ) for
+            moments([x, y, z], 4, sphere_atoms, δ; case = "S") for
             δ in [1e-12, 1e-8, 1e-6, 1e-4]
         ]
     ],
+    ("Case", "δ"),
 )
 
 # On the circle, `x²` is dependent on `1` and `y²`. A tolerance below the
@@ -314,7 +334,8 @@ F = svd(Matrix(MM.value_matrix(ν)))
 
 # After the first singular value the spectrum decays gradually. The table
 # compares the extracted atoms when we set the accuracy to `σ[r+1] / σ[r]`
-# and when we use the package default. Both use the same computed vectors
+# and when we use the package default. The last two columns give the atom
+# ratios `b/a` for these two choices. Both use the same computed vectors
 # and the [`Echelon`](@ref) solver.
 
 function extract(null)
@@ -345,7 +366,7 @@ end
 Markdown.parse(
     join(
         [
-            "| Rank tolerance | r | σ[r+1]/σ[1] | σ[r+1]/σ[r] | b/a with σ[r+1]/σ[r] | b/a with `accuracy` |"
+            "| Rank tol. | r | ρ₁ | ρᵣ | b/a (ρᵣ) | b/a (default) |"
             "| --- | --- | --- | --- | --- | --- |"
             rows
         ],
@@ -371,7 +392,7 @@ Markdown.parse(
 # For example, with `σ = [1, 1e-3, 5e-4, 4e-6]` and `r = 2`, the default
 # gives `5e-4`. Searching one step further gives `4e-6 / 1e-3 = 4e-3`.
 #
-# **A small spurious coordinate.** In the diagonal matrix below, the clean
+# **A. Spurious coordinate.** In the diagonal matrix below, the clean
 # rank-two subspace is spanned by coordinate vectors 1 and 3. A small
 # perturbation couples directions 2 and 3 while leaving the fourth singular
 # value zero.
@@ -388,7 +409,7 @@ coupled_pivots = gap_pivots(Z_coupled, basis_coupled, F_coupled.S, 2)
 # Searching for a later gap finds one after the third singular value and
 # sets a tolerance of about `1.8e-12`, which accepts that component.
 #
-# **A small genuine coordinate.** The following moment matrix comes from
+# **B. Genuine coordinate.** The following moment matrix comes from
 # the package's atom-extraction tests. Its measure has atoms at `(1, 3)`
 # and `(4, 3)` with approximate weights `0.864` and `0.136`. We retain one
 # direction of this two-atom example. The clean moment matrix has strictly
@@ -410,15 +431,8 @@ atom_pivots = gap_pivots(Z_atoms, basis_atoms, F_atoms.S, 1)
 @assert atom_pivots == (Set([4]), Set([1]))
 
 table([
-    row(
-        "coupled diagonal matrix",
-        Z_coupled,
-        basis_coupled,
-        F_coupled.S,
-        2,
-        Set([1, 3]),
-    ),
-    row("two-atom moment matrix", Z_atoms, basis_atoms, F_atoms.S, 1, Set([1])),
+    row(("A",), Z_coupled, basis_coupled, F_coupled.S, 2, Set([1, 3])),
+    row(("B",), Z_atoms, basis_atoms, F_atoms.S, 1, Set([1])),
 ])
 
 # The second singular value is about `0.21 σ[1]`, well above the residual
@@ -449,13 +463,17 @@ d = MM.BasisDependence{MM.LinearDependence}(image)
 # ## Limitations
 #
 # Consider six atoms on the twisted cubic, two of which are very close.
+# We use monomials through degree three and vary the relative perturbation `δ`.
 
 twisted_cubic_atoms =
     [[t, t^2, t^3] for t in big.([-0.9, -0.4, 0.1, 0.5, 0.5001, 0.95])]
-table([
-    moments("twisted cubic, d = 3", [x, y, z], 3, twisted_cubic_atoms, δ) for
-    δ in [1e-12, 1e-8, 1e-6]
-])
+table(
+    [
+        moments([x, y, z], 3, twisted_cubic_atoms, δ) for
+        δ in [1e-12, 1e-8, 1e-6]
+    ],
+    ("δ",),
+)
 
 # The first six monomials are already independent. A generic six-dimensional
 # subspace has the same six pivots, so a check mark here says little about
