@@ -10,10 +10,9 @@ element type.
 If a Gröbner basis of the ideal is known, the matrix gives the remainders
 of the elements of `basis` modulo the Gröbner basis. For a truncated ideal,
 the polynomials whose coefficients are in the kernel of the matrix are the
-polynomials in the row space of the Macaulay matrix of its degree. If `domain`
-is an `AlgebraicSet` whose Gröbner basis is not known, it is not computed and
-the ideal is instead truncated at the maximal degree of `basis`, see
-`SemialgebraicSets.truncated`.
+polynomials in the row space of the Macaulay matrix of its degree. If the
+Gröbner basis of `domain` is not known, it is computed, which may be
+expensive. To avoid this, truncate `domain` with `SemialgebraicSets.truncated`.
 """
 function quotient_basis(
     basis::MB.SubBasis{MB.Monomial},
@@ -29,19 +28,6 @@ function quotient_basis(
     T = float(MP.coefficient_type(typeof(I)))
     return MB.QuotientBasis(basis, _remainder_matrix(basis, I, T))
 end
-
-function quotient_basis(
-    basis::MB.SubBasis{MB.Monomial},
-    domain::SS.AlgebraicSet,
-)
-    I = SS.ideal(domain)
-    if SS.is_gröbner_basis(I)
-        return quotient_basis(basis, I)
-    end
-    return quotient_basis(basis, SS.truncated(I, _maxdegree(basis)))
-end
-
-_maxdegree(basis) = isempty(basis) ? 0 : MP.maxdegree(basis)
 
 function quotient_basis(basis::MB.SubBasis{MB.Monomial}, I::SS.TruncatedIdeal)
     T = float(MP.coefficient_type(typeof(I)))
