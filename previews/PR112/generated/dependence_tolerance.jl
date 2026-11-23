@@ -68,31 +68,17 @@ function row(labels, Z, basis, σ, r, piv)
         noise,
         signal,
     )
-    leading = max(σ[r+1] / σ[1], eps()) / sqrt(n)
-    adjacent = max(σ[r+1] / σ[r], eps()) * sqrt(n)
-    at_rank, first_gap = gap_pivots(Z, basis, σ, r)
-    found = (pivots(A, leading), pivots(A, adjacent), at_rank, first_gap)
-    return (; measurements, case = join(labels, " "), reference = piv, found)
-end
-
-function recovery_summary(rows)
-    methods = ["ρ₁/√n", "ρᵣ·√n", "Gap at r", "First gap"]
-    cases = [row.case for row in rows]
-    outcomes = [
-        [row.found[i] == row.reference for row in rows] for
-        i in eachindex(methods)
-    ]
-    return map(unique(outcomes)) do pattern
-        names = join(methods[findall(==(pattern), outcomes)], ", ")
-        missed = if all(pattern)
-            "None"
-        elseif any(pattern)
-            join(cases[.!pattern], ", ")
-        else
-            "All"
-        end
-        return "| $names | $(count(pattern))/$(length(rows)) | $missed |"
+    recovery = "| $label |"
+    for tol in (
+        max(σ[r+1] / σ[1], eps()) / sqrt(n),
+        max(σ[r+1] / σ[r], eps()) * sqrt(n),
+    )
+        recovery *= pivots(A, tol) == piv ? " ✓ |" : " ✗ |"
     end
+    for found in gap_pivots(Z, basis, σ, r)
+        recovery *= found == piv ? " ✓ |" : " ✗ |"
+    end
+    return (; measurements, recovery)
 end
 
 function table(rows, labels = ("Case",))
@@ -105,9 +91,9 @@ function table(rows, labels = ("Case",))
 
     **Recovery of the reference pivots**
 
-    | Method(s) | Recovered | Missed cases |
-    | --- | --- | --- |
-    $(join(recovery_summary(rows), "\n"))
+    | $header | ρ₁/√n | ρᵣ·√n | Gap at r | First gap |
+    |$sep --- | --- | --- | --- |
+    $(join((row.recovery for row in rows), "\n"))
     """)
 end
 
@@ -138,7 +124,7 @@ table([
     macaulay("M4", [x^3 - 0.3x * y + 1 / 7, y^2 - 3x * z, z^2 - x - 0.25], 5),
 ])
 
-function moments(vars, d, atoms, levels; case = nothing)
+function moments(vars, d, atoms, δ; case = nothing)
     monos = monomials(vars, 0:d)
     k = length(atoms)
     V = [m(vars => a) for m in monos, a in atoms]
@@ -147,15 +133,18 @@ function moments(vars, d, atoms, levels; case = nothing)
     piv = true_pivots(Matrix(transpose(V)))
     E = randn(size(exact))
     E = (E + E') / 2
-    scale = opnorm(exact) / opnorm(E)
-    basis = MB.SubBasis{MB.Monomial}(monos)
-    return map(levels) do δ
-        M = exact + (δ * scale) * E
-        chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.FixedRank(k))
-        noise_level = @sprintf("%.0e", δ)
-        labels = isnothing(case) ? (noise_level,) : (case, noise_level)
-        return row(labels, chol.L, basis, chol.singular_values, k, piv)
-    end
+    M = exact + δ * opnorm(exact) / opnorm(E) * E
+    chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.FixedRank(k))
+    noise_level = @sprintf("%.0e", δ)
+    labels = isnothing(case) ? (noise_level,) : (case, noise_level)
+    return row(
+        labels,
+        chol.L,
+        MB.SubBasis{MB.Monomial}(monos),
+        chol.singular_values,
+        k,
+        piv,
+    )
 end
 
 # Atoms on the circle of radius `radius` with angles `2π i / k + 0.1 i^2` for
@@ -176,29 +165,20 @@ circle_atoms = circle(1, 7)
 large_circle_atoms = circle(3, 7)
 sphere_atoms = [sphere() for _ in 1:12]
 table(
-    vcat(
-        moments(
-            [x, y],
-            4,
-            circle_atoms,
-            [1e-12, 1e-8, 1e-6, 1e-4];
-            case = "C₁",
-        ),
-        moments(
-            [x, y],
-            4,
-            large_circle_atoms,
-            [1e-12, 1e-8, 1e-6];
-            case = "C₃",
-        ),
-        moments(
-            [x, y, z],
-            4,
-            sphere_atoms,
-            [1e-12, 1e-8, 1e-6, 5e-6, 6e-6, 1e-4];
-            case = "S",
-        ),
-    ),
+    [
+        [
+            moments([x, y], 4, circle_atoms, δ; case = "C₁") for
+            δ in [1e-12, 1e-8, 1e-6, 1e-4]
+        ]
+        [
+            moments([x, y], 4, large_circle_atoms, δ; case = "C₃") for
+            δ in [1e-12, 1e-8, 1e-6]
+        ]
+        [
+            moments([x, y, z], 4, sphere_atoms, δ; case = "S") for
+            δ in [1e-12, 1e-8, 1e-6, 1e-4]
+        ]
+    ],
     ("Case", "δ"),
 )
 
@@ -263,8 +243,8 @@ A[2, 3] = A[3, 2] = 1e-12
 F_coupled = svd(A)
 Z_coupled = F_coupled.U[:, 1:2]
 basis_coupled = MB.SubBasis{MB.Monomial}(monomials([x], 0:3))
-coupled = row(("A",), Z_coupled, basis_coupled, F_coupled.S, 2, Set([1, 3]))
-@assert coupled.found[3:4] == (Set([1, 3]), Set([1, 2]))
+coupled_pivots = gap_pivots(Z_coupled, basis_coupled, F_coupled.S, 2)
+@assert coupled_pivots == (Set([1, 3]), Set([1, 2]))
 
 Q = [
     1.0000000000000002 2.9999999777389235 1.408602019734018 8.999999911981313 4.225805987406138 3.043010098670093
@@ -277,22 +257,13 @@ Q = [
 F_atoms = svd(Q)
 Z_atoms = F_atoms.U[:, 1:1]
 basis_atoms = MB.SubBasis{MB.Monomial}(monomials([x, y], 0:2))
-two_atoms = row(("B",), Z_atoms, basis_atoms, F_atoms.S, 1, Set([1]))
-@assert two_atoms.found[3:4] == (Set([4]), Set([1]))
+atom_pivots = gap_pivots(Z_atoms, basis_atoms, F_atoms.S, 1)
+@assert atom_pivots == (Set([4]), Set([1]))
 
-function pivot_row(result)
-    cells = map((result.reference, result.found...)) do indices
-        return isempty(indices) ? "∅" : join(sort(collect(indices)), ", ")
-    end
-    return "| $(result.case) | $(join(cells, " | ")) |"
-end
-
-Markdown.parse("""
-| Case | Reference | ρ₁/√n | ρᵣ·√n | Gap at r | First gap |
-| --- | --- | --- | --- | --- | --- |
-$(pivot_row(coupled))
-$(pivot_row(two_atoms))
-""")
+table([
+    row(("A",), Z_coupled, basis_coupled, F_coupled.S, 2, Set([1, 3])),
+    row(("B",), Z_atoms, basis_atoms, F_atoms.S, 1, Set([1])),
+])
 
 measure_moments = MM.moment_matrix(Q, monomials([x, y], 0:2))
 policy = MM.GapBasedAccuracy(MM.FixedRank(1); search_later = true)
@@ -305,6 +276,12 @@ d = MM.BasisDependence{MM.LinearDependence}(image)
 
 twisted_cubic_atoms =
     [[t, t^2, t^3] for t in big.([-0.9, -0.4, 0.1, 0.5, 0.5001, 0.95])]
-table(moments([x, y, z], 3, twisted_cubic_atoms, [1e-12, 1e-8, 1e-6]), ("δ",))
+table(
+    [
+        moments([x, y, z], 3, twisted_cubic_atoms, δ) for
+        δ in [1e-12, 1e-8, 1e-6]
+    ],
+    ("δ",),
+)
 
 # This file was generated using Literate.jl, https://github.com/fredrikekre/Literate.jl
