@@ -13,9 +13,10 @@ function _nullspace_rref(null::MacaulayNullspace)
     A = null.matrix'
     tol = real(null.accuracy) * sqrt(size(A, 2))
     U = RowEchelon.rref!(Matrix(A), tol)
-    # An empty matrix has rank zero at any tolerance. Otherwise, zero rows
-    # come last in echelon form, so a nonzero last row means every row
-    # already has a pivot at the initial tolerance.
+    # An empty matrix has rank zero at any tolerance. Otherwise, we expect
+    # the r columns of the Macaulay nullspace basis to be independent, so
+    # its adjoint A should have r pivots. Zero rows come last in echelon
+    # form, so a nonzero rth row of U confirms that all r pivots were found.
     if isempty(U) || !iszero(view(U, size(U, 1), :))
         return U
     end
