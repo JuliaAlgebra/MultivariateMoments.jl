@@ -9,8 +9,6 @@ is_dependent!(p::Pivots, i) = !(i in p.pivots)
 # error, and Trefethen and Schreiber (1990) study growth in elimination on
 # random matrices. See `docs/src/tutorials/dependence_tolerance.jl` for the
 # relation to these analyses and comparisons on monomial bases.
-# If elimination loses directions, lower the tolerance to recover the
-# attainable rank.
 function _nullspace_rref(null::MacaulayNullspace)
     A = null.matrix'
     tol = real(null.accuracy) * sqrt(size(A, 2))
@@ -21,13 +19,14 @@ function _nullspace_rref(null::MacaulayNullspace)
     if isempty(U) || !iszero(view(U, size(U, 1), :))
         return U
     end
-    # Restricting a null space to a subset of its rows can lower its rank.
-    # Determine the attainable rank by eliminating at roundoff tolerance.
+    # A zero last row may be genuine, e.g., after restricting the monomial
+    # basis. Count the pivots at roundoff tolerance to get a reference rank.
     scale = norm(A, Inf)
     roundoff = eps(float(scale))
     V = RowEchelon.rref!(Matrix(A), roundoff)
     r = findlast(!iszero, eachrow(V))
     tol = min(tol, scale)
+    # Row r is zero exactly when U has fewer than r pivots.
     while !isnothing(r) && iszero(view(U, r, :))
         tol /= 2
         if tol <= roundoff
