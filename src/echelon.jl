@@ -4,37 +4,13 @@ end
 
 is_dependent!(p::Pivots, i) = !(i in p.pivots)
 
-# The initial tolerance uses a factor of √n for a basis with n monomials.
-#
-# * The backward error analysis of Gaussian elimination with partial pivoting
-#   (which is what `RowEchelon.rref!` does as it picks the largest entry of
-#   the column) gives a bound proportional to `n * u` times the growth factor
-#   `ρ_n`, see [H02, Chapter 9]. The worst case would therefore give a factor
-#   `n` (times `ρ_n`), not `√n`.
-# * The `√n` factor matches the rule of thumb of [H02, Section 2.8]: as
-#   rounding errors are roughly independent, an `n * u` bound is pessimistic
-#   and `√n * u` is a more realistic estimate (this goes back to Wilkinson).
-# * [TS90] shows that the growth factor of partial pivoting is small in
-#   practice, which supports not including it.
-#
-# Note that these analyses consider the rounding errors made during the
-# elimination while here, the dominant error is usually the error of
-# `null.matrix` itself which is carried by the elimination. In the end, the
-# factor `√n` was chosen empirically, see
-# https://github.com/JuliaAlgebra/MultivariateMoments.jl/pull/111 and the
-# tutorial `docs/src/tutorials/dependence_tolerance.jl` for a comparison with
-# other tolerances.
-#
-# [H02] Higham, Nicholas J.
-# *Accuracy and Stability of Numerical Algorithms.*
-# 2nd edition, SIAM, 2002.
-#
-# [TS90] Trefethen, Lloyd N. and Schreiber, Robert S.
-# *Average-case stability of Gaussian elimination.*
-# SIAM Journal on Matrix Analysis and Applications 11.3 (1990): 335-360.
-#
-# Start with the tolerance studied in the dependence tutorial. If it drops
-# directions, lower it only as much as needed to recover the numerical rank.
+# Use √n as an empirical multiplier on the estimated subspace error for
+# n monomials. Higham (2002, Section 2.8 and Chapter 9) analyzes rounding
+# error, and Trefethen and Schreiber (1990) study growth in elimination on
+# random matrices. See `docs/src/tutorials/dependence_tolerance.jl` for the
+# relation to these analyses and comparisons on monomial bases.
+# If elimination loses directions, lower the tolerance to recover the
+# attainable rank.
 function _nullspace_rref(null::MacaulayNullspace)
     A = null.matrix'
     tol = real(null.accuracy) * sqrt(size(A, 2))

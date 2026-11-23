@@ -1,5 +1,6 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
 DynamicPolynomials = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
 GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -18,4 +19,5 @@ MultivariateMoments = {path = ".."}
 
 [compat]
 Documenter = "1"
+DocumenterCitations = "1"
 Literate = "2"

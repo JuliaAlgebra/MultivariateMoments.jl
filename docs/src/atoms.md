@@ -84,6 +84,7 @@ LeadingRelativeRankTol
 DifferentialRankTol
 LargestDifferentialRank
 FallbackRank
+GapBasedAccuracy
 ```
 
 Given the [`MacaulayNullspace`](@ref), there are two approaches implemented

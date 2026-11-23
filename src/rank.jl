@@ -15,39 +15,81 @@ using `check`.
 function rank_from_singular_values end
 
 """
+    GapBasedAccuracy(check::RankCheck; gap_tol = 1e-2, search_later = false)
+
+Select the rank using `check` and configure how [`accuracy`](@ref) scales the
+pivot tolerance. A gap after singular value `σ[j]` means
+`σ[j+1] < gap_tol * σ[j]`.
+
+By default only the gap at the selected rank `r` is considered. Set
+`search_later = true` to use the first gap at or after `r`. A later gap
+can identify a noise floor below discarded signal directions. Both the
+noise level and its normalization change, so the resulting tolerance can
+increase or decrease. See
+[Tolerance of the numerical dependence of monomials](@ref) for examples.
+"""
+struct GapBasedAccuracy{C<:RankCheck,T<:Real} <: RankCheck
+    check::C
+    gap_tol::T
+    search_later::Bool
+end
+
+function GapBasedAccuracy(
+    check::RankCheck;
+    gap_tol = 1e-2,
+    search_later = false,
+)
+    return GapBasedAccuracy(check, gap_tol, search_later)
+end
+
+function rank_from_singular_values(σ, config::GapBasedAccuracy)
+    return rank_from_singular_values(σ, config.check)
+end
+
+function default_accuracy(σ, config::GapBasedAccuracy)
+    return default_accuracy(σ, config.check)
+end
+
+"""
     accuracy(σ, r, check::RankCheck)
 
 Return a relative tolerance for dependence calculations after selecting rank
 `r` from the decreasing singular values `σ`.
 
-Use `max(σ[r+1], length(σ) * eps * σ[1])` as the noise level, where `eps`
-is machine precision. The second term accounts for roundoff in the singular
-values. When `σ[r+1] < 1e-2 * σ[r]`, divide this noise level by `σ[r]`, the
-weakest retained singular value. Otherwise divide by `σ[1]`. A gap later
-in the spectrum can separate a larger subspace while the retained directions
-remain sensitive to perturbations at the cutoff. Both choices are heuristics
-for selecting pivots. Estimating a principal angle requires information about
-the perturbation.
+By default, check for a gap at `r`. Use [`GapBasedAccuracy`](@ref) to configure
+the threshold and search range. For a gap after `σ[j]`, divide `σ[j+1]` by
+the weakest retained singular value `σ[r]`. If no gap is found, divide
+`σ[r+1]` by `σ[1]`. In both cases, first bound the numerator from below by
+`length(σ) * eps * σ[1]` to account for roundoff in the singular values.
+These ratios are heuristics for selecting pivots. Estimating a principal
+angle also requires information about the perturbation.
 
 For rank zero return zero. For full rank use the default for `check`.
 See [Tolerance of the numerical dependence of monomials](@ref) for examples.
 """
-function accuracy(σ::Vector{T}, r, check::RankCheck) where {T}
+function accuracy(σ::Vector, r, check::RankCheck)
+    return accuracy(σ, r, GapBasedAccuracy(check))
+end
+
+function accuracy(σ::Vector{T}, r, config::GapBasedAccuracy) where {T}
     if iszero(r)
         return zero(T)
     elseif r == lastindex(σ)
-        return default_accuracy(σ, check)
+        return default_accuracy(σ, config)
     end
-    scale = if σ[r+1] < 1e-2 * σ[r]
-        σ[r]
-    else
-        σ[1]
+    noise, scale = σ[r+1], σ[1]
+    last = config.search_later ? lastindex(σ) - 1 : r
+    for j in r:last
+        if σ[j+1] < config.gap_tol * σ[j]
+            noise, scale = σ[j+1], σ[r]
+            break
+        end
     end
     # The singular values are computed with an error of about
     # `length(σ) * eps * σ[1]` so a smaller computed singular value does not
     # mean that the noise is smaller.
     roundoff = length(σ) * eps(float(T)) * σ[1]
-    return max(σ[r+1], roundoff) / scale
+    return max(noise, roundoff) / scale
 end
 
 """
@@ -59,6 +101,10 @@ This is used by [`FallbackRank`](@ref) for deciding whether the fallback
 should be used.
 """
 function doubt end
+
+function doubt(σ, config::GapBasedAccuracy)
+    return doubt(σ, config.check)
+end
 
 """
     struct UserRank <: RankCheck

@@ -30,6 +30,31 @@ end
     @test accuracy([1.0, 0.5, 1e-20], 2, check) ≈ 3eps() / 0.5
 end
 
+@testset "Configurable spectral gap" begin
+    σ = [1.0, 0.125, 0.015625, 1e-6, 1e-10]
+    check = FixedRank(2)
+    @test accuracy(σ, 2, GapBasedAccuracy(check)) == accuracy(σ, 2, check)
+    # The comparison at the threshold is strict (σ[3] / σ[2] = 0.125).
+    @test accuracy(σ, 2, GapBasedAccuracy(check; gap_tol = 0.125)) == σ[3]
+    @test accuracy(σ, 2, GapBasedAccuracy(check; gap_tol = 0.25)) == σ[3] / σ[2]
+    later = GapBasedAccuracy(check; search_later = true)
+    # Take the first qualifying gap, even when another one follows.
+    @test accuracy(σ, 2, later) == σ[4] / σ[2]
+    @test accuracy(
+        σ,
+        2,
+        GapBasedAccuracy(check; gap_tol = 0, search_later = true),
+    ) == σ[3]
+    @test accuracy([1.0, 0.125, 0.015625, 0.0], 2, later) == 4eps() / 0.125
+    @test accuracy(σ, length(σ), later) == accuracy(σ, length(σ), check)
+    @test iszero(accuracy(σ, 0, later))
+    chol = low_rank_ldlt(Diagonal(σ), SVDLDLT(), later)
+    @test size(chol.L, 2) == 2
+    @test accuracy(chol) == σ[4] / σ[2]
+    @test doubt(σ, GapBasedAccuracy(LargestDifferentialRank())) ==
+          doubt(σ, LargestDifferentialRank())
+end
+
 struct HardcodedRanks <: RankCheck
     r::Vector{Int}
 end

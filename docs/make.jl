@@ -1,4 +1,5 @@
 using Documenter, Literate, MultivariateMoments
+import DocumenterCitations
 # Needed because we include docstrings for `monomial`, `variables` and `monomials`
 import MultivariatePolynomials
 
@@ -33,11 +34,18 @@ makedocs(
         "Moments and expectation" => "moments.md"
         "Atoms extraction" => "atoms.md"
         "Tutorials" => _TUTORIALS
+        "Bibliography" => "bibliography.md"
     ],
     # The following ensures that we only include the docstrings from
     # this module for functions define in Base and MultivariatePolynomials that
     # we overwrite.
     modules = [MultivariateMoments],
+    plugins = [
+        DocumenterCitations.CitationBibliography(
+            joinpath(@__DIR__, "src", "references.bib");
+            style = :authoryear,
+        ),
+    ],
 )
 
 deploydocs(
