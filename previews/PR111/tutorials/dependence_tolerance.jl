@@ -178,9 +178,24 @@ table([
 # *Perturbation bounds in connection with singular value decomposition.*
 # BIT Numerical Mathematics 12 (1972): 99-111.
 #
-# The Gaussian elimination then amplifies these errors. The factor ``\sqrt{n}``
-# is a heuristic for this amplification, it is enough in all the cases of this
-# tutorial.
+# The Gaussian elimination then amplifies these errors. The backward error
+# analysis of Gaussian elimination with partial pivoting gives a bound
+# proportional to ``n`` times the growth factor [H02, Chapter 9] but, as
+# rounding errors are roughly independent, ``\sqrt{n}`` is a more realistic
+# estimate [H02, Section 2.8] and the growth factor of partial pivoting is
+# small in practice [TS90]. These analyses consider the rounding errors made
+# during the elimination while here, the dominant error is the error of the
+# space itself, so the factor ``\sqrt{n}`` was in the end chosen empirically,
+# see [MultivariateMoments#111](https://github.com/JuliaAlgebra/MultivariateMoments.jl/pull/111).
+# It is enough in all the cases of this tutorial.
+#
+# [H02] Higham, Nicholas J.
+# *Accuracy and Stability of Numerical Algorithms.*
+# 2nd edition, SIAM, 2002.
+#
+# [TS90] Trefethen, Lloyd N. and Schreiber, Robert S.
+# *Average-case stability of Gaussian elimination.*
+# SIAM Journal on Matrix Analysis and Applications 11.3 (1990): 335-360.
 #
 # For exact equations, the computed `σ[r+1]` is often below the machine
 # precision. It is not a reliable estimate of the noise since the singular
