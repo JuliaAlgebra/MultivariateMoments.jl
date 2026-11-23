@@ -1,0 +1,7 @@
+/* Give numeric columns more room in tables printed by tutorial examples. */
+@media (max-width: 32rem) {
+    .content .markdown table :is(th, td) {
+        font-size: 0.875rem;
+        padding-inline: 0.15rem;
+    }
+}
