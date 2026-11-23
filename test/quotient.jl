@@ -41,16 +41,21 @@ end
 
 function test_macaulay(x, y)
     # The equation is redundant so that it is not a Gröbner basis
-    domain = SS.@set x^2 + 1.0 == 0 && 2x^2 + 2.0 == 0
-    @test !SS.is_gröbner_basis(SS.ideal(domain))
+    V = SS.@set x^2 + 1.0 == 0 && 2x^2 + 2.0 == 0
+    @test !SS.is_gröbner_basis(SS.ideal(V))
     # `y` is not a column of the Macaulay matrix of degree 2
-    _test_quotient(b([1, y, x^2]), domain, [1 0 -1; 0 1 0])
+    _test_quotient(b([1, y, x^2]), SS.truncated(V, 2), [1 0 -1; 0 1 0])
     # Same matrix as the remainders modulo the Gröbner basis
-    _test_quotient(b([1, x, x^2, x^3]), domain, [1 0 -1 0; 0 1 0 -1])
+    _test_quotient(
+        b([1, x, x^2, x^3]),
+        SS.truncated(V, 3),
+        [1 0 -1 0; 0 1 0 -1],
+    )
     # The Macaulay matrix of degree 1 has no rows
-    _test_quotient(b([1, x]), domain, [1 0; 0 1])
-    _test_quotient(b(typeof(x * y)[]), domain, zeros(0, 0))
-    @test !SS.is_gröbner_basis(SS.ideal(domain))
+    _test_quotient(b([1, x]), SS.truncated(V, 1), [1 0; 0 1])
+    _test_quotient(b(typeof(x * y)[]), SS.truncated(V, 0), zeros(0, 0))
+    # The Gröbner basis is not computed for the truncation
+    @test !SS.is_gröbner_basis(SS.ideal(V))
     return
 end
 
@@ -81,21 +86,12 @@ function test_degree_fall(x, y)
     # in its truncation at degree 1 or 2
     domain = SS.@set x * y == 1.0 && y^2 == 1.0
     linear = b(MP.monomials((x, y), 0:1))
-    # By default, the ideal is truncated at the maximal degree of the basis
     for d in 1:2
-        @test !_in_kernel(
-            MM.quotient_basis(b(MP.monomials((x, y), 0:d)), domain),
-            x - y,
-        )
         @test !_in_kernel(
             MM.quotient_basis(linear, SS.truncated(domain, d)),
             x - y,
         )
     end
-    @test _in_kernel(
-        MM.quotient_basis(b(MP.monomials((x, y), 0:3)), domain),
-        x - y,
-    )
     # The truncation degree can be larger than the degree of the basis
     q = MM.quotient_basis(linear, SS.truncated(domain, 3))
     @test q isa MA.promote_operation(
@@ -106,6 +102,11 @@ function test_degree_fall(x, y)
     @test _in_kernel(q, x - y)
     @test !_in_kernel(q, x)
     @test !SS.is_gröbner_basis(SS.ideal(domain))
+    # Without truncation, the Gröbner basis is computed
+    q = MM.quotient_basis(linear, domain)
+    @test _in_kernel(q, x - y)
+    @test !_in_kernel(q, x)
+    @test SS.is_gröbner_basis(SS.ideal(domain))
     return
 end
 
