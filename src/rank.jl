@@ -18,18 +18,54 @@ function rank_from_singular_values end
     accuracy(σ, r, check::RankCheck)
 
 Returns a value measuring the accuracy of the rank check `check` returning rank
-`r`. This is used by [`Echelon`](@ref) to determine the accuracy to use for the
-Gaussian elimination.
+`r` for a matrix with singular values `σ`. It estimates the error (i.e., the
+sine of the largest principal angle) of the computed space spanned by the
+first `r` (resp. last `length(σ) - r`) singular vectors.
+
+The singular value `σ[j+1]` after the first gap, i.e., for the first `j ≥ r`
+such that `σ[j+1] < 1e-2 * σ[j]`, is the level of the noise of the matrix. Indeed,
+if `j > r`, the singular values `σ[r+1], ..., σ[j]` are not noise but they were
+discarded by the rank check. As the error of the space is the level of the
+noise divided by `σ[r]` [W72], the accuracy is `σ[j+1] / σ[r]`. This is the
+case for instance for the null space of a Macaulay matrix of exact equations
+which has a gap at `j = r`.
+
+If there is no gap, the level of noise cannot be determined so the accuracy
+is `σ[r+1] / σ[1]`. This is the case for instance for moment matrices
+obtained by an SDP solver whose singular values decrease without any gap.
+
+In both cases, the level of the noise is at least the error
+`length(σ) * eps * σ[1]` with which the singular values are computed, which
+is the default tolerance of `LinearAlgebra.rank`.
+
+This is used to determine the tolerance of the Gaussian elimination of
+[`Echelon`](@ref) and [`BasisDependence`](@ref).
+See the tutorial
+[Tolerance of the numerical dependence of monomials](@ref) for a comparison
+with other choices.
+
+[W72] Wedin, Per-Åke.
+*Perturbation bounds in connection with singular value decomposition.*
+BIT Numerical Mathematics 12 (1972): 99-111.
 """
 function accuracy(σ::Vector{T}, r, check::RankCheck) where {T}
     if iszero(r)
         return zero(T)
     elseif r == lastindex(σ)
         return default_accuracy(σ, check)
-    else
-        # Even an exact zero pivot leaves roundoff in the computed factors.
-        return max(σ[r+1] / σ[1], eps(float(T)))
     end
+    # The first gap is between `σ[r+k-1]` and `σ[r+k]`
+    k = findfirst(j -> σ[j+1] < 1e-2 * σ[j], r:(lastindex(σ)-1))
+    if isnothing(k)
+        noise, scale = σ[r+1], σ[1]
+    else
+        noise, scale = σ[r+k], σ[r]
+    end
+    # The singular values are computed with an error of about
+    # `length(σ) * eps * σ[1]` so a smaller computed singular value does not
+    # mean that the noise is smaller.
+    roundoff = length(σ) * eps(float(T)) * σ[1]
+    return max(noise, roundoff) / scale
 end
 
 """
@@ -428,12 +464,9 @@ end
 """
     accuracy(chol::LowRankLDLT)
 
-Return the ratio `rtol = σ[r+1]/σ[1]` where `σ` is the vector of singular
-values of the matrix for which `chol` is the rank-`r` Cholesky decomposition.
-This is a good relative tolerance to use with the matrix as `σ[r+1]` is the
-first singular value that was discarded.
-For a truncated decomposition, the relative tolerance is at least machine
-precision to account for roundoff in the factors.
+Return the accuracy of the space spanned by the columns of `chol.L` from the
+singular values of the matrix for which `chol` is the rank-`r` Cholesky
+decomposition, see [`accuracy`](@ref).
 """
 function accuracy(chol::LowRankLDLT)
     return accuracy(chol.singular_values, size(chol.L, 2), chol.rank_check)
