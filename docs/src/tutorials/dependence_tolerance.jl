@@ -88,9 +88,8 @@ end
 # `ρ₁ = σ[r+1] / σ[1]` scales the first discarded singular value by the
 # largest one, and `ρᵣ = σ[r+1] / σ[r]` scales it by the weakest retained one.
 #
-# The recovery summary counts exact matches with the reference pivot set.
-# Methods share a row when they succeed and fail on the same cases in that
-# experiment. Two methods use fixed tolerances, `ρ₁/√n` (previously used by
+# The second table shows which tolerances recover the reference pivots (✓).
+# The first two columns of results use `ρ₁/√n` (previously used by
 # [`Echelon`](@ref)) and `ρᵣ·√n`. Both floor the ratio at machine precision
 # before scaling and apply a single elimination. **Gap at r** checks for
 # a gap at the selected rank, and **First gap** uses the first gap at or
@@ -123,31 +122,17 @@ function row(labels, Z, basis, σ, r, piv)
         noise,
         signal,
     )
-    leading = max(σ[r+1] / σ[1], eps()) / sqrt(n)
-    adjacent = max(σ[r+1] / σ[r], eps()) * sqrt(n)
-    at_rank, first_gap = gap_pivots(Z, basis, σ, r)
-    found = (pivots(A, leading), pivots(A, adjacent), at_rank, first_gap)
-    return (; measurements, case = join(labels, " "), reference = piv, found)
-end
-
-function recovery_summary(rows)
-    methods = ["ρ₁/√n", "ρᵣ·√n", "Gap at r", "First gap"]
-    cases = [row.case for row in rows]
-    outcomes = [
-        [row.found[i] == row.reference for row in rows] for
-        i in eachindex(methods)
-    ]
-    return map(unique(outcomes)) do pattern
-        names = join(methods[findall(==(pattern), outcomes)], ", ")
-        missed = if all(pattern)
-            "None"
-        elseif any(pattern)
-            join(cases[.!pattern], ", ")
-        else
-            "All"
-        end
-        return "| $names | $(count(pattern))/$(length(rows)) | $missed |"
+    recovery = "| $label |"
+    for tol in (
+        max(σ[r+1] / σ[1], eps()) / sqrt(n),
+        max(σ[r+1] / σ[r], eps()) * sqrt(n),
+    )
+        recovery *= pivots(A, tol) == piv ? " ✓ |" : " ✗ |"
     end
+    for found in gap_pivots(Z, basis, σ, r)
+        recovery *= found == piv ? " ✓ |" : " ✗ |"
+    end
+    return (; measurements, recovery)
 end
 
 function table(rows, labels = ("Case",))
@@ -160,9 +145,9 @@ function table(rows, labels = ("Case",))
 
     **Recovery of the reference pivots**
 
-    | Method(s) | Recovered | Missed cases |
-    | --- | --- | --- |
-    $(join(recovery_summary(rows), "\n"))
+    | $header | ρ₁/√n | ρᵣ·√n | Gap at r | First gap |
+    |$sep --- | --- | --- | --- |
+    $(join((row.recovery for row in rows), "\n"))
     """)
 end
 
@@ -249,14 +234,13 @@ table([
 #
 # We now consider the moment matrix of atoms lying on a variety so that some
 # monomials are dependent before the last pivot. To mimic the inaccuracy of
-# an SDP solver, we perturb the moment matrix by a random symmetric matrix.
-# For each set of atoms we hold the perturbation direction fixed and vary
-# only its relative norm `δ`. The rank is fixed to the number of atoms with
+# an SDP solver, the moment matrix is perturbed by a random symmetric matrix of
+# relative norm `δ`. The rank is fixed to the number of atoms with
 # [`FixedRank`](@ref) to separate the choice of the rank from the choice of
 # the pivots. The atoms and the true pivots are computed in `BigFloat` so that
 # roundoff in the reference pivots is small compared with the perturbation.
 
-function moments(vars, d, atoms, levels; case = nothing)
+function moments(vars, d, atoms, δ; case = nothing)
     monos = monomials(vars, 0:d)
     k = length(atoms)
     V = [m(vars => a) for m in monos, a in atoms]
@@ -265,15 +249,18 @@ function moments(vars, d, atoms, levels; case = nothing)
     piv = true_pivots(Matrix(transpose(V)))
     E = randn(size(exact))
     E = (E + E') / 2
-    scale = opnorm(exact) / opnorm(E)
-    basis = MB.SubBasis{MB.Monomial}(monos)
-    return map(levels) do δ
-        M = exact + (δ * scale) * E
-        chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.FixedRank(k))
-        noise_level = @sprintf("%.0e", δ)
-        labels = isnothing(case) ? (noise_level,) : (case, noise_level)
-        return row(labels, chol.L, basis, chol.singular_values, k, piv)
-    end
+    M = exact + δ * opnorm(exact) / opnorm(E) * E
+    chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.FixedRank(k))
+    noise_level = @sprintf("%.0e", δ)
+    labels = isnothing(case) ? (noise_level,) : (case, noise_level)
+    return row(
+        labels,
+        chol.L,
+        MB.SubBasis{MB.Monomial}(monos),
+        chol.singular_values,
+        k,
+        piv,
+    )
 end
 
 ## Atoms on the circle of radius `radius` with angles `2π i / k + 0.1 i^2` for
@@ -299,50 +286,26 @@ circle_atoms = circle(1, 7)
 large_circle_atoms = circle(3, 7)
 sphere_atoms = [sphere() for _ in 1:12]
 table(
-    vcat(
-        moments(
-            [x, y],
-            4,
-            circle_atoms,
-            [1e-12, 1e-8, 1e-6, 1e-4];
-            case = "C₁",
-        ),
-        moments(
-            [x, y],
-            4,
-            large_circle_atoms,
-            [1e-12, 1e-8, 1e-6];
-            case = "C₃",
-        ),
-        moments(
-            [x, y, z],
-            4,
-            sphere_atoms,
-            [1e-12, 1e-8, 1e-6, 5e-6, 6e-6, 1e-4];
-            case = "S",
-        ),
-    ),
+    [
+        [
+            moments([x, y], 4, circle_atoms, δ; case = "C₁") for
+            δ in [1e-12, 1e-8, 1e-6, 1e-4]
+        ]
+        [
+            moments([x, y], 4, large_circle_atoms, δ; case = "C₃") for
+            δ in [1e-12, 1e-8, 1e-6]
+        ]
+        [
+            moments([x, y, z], 4, sphere_atoms, δ; case = "S") for
+            δ in [1e-12, 1e-8, 1e-6, 1e-4]
+        ]
+    ],
     ("Case", "δ"),
 )
 
-# On both circles there is already a gap at the retained rank. Both gap
-# policies therefore start at `ρᵣ·√n` (the roundoff floor is inactive).
-# The smaller `ρ₁/√n` admits noise in dependent columns such as `x²`,
-# which on the circle is a linear combination of `1` and `y²`.
-#
-# The two nearby sphere perturbations show what happens at the gap cutoff.
-# At `δ = 5e-6`, `ρᵣ ≈ 0.0099` qualifies as a gap. All three methods using
-# `ρᵣ·√n` recover the reference pivots. At `δ = 6e-6`, `ρᵣ ≈ 0.0118`
-# exceeds the cutoff and there is no qualifying gap later. The fixed
-# tolerance is about `0.070`, between the measured noise (`0.0020`) and
-# signal (`0.114`). The two gap policies fall back to `ρ₁·√n ≈ 0.000029`,
-# accept column 10 in place of column 13, and still find all twelve pivots.
-#
-# At `δ = 1e-4` all four methods miss the reference. The fixed adjacent
-# tolerance exceeds one, so it discards every entry of the orthonormal
-# basis. Both gap policies start below the measured noise and again accept
-# a spurious pivot. [Choosing which gap to use](@ref) compares matrices
-# where the choice of search range matters.
+# On the circle, `x²` is dependent on `1` and `y²`. A tolerance below the
+# measured noise can select this column as a pivot. Several rows illustrate
+# this failure for the first tolerance. The last row is discussed below.
 
 # ## Moment matrices without gap
 #
@@ -439,8 +402,8 @@ A[2, 3] = A[3, 2] = 1e-12
 F_coupled = svd(A)
 Z_coupled = F_coupled.U[:, 1:2]
 basis_coupled = MB.SubBasis{MB.Monomial}(monomials([x], 0:3))
-coupled = row(("A",), Z_coupled, basis_coupled, F_coupled.S, 2, Set([1, 3]))
-@assert coupled.found[3:4] == (Set([1, 3]), Set([1, 2]))
+coupled_pivots = gap_pivots(Z_coupled, basis_coupled, F_coupled.S, 2)
+@assert coupled_pivots == (Set([1, 3]), Set([1, 2]))
 
 # The selected-rank policy skips the spurious `2e-9` component in column 2.
 # Searching for a later gap finds one after the third singular value and
@@ -464,24 +427,13 @@ Q = [
 F_atoms = svd(Q)
 Z_atoms = F_atoms.U[:, 1:1]
 basis_atoms = MB.SubBasis{MB.Monomial}(monomials([x, y], 0:2))
-two_atoms = row(("B",), Z_atoms, basis_atoms, F_atoms.S, 1, Set([1]))
-@assert two_atoms.found[3:4] == (Set([4]), Set([1]))
+atom_pivots = gap_pivots(Z_atoms, basis_atoms, F_atoms.S, 1)
+@assert atom_pivots == (Set([4]), Set([1]))
 
-# Each entry gives the column indices selected in the displayed basis.
-
-function pivot_row(result)
-    cells = map((result.reference, result.found...)) do indices
-        return isempty(indices) ? "∅" : join(sort(collect(indices)), ", ")
-    end
-    return "| $(result.case) | $(join(cells, " | ")) |"
-end
-
-Markdown.parse("""
-| Case | Reference | ρ₁/√n | ρᵣ·√n | Gap at r | First gap |
-| --- | --- | --- | --- | --- | --- |
-$(pivot_row(coupled))
-$(pivot_row(two_atoms))
-""")
+table([
+    row(("A",), Z_coupled, basis_coupled, F_coupled.S, 2, Set([1, 3])),
+    row(("B",), Z_atoms, basis_atoms, F_atoms.S, 1, Set([1])),
+])
 
 # The second singular value is about `0.21 σ[1]`, well above the residual
 # singular values from the third onward. The selected-rank fallback sets
@@ -515,10 +467,16 @@ d = MM.BasisDependence{MM.LinearDependence}(image)
 
 twisted_cubic_atoms =
     [[t, t^2, t^3] for t in big.([-0.9, -0.4, 0.1, 0.5, 0.5001, 0.95])]
-table(moments([x, y, z], 3, twisted_cubic_atoms, [1e-12, 1e-8, 1e-6]), ("δ",))
+table(
+    [
+        moments([x, y, z], 3, twisted_cubic_atoms, δ) for
+        δ in [1e-12, 1e-8, 1e-6]
+    ],
+    ("δ",),
+)
 
 # The first six monomials are already independent. A generic six-dimensional
-# subspace has the same six pivots, so matching the reference says little about
+# subspace has the same six pivots, so a check mark here says little about
 # recovery of the clean subspace. At higher perturbations the sixth
 # singular direction can be poorly determined.
 #
