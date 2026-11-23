@@ -6,12 +6,35 @@ is_dependent!(p::Pivots, i) = !(i in p.pivots)
 
 # Tolerance for the Gaussian elimination of `transpose(null.matrix)`. As the
 # columns of `null.matrix` are orthonormal, the error of the space they span is
-# about `null.accuracy` and the error of the entries of the rows of the
-# matrix in echelon form during the elimination is about `null.accuracy` times
-# a small growth factor. We multiply by the square root of the number of rows
-# of `null.matrix` to account for this growth. See the tutorial
-# `docs/src/tutorials/dependence_tolerance.jl` for a comparison with other
-# tolerances.
+# about `null.accuracy`, see `accuracy`. The Gaussian elimination then carries
+# and amplifies this error:
+#
+# * The backward error analysis of Gaussian elimination with partial pivoting
+#   (which is what `RowEchelon.rref!` does as it picks the largest entry of
+#   the column) gives a bound proportional to `n * u` times the growth factor
+#   `ρ_n`, see [H02, Chapter 9]. The worst case would therefore give a factor
+#   `n` (times `ρ_n`), not `√n`.
+# * The `√n` factor matches the rule of thumb of [H02, Section 2.8]: as
+#   rounding errors are roughly independent, an `n * u` bound is pessimistic
+#   and `√n * u` is a more realistic estimate (this goes back to Wilkinson).
+# * [TS90] shows that the growth factor of partial pivoting is small in
+#   practice, which supports not including it.
+#
+# Note that these analyses consider the rounding errors made during the
+# elimination while here, the dominant error is usually the error of
+# `null.matrix` itself which is carried by the elimination. In the end, the
+# factor `√n` was chosen empirically, see
+# https://github.com/JuliaAlgebra/MultivariateMoments.jl/pull/111 and the
+# tutorial `docs/src/tutorials/dependence_tolerance.jl` for a comparison with
+# other tolerances.
+#
+# [H02] Higham, Nicholas J.
+# *Accuracy and Stability of Numerical Algorithms.*
+# 2nd edition, SIAM, 2002.
+#
+# [TS90] Trefethen, Lloyd N. and Schreiber, Robert S.
+# *Average-case stability of Gaussian elimination.*
+# SIAM Journal on Matrix Analysis and Applications 11.3 (1990): 335-360.
 function _rref_tolerance(null::MacaulayNullspace)
     return null.accuracy * sqrt(size(null.matrix, 1))
 end
