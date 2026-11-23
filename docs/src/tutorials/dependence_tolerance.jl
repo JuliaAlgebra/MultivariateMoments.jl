@@ -1,10 +1,9 @@
 # # Tolerance of the numerical dependence of monomials
 
-# Both the extraction of atoms from a moment matrix and the reduction of
-# polynomials modulo a truncated ideal end up with the same numerical
-# question: given a matrix ``Z`` with orthonormal columns whose rows are
-# indexed by monomials, which monomials are linearly dependent on the
-# previous ones?
+# In the SVD examples below, atom extraction from a moment matrix and
+# reduction modulo a truncated ideal give a matrix ``Z`` with orthonormal
+# columns. Its rows are indexed by monomials. Which rows are linearly
+# dependent on the previous ones?
 #
 # * For atom extraction, ``Z`` spans the image space of the moment matrix,
 #   see `image_space`. The moment matrix is typically the solution of
@@ -84,52 +83,72 @@ function noise_and_signal(A, piv)
     return noise, signal
 end
 
-# We compare the following candidates for the tolerance where `σ` are the
-# singular values, `r` is the rank and `n` is the number of monomials. The
-# first one was used by [`Echelon`](@ref) and the second one is the one
-# suggested by perturbation theory as we will see below. The last one is the
-# one currently used by the package with the [`accuracy`](@ref) of the
-# [`MacaulayNullspace`](@ref).
+# For each case, the first table gives the number of monomials `n`, the
+# measured noise and signal, and two ratios. With `r` the selected rank,
+# `ρ₁ = σ[r+1] / σ[1]` scales the first discarded singular value by the
+# largest one, and `ρᵣ = σ[r+1] / σ[r]` scales it by the weakest retained one.
+#
+# The second table shows which tolerances recover the reference pivots (✓).
+# The first two columns of results use `ρ₁/√n` (previously used by
+# [`Echelon`](@ref)) and `ρᵣ·√n`. Both floor the ratio at machine precision
+# before scaling and apply a single elimination. **Gap at r** checks for
+# a gap at the selected rank, and **First gap** uses the first gap at or
+# after that rank. Both call [`BasisDependence`](@ref) and retry at a
+# lower tolerance if the initial elimination loses rank. For example,
+# a rank-one space spanned by a vector with 128 equal entries has unit
+# norm after normalization, but each entry is only about 0.088. If the
+# proposed tolerance is 0.09, the first pass discards every entry.
 
-const CANDIDATES = [
-    "σ[r+1]/σ[1]/√n" => (σ, r, n, _) -> max(σ[r+1] / σ[1], eps()) / sqrt(n),
-    "σ[r+1]/σ[r]·√n" => (σ, r, n, _) -> max(σ[r+1] / σ[r], eps()) * sqrt(n),
-    "accuracy·√n" => (σ, r, n, accuracy) -> accuracy * sqrt(n),
-]
+function gap_pivots(Z, basis, σ, r; gap_tol = 1e-2)
+    return map((false, true)) do search_later
+        policy = MM.GapBasedAccuracy(MM.FixedRank(r); gap_tol, search_later)
+        null = MM.MacaulayNullspace(Z, basis, MM.accuracy(σ, r, policy))
+        d = MM.BasisDependence{MM.LinearDependence}(null)
+        return Set(findall(!MM.is_dependent, d.dependence))
+    end
+end
 
-# For each case, we report the noise, the signal, and whether each candidate
-# gives the true pivots.
-
-function row(name, null::MM.MacaulayNullspace, σ, r, piv)
-    A = Matrix(transpose(null.matrix))
-    n = size(null.matrix, 1)
+function row(labels, Z, basis, σ, r, piv)
+    A = Matrix(transpose(Z))
+    n = size(Z, 1)
     noise, signal = noise_and_signal(A, piv)
-    s = @sprintf(
+    label = join(labels, " | ")
+    measurements = @sprintf(
         "| %s | %d | %.1e | %.1e | %.1e | %.1e |",
-        name,
+        label,
         n,
         σ[r+1] / σ[1],
         σ[r+1] / σ[r],
         noise,
         signal,
     )
-    for (_, tol) in CANDIDATES
-        s *= pivots(A, tol(σ, r, n, null.accuracy)) == piv ? " ✓ |" : " ✗ |"
+    recovery = "| $label |"
+    for tol in (
+        max(σ[r+1] / σ[1], eps()) / sqrt(n),
+        max(σ[r+1] / σ[r], eps()) * sqrt(n),
+    )
+        recovery *= pivots(A, tol) == piv ? " ✓ |" : " ✗ |"
     end
-    ## Check that the package uses the last candidate
-    d = MM.BasisDependence{MM.LinearDependence}(null)
-    @assert Set(findall(!MM.is_dependent, d.dependence)) ==
-            pivots(A, last(CANDIDATES)[2](σ, r, n, null.accuracy))
-    return s
+    for found in gap_pivots(Z, basis, σ, r)
+        recovery *= found == piv ? " ✓ |" : " ✗ |"
+    end
+    return (; measurements, recovery)
 end
 
-function table(rows)
-    header = "| Case | n | σ[r+1]/σ[1] | σ[r+1]/σ[r] | noise | signal |"
-    for (name, _) in CANDIDATES
-        header *= " $name |"
-    end
-    sep = "|" * repeat(" --- |", 6 + length(CANDIDATES))
-    return Markdown.parse(join([header; sep; rows], "\n"))
+function table(rows, labels = ("Case",))
+    header = join(labels, " | ")
+    sep = repeat(" --- |", length(labels))
+    return Markdown.parse("""
+    | $header | n | ρ₁ | ρᵣ | Noise | Signal |
+    |$sep --- | --- | --- | --- | --- |
+    $(join((row.measurements for row in rows), "\n"))
+
+    **Recovery of the reference pivots**
+
+    | $header | ρ₁/√n | ρᵣ·√n | Gap at r | First gap |
+    |$sep --- | --- | --- | --- |
+    $(join((row.recovery for row in rows), "\n"))
+    """)
 end
 
 # ## Macaulay null spaces
@@ -140,63 +159,67 @@ end
 
 @polyvar x y z
 
-function macaulay(equalities, D)
+function macaulay(label, equalities, D)
     M = MB.macaulay(equalities, D, [x, y, z])
-    null = MM.MacaulayNullspace(M)
     A = float(Matrix(SparseArrays.sparse(M)))
-    σ = svdvals(A)
-    σ = [σ; zeros(size(A, 2) - length(σ))]
-    r = size(A, 2) - size(null.matrix, 2)
-    F = svd(big.(A); full = true)
-    piv = true_pivots(Matrix(F.Vt[(r+1):end, :]))
-    return row(join(equalities, ", ") * ", D = $D", null, σ, r, piv)
+    F = svd(A; full = true)
+    check = MM._default_nullspace_rank_check(A)
+    r = MM.rank_from_singular_values(F.S, check)
+    Z = F.Vt[(r+1):end, :]'
+    big_A = big.(A)
+    ref = svd(big_A; full = true)
+    ref_rank = MM.rank_from_singular_values(
+        ref.S,
+        MM._default_nullspace_rank_check(big_A),
+    )
+    @assert r == ref_rank
+    piv = true_pivots(Matrix(ref.Vt[(ref_rank+1):end, :]))
+    return row((label,), Z, M.column_basis, F.S, r, piv)
 end
 
+# The four systems below are truncated at degree `D`.
+#
+# * **M1** (D = 5) uses `x² + y² = 1` and `xy = z`.
+# * **M2** (D = 5) uses `x² + y²/3 = 0.7` and `xy = z³/7`.
+# * **M3** (D = 6) uses `x² + 0.001y² = 0.7` and `xy = 1000z³`.
+# * **M4** (D = 5) uses `x³ − 0.3xy + 1/7 = 0`, `y² = 3xz`, and
+#   `z² = x + 0.25`.
+
 table([
-    macaulay([x^2 + y^2 - 1.0, x * y - z], 5),
-    macaulay([x^2 + 1 / 3 * y^2 - 0.7, x * y - 1 / 7 * z^3], 5),
-    macaulay([x^2 + 1e-3 * y^2 - 0.7, x * y - 1e3 * z^3], 6),
-    macaulay([x^3 - 0.3x * y + 1 / 7, y^2 - 3x * z, z^2 - x - 0.25], 5),
+    macaulay("M1", [x^2 + y^2 - 1.0, x * y - z], 5),
+    macaulay("M2", [x^2 + 1 / 3 * y^2 - 0.7, x * y - 1 / 7 * z^3], 5),
+    macaulay("M3", [x^2 + 1e-3 * y^2 - 0.7, x * y - 1e3 * z^3], 6),
+    macaulay("M4", [x^3 - 0.3x * y + 1 / 7, y^2 - 3x * z, z^2 - x - 0.25], 5),
 ])
 
-# The noise is at the level of the round-off errors but it is not at the
-# level of `σ[r+1] / σ[1]`: it follows `σ[r+1] / σ[r]` instead. This is
-# visible for the third case whose equations are badly scaled: the smallest
-# nonzero singular value `σ[r]` is small compared to `σ[1]` so the noise is
-# about `1e-13` while `σ[r+1] / σ[1]` is about `1e-16`.
+# In M3 the equations have very different scales. The noise
+# in the elimination is about `1e-13` even though `σ[r+1] / σ[1]` is close to
+# machine precision. Scaling by `σ[r]` gives a larger tolerance.
 #
-# This is explained by the perturbation theory of the singular value
-# decomposition [Wed72]: if the matrix is perturbed by a matrix of norm
-# ``\epsilon``, the sine of the largest principal angle between the space
-# spanned by the singular vectors of the first ``r`` singular values and the
-# one of the perturbed matrix is at most ``\epsilon / \delta`` where
-# ``\delta`` is the gap between ``\sigma_r`` and the next singular value of
-# the perturbed matrix. With ``\epsilon = \sigma_{r+1}``, this is about
-# ``\sigma_{r+1} / \sigma_r``.
+# Wedin bounds the angle between singular subspaces using perturbation or
+# residual norms and the spectral separation of retained and discarded
+# directions. With a pronounced gap at rank `r`, that separation may be
+# close to `σ[r]`. Using `σ[r+1]` as a proxy for the perturbation size then
+# suggests the scale `σ[r+1] / σ[r]`. An actual angle bound needs independent
+# information about the perturbation. [Wedin1972](@cite)
 #
-# [Wed72] Wedin, Per-Åke.
-# *Perturbation bounds in connection with singular value decomposition.*
-# BIT Numerical Mathematics 12 (1972): 99-111.
+# Gaussian elimination introduces rounding error and can amplify errors
+# already present in the singular vectors. For partial pivoting, a worst-case
+# backward error bound includes a dimension factor and element growth
+# (Chapter 9). The square-root rule of thumb for accumulated rounding error
+# assumes cancellation of errors of varying signs (Section 2.8).
+# [Higham2002](@cite)
 #
-# The Gaussian elimination then amplifies these errors. The backward error
-# analysis of Gaussian elimination with partial pivoting gives a bound
-# proportional to ``n`` times the growth factor [H02, Chapter 9] but, as
-# rounding errors are roughly independent, ``\sqrt{n}`` is a more realistic
-# estimate [H02, Section 2.8] and the growth factor of partial pivoting is
-# small in practice [TS90]. These analyses consider the rounding errors made
-# during the elimination while here, the dominant error is the error of the
-# space itself, so the factor ``\sqrt{n}`` was in the end chosen empirically,
-# see [MultivariateMoments#111](https://github.com/JuliaAlgebra/MultivariateMoments.jl/pull/111).
-# It is enough in all the cases of this tutorial.
+# Average-case experiments show much smaller element growth than the
+# worst-case bound for several random matrix ensembles.
+# [Trefethen1990](@cite)
 #
-# [H02] Higham, Nicholas J.
-# *Accuracy and Stability of Numerical Algorithms.*
-# 2nd edition, SIAM, 2002.
-#
-# [TS90] Trefethen, Lloyd N. and Schreiber, Robert S.
-# *Average-case stability of Gaussian elimination.*
-# SIAM Journal on Matrix Analysis and Applications 11.3 (1990): 335-360.
-#
+# Applying these results to dependence decisions requires an additional
+# empirical choice. Here the input may already contain error from an SDP
+# solver. The multiplier `√n` for the initial pivot tolerance was chosen
+# empirically in [pull request #111](https://github.com/JuliaAlgebra/MultivariateMoments.jl/pull/111).
+# The examples below compare the two choices of spectral gap.
+
 # For exact equations, the computed `σ[r+1]` is often below the machine
 # precision. It is not a reliable estimate of the noise since the singular
 # values are only computed with an error of about `length(σ) * eps * σ[1]`,
@@ -215,9 +238,9 @@ table([
 # relative norm `δ`. The rank is fixed to the number of atoms with
 # [`FixedRank`](@ref) to separate the choice of the rank from the choice of
 # the pivots. The atoms and the true pivots are computed in `BigFloat` so that
-# the atoms are exactly on the variety.
+# roundoff in the reference pivots is small compared with the perturbation.
 
-function moments(name, vars, d, atoms, δ)
+function moments(vars, d, atoms, δ; case = nothing)
     monos = monomials(vars, 0:d)
     k = length(atoms)
     V = [m(vars => a) for m in monos, a in atoms]
@@ -228,14 +251,12 @@ function moments(name, vars, d, atoms, δ)
     E = (E + E') / 2
     M = exact + δ * opnorm(exact) / opnorm(E) * E
     chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.FixedRank(k))
-    null = MM.MacaulayNullspace(
+    noise_level = @sprintf("%.0e", δ)
+    labels = isnothing(case) ? (noise_level,) : (case, noise_level)
+    return row(
+        labels,
         chol.L,
         MB.SubBasis{MB.Monomial}(monos),
-        MM.accuracy(chol),
-    )
-    return row(
-        @sprintf("%s, δ = %.0e", name, δ),
-        null,
         chol.singular_values,
         k,
         piv,
@@ -255,6 +276,11 @@ function sphere()
     return [cos(u) * cos(v), cos(u) * sin(v), sin(u)]
 end
 
+# All three cases use monomials through degree four. **C₁** and **C₃** each
+# have seven atoms on a circle of radius one and three, respectively.
+# **S** has twelve atoms on the unit sphere. Each row gives the relative
+# perturbation `δ` for that case.
+
 Random.seed!(0)
 circle_atoms = circle(1, 7)
 large_circle_atoms = circle(3, 7)
@@ -262,41 +288,29 @@ sphere_atoms = [sphere() for _ in 1:12]
 table(
     [
         [
-            moments("circle, d = 4", [x, y], 4, circle_atoms, δ) for
+            moments([x, y], 4, circle_atoms, δ; case = "C₁") for
             δ in [1e-12, 1e-8, 1e-6, 1e-4]
         ]
         [
-            moments(
-                "circle of radius 3, d = 4",
-                [x, y],
-                4,
-                large_circle_atoms,
-                δ,
-            ) for δ in [1e-12, 1e-8, 1e-6]
+            moments([x, y], 4, large_circle_atoms, δ; case = "C₃") for
+            δ in [1e-12, 1e-8, 1e-6]
         ]
         [
-            moments("sphere, d = 4", [x, y, z], 4, sphere_atoms, δ) for
+            moments([x, y, z], 4, sphere_atoms, δ; case = "S") for
             δ in [1e-12, 1e-8, 1e-6, 1e-4]
         ]
     ],
+    ("Case", "δ"),
 )
 
-# Again, the noise follows `σ[r+1] / σ[r]` and not `σ[r+1] / σ[1]`. The
-# tolerance `σ[r+1] / σ[1] / √n` previously used by [`Echelon`](@ref) is
-# therefore too small: it considers some noise as pivots. Note that this only
-# matters if a monomial is dependent before the last pivot. This is the case
-# for atoms on the circle as ``x^2`` is dependent on ``1`` and ``y^2``.
-# The last row is discussed in the limitations below.
+# On the circle, `x²` is dependent on `1` and `y²`. A tolerance below the
+# measured noise can select this column as a pivot. Several rows illustrate
+# this failure for the first tolerance. The last row is discussed below.
 
 # ## Moment matrices without gap
 #
 # Should we then simply use `σ[r+1] / σ[r]` ? Consider the following moment
-# matrix obtained by an SDP solver for [LPJ20, Example 3.9].
-#
-# [LPJ20] Legat, Benoît, Pablo Parrilo, and Raphaël Jungers.
-# *Certifying unstability of switched systems using sum of squares
-# programming.*
-# SIAM Journal on Control and Optimization 58.4 (2020): 2616-2638.
+# matrix obtained by an SDP solver for [Legat2020; Example 3.9](@cite).
 
 @polyvar a b
 ν = MM.moment_matrix(
@@ -314,48 +328,45 @@ table(
     ],
     monomials([a, b], 6),
 )
-σ = svdvals(Matrix(MM.value_matrix(ν)))
+F = svd(Matrix(MM.value_matrix(ν)))
+σ = F.S
 σ / σ[1]
 
-# The singular values decrease without any gap. Whatever the rank we choose,
-# the discarded singular values are not noise, they are just smaller. The
-# space spanned by the first `r` singular vectors is then very sensitive to
-# perturbations and `σ[r+1] / σ[r]` is large. Still, the atoms can be
-# extracted as long as the Gaussian elimination does not consider the small
-# but nonzero pivots as zero. We compare the atoms obtained with the
-# tolerance `σ[r+1] / σ[r] · √n` and with the one of the package.
+# After the first singular value the spectrum decays gradually. The table
+# compares the extracted atoms when we set the accuracy to `σ[r+1] / σ[r]`
+# and when we use the package default. The last two columns give the atom
+# ratios `b/a` for these two choices. Both use the same computed vectors
+# and the [`Echelon`](@ref) solver.
 
-function extract(rank_tol, accuracy)
-    null = MM.image_space(ν, MM.LeadingRelativeRankTol(rank_tol))
-    r = size(null.matrix, 2)
-    if !isnothing(accuracy)
-        null = MM.MacaulayNullspace(null.matrix, null.basis, accuracy(r))
-    end
+function extract(null)
     atoms = MM.solve(null, MM.Echelon())
     if isnothing(atoms) || isempty(atoms)
-        return r, "none"
+        return "none"
     end
-    return r,
-    join([@sprintf("%.4f", atom[2] / atom[1]) for atom in atoms], ", ")
+    return join([@sprintf("%.4f", atom[2] / atom[1]) for atom in atoms], ", ")
 end
 
 rows = map([1e-4, 1e-5, 1e-6, 1e-7, 1e-8]) do rank_tol
-    r, gap = extract(rank_tol, r -> σ[r+1] / σ[r])
-    _, package = extract(rank_tol, nothing)
+    check = MM.LeadingRelativeRankTol(rank_tol)
+    r = MM.rank_from_singular_values(σ, check)
+    Z = F.U[:, 1:r]
+    adjacent = MM.MacaulayNullspace(Z, ν.basis, σ[r+1] / σ[r])
+    package = MM.MacaulayNullspace(Z, ν.basis, MM.accuracy(σ, r, check))
     return @sprintf(
         "| %.0e | %d | %.1e | %.1e | %s | %s |",
         rank_tol,
         r,
         σ[r+1] / σ[1],
         σ[r+1] / σ[r],
-        gap,
-        package,
+        extract(adjacent),
+        extract(package),
     )
 end
+
 Markdown.parse(
     join(
         [
-            "| Rank tolerance | r | σ[r+1]/σ[1] | σ[r+1]/σ[r] | b/a with σ[r+1]/σ[r] | b/a with `accuracy` |"
+            "| Rank tol. | r | ρ₁ | ρᵣ | b/a (ρᵣ) | b/a (default) |"
             "| --- | --- | --- | --- | --- | --- |"
             rows
         ],
@@ -363,61 +374,114 @@ Markdown.parse(
     ),
 )
 
-# The dominant atom has `b / a ≈ 0.2278`. With `σ[r+1] / σ[r]`, the tolerance
-# is so large that it considers true pivots as zero and the extraction fails.
+# The dominant atom has `b / a ≈ 0.2278`. Lowering the rank tolerance retains
+# additional directions and makes the choice of pivots relevant to which
+# atoms can be extracted.
 
-# ## The first gap
+# ## Choosing which gap to use
 #
-# The two previous sections seem contradictory. The difference is whether the
-# singular values discarded by the rank check are noise:
+# [`GapBasedAccuracy`](@ref) wraps a rank check. With
+# `gap_tol = 1e-2`, a gap after `j` means `σ[j+1] < 10⁻² σ[j]`.
+# The default, `search_later = false`, checks only `j = r`. Setting
+# `search_later = true` uses the first qualifying gap at or after `r`. If
+# either policy finds a gap, it divides `σ[j+1]` by `σ[r]`. Otherwise it
+# divides `σ[r+1]` by `σ[1]`. The numerator includes the roundoff floor
+# described above. A later gap can suggest a noise floor for a larger signal
+# space. Wedin's separation for the chosen subspace is still the separation
+# at rank `r`. Changing the search range can even increase the tolerance.
+# For example, with `σ = [1, 1e-3, 5e-4, 4e-6]` and `r = 2`, the default
+# gives `5e-4`. Searching one step further gives `4e-6 / 1e-3 = 4e-3`.
 #
-# * For a Macaulay matrix of exact equations or a moment matrix with a clear
-#   rank, there is a gap right after `σ[r]` and `σ[r+1]` is the level of the
-#   noise. The error of the space is then `σ[r+1] / σ[r]`.
-# * For the moment matrix above, there is no gap so the level of the noise
-#   cannot be determined from the singular values. The space spanned by the
-#   first `r` singular vectors should then be considered as the object of
-#   interest rather than an approximation of the space of a matrix of rank
-#   `r`. The Gaussian elimination should only account for the errors in
-#   computing this space, not for the distance to the space of a matrix of
-#   rank `r`, hence the use of `σ[r+1] / σ[1]`.
+# **A. Spurious coordinate.** In the diagonal matrix below, the clean
+# rank-two subspace is spanned by coordinate vectors 1 and 3. A small
+# perturbation couples directions 2 and 3 while leaving the fourth singular
+# value zero.
+
+A = diagm([1.0, 5e-4, 1e-3, 0.0])
+A[2, 3] = A[3, 2] = 1e-12
+F_coupled = svd(A)
+Z_coupled = F_coupled.U[:, 1:2]
+basis_coupled = MB.SubBasis{MB.Monomial}(monomials([x], 0:3))
+coupled_pivots = gap_pivots(Z_coupled, basis_coupled, F_coupled.S, 2)
+@assert coupled_pivots == (Set([1, 3]), Set([1, 2]))
+
+# The selected-rank policy skips the spurious `2e-9` component in column 2.
+# Searching for a later gap finds one after the third singular value and
+# sets a tolerance of about `1.8e-12`, which accepts that component.
 #
-# These are two extremes of the same rule. Let `j ≥ r` be the first index
-# such that there is a gap after `σ[j]`, i.e., `σ[j+1] < 10⁻² σ[j]`. The
-# singular values `σ[r+1], ..., σ[j]` were discarded by the rank check but they
-# are not noise, the level of the noise is `σ[j+1]`. The error of the space
-# is then `σ[j+1] / σ[r]`. If there is no gap, we fall back to
-# `σ[r+1] / σ[1]`. This is what [`accuracy`](@ref) computes.
+# **B. Genuine coordinate.** The following moment matrix comes from
+# the package's atom-extraction tests. Its measure has atoms at `(1, 3)`
+# and `(4, 3)` with approximate weights `0.864` and `0.136`. We retain one
+# direction of this two-atom example. The clean moment matrix has strictly
+# positive entries, so its dominant eigenvector can be chosen strictly
+# positive. Its first coordinate, the constant monomial, is a genuine pivot.
+
+Q = [
+    1.0000000000000002 2.9999999777389235 1.408602019734018 8.999999911981313 4.225805987406138 3.043010098670093
+    2.9999999777389235 8.999999911981313 4.225805987406138 26.999999824988187 12.677417999642149 9.129030026074997
+    1.408602019734018 4.225805987406138 3.043010098670093 12.677417999642149 9.129030026074997 9.580642414414385
+    8.999999911981313 26.999999824988187 12.677417999642149 80.99999955990646 38.03225428611012 27.387090350285558
+    4.225805987406138 12.677417999642149 9.129030026074997 38.03225428611012 27.387090350285558 28.74192618075039
+    3.043010098670093 9.129030026074997 9.580642414414385 27.387090350285558 28.74192618075039 35.73117167739159
+]
+F_atoms = svd(Q)
+Z_atoms = F_atoms.U[:, 1:1]
+basis_atoms = MB.SubBasis{MB.Monomial}(monomials([x, y], 0:2))
+atom_pivots = gap_pivots(Z_atoms, basis_atoms, F_atoms.S, 1)
+@assert atom_pivots == (Set([4]), Set([1]))
+
+table([
+    row(("A",), Z_coupled, basis_coupled, F_coupled.S, 2, Set([1, 3])),
+    row(("B",), Z_atoms, basis_atoms, F_atoms.S, 1, Set([1])),
+])
+
+# The second singular value is about `0.21 σ[1]`, well above the residual
+# singular values from the third onward. The selected-rank fallback sets
+# a tolerance of about `0.51`, skipping the genuine first coordinate of
+# magnitude `0.083`. The gap after the second direction gives a tolerance
+# of about `9.5e-9` and recovers the constant monomial. To use this policy
+# when computing the image space, pass it as the rank check.
+
+measure_moments = MM.moment_matrix(Q, monomials([x, y], 0:2))
+policy = MM.GapBasedAccuracy(MM.FixedRank(1); search_later = true)
+image = MM.image_space(measure_moments, policy)
+d = MM.BasisDependence{MM.LinearDependence}(image)
+@assert findall(!MM.is_dependent, d.dependence) == [1]
+
+# The cutoff controls which gaps qualify. Increasing it to `0.25` makes
+# the gap after the first singular value qualify for both policies.
+
+@assert gap_pivots(Z_atoms, basis_atoms, F_atoms.S, 1; gap_tol = 0.25) ==
+        (Set([4]), Set([4]))
+
+# A later gap can help when discarded directions still carry signal, as in
+# the two-atom example. A gap far below the selected rank can also suggest
+# a tolerance small enough to admit roundoff or perturbation in a dependent
+# column, as in the coupled matrix. The clean pivots distinguish these two
+# outcomes even though both policies recover the requested number of pivots.
+
+# ## Limitations
 #
-# The fallback is also useful when the rank is chosen larger than the rank
-# supported by the data. Consider 6 atoms on the twisted cubic, two of which
-# are very close to each other so that `σ[6]` is about `1e-10 σ[1]`.
+# Consider six atoms on the twisted cubic, two of which are very close.
+# We use monomials through degree three and vary the relative perturbation `δ`.
 
 twisted_cubic_atoms =
     [[t, t^2, t^3] for t in big.([-0.9, -0.4, 0.1, 0.5, 0.5001, 0.95])]
-table([
-    moments("twisted cubic, d = 3", [x, y, z], 3, twisted_cubic_atoms, δ) for
-    δ in [1e-12, 1e-8, 1e-6]
-])
+table(
+    [
+        moments([x, y, z], 3, twisted_cubic_atoms, δ) for
+        δ in [1e-12, 1e-8, 1e-6]
+    ],
+    ("δ",),
+)
 
-# The first 6 monomials are independent so there is no noise: only the signal
-# matters. With `δ = 1e-8` and `δ = 1e-6`, `σ[6]` is at the level of the noise
-# so `σ[7] / σ[6]` is close to `1` and the tolerance `σ[r+1] / σ[r] · √n`
-# considers true pivots as zero. As there is no gap after `σ[6]`, the
-# accuracy falls back to `σ[7] / σ[1]` which gives the true pivots. With
-# `δ = 1e-12`, `σ[7] / σ[6]` is just above the threshold of `10⁻²` so the
-# accuracy also falls back to `σ[7] / σ[1]`.
+# The first six monomials are already independent. A generic six-dimensional
+# subspace has the same six pivots, so a check mark here says little about
+# recovery of the clean subspace. At higher perturbations the sixth
+# singular direction can be poorly determined.
 #
-# ## Limitations
-#
-# The threshold `10⁻²` for detecting a gap is arbitrary. When the noise of an
-# SDP solution is large, for instance `δ = 1e-4` for the sphere above,
-# `σ[r+1] / σ[r]` is about `0.2` which is not considered as a gap so the
-# accuracy falls back to `σ[r+1] / σ[1]` which is too small. Increasing the
-# threshold to detect it would also consider `σ[3] / σ[2] ≈ 0.096` of the
-# moment matrix of the previous section as a gap. Even then, the tolerance
-# `σ[r+1] / σ[r] · √n` would be larger than the signal. The true pivots are
-# obtained with a tolerance between the noise `1.3e-2` and the signal
-# `1.1e-1` but the singular values alone do not tell us where these are. In
-# general, when the noise is comparable to the signal, the dependence of the
-# monomials cannot be recovered with any tolerance.
+# The gap threshold `10⁻²` is heuristic. For the sphere at `δ = 1e-4`, the
+# fallback can accept spurious pivots. The noise and signal columns show
+# the interval of tolerances that recovers the reference pivots. Once the
+# measured noise exceeds the signal, no single tolerance along this
+# elimination path can recover them all.

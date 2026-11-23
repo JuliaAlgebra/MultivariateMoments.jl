@@ -4,39 +4,38 @@ end
 
 is_dependent!(p::Pivots, i) = !(i in p.pivots)
 
-# Tolerance for the Gaussian elimination of `transpose(null.matrix)`. As the
-# columns of `null.matrix` are orthonormal, the error of the space they span is
-# about `null.accuracy`, see `accuracy`. The Gaussian elimination then carries
-# and amplifies this error:
-#
-# * The backward error analysis of Gaussian elimination with partial pivoting
-#   (which is what `RowEchelon.rref!` does as it picks the largest entry of
-#   the column) gives a bound proportional to `n * u` times the growth factor
-#   `ρ_n`, see [H02, Chapter 9]. The worst case would therefore give a factor
-#   `n` (times `ρ_n`), not `√n`.
-# * The `√n` factor matches the rule of thumb of [H02, Section 2.8]: as
-#   rounding errors are roughly independent, an `n * u` bound is pessimistic
-#   and `√n * u` is a more realistic estimate (this goes back to Wilkinson).
-# * [TS90] shows that the growth factor of partial pivoting is small in
-#   practice, which supports not including it.
-#
-# Note that these analyses consider the rounding errors made during the
-# elimination while here, the dominant error is usually the error of
-# `null.matrix` itself which is carried by the elimination. In the end, the
-# factor `√n` was chosen empirically, see
-# https://github.com/JuliaAlgebra/MultivariateMoments.jl/pull/111 and the
-# tutorial `docs/src/tutorials/dependence_tolerance.jl` for a comparison with
-# other tolerances.
-#
-# [H02] Higham, Nicholas J.
-# *Accuracy and Stability of Numerical Algorithms.*
-# 2nd edition, SIAM, 2002.
-#
-# [TS90] Trefethen, Lloyd N. and Schreiber, Robert S.
-# *Average-case stability of Gaussian elimination.*
-# SIAM Journal on Matrix Analysis and Applications 11.3 (1990): 335-360.
-function _rref_tolerance(null::MacaulayNullspace)
-    return null.accuracy * sqrt(size(null.matrix, 1))
+# Use √n as an empirical multiplier on the estimated subspace error for
+# n monomials. Higham (2002, Section 2.8 and Chapter 9) analyzes rounding
+# error, and Trefethen and Schreiber (1990) study growth in elimination on
+# random matrices. See `docs/src/tutorials/dependence_tolerance.jl` for the
+# relation to these analyses and comparisons on monomial bases.
+function _nullspace_rref(null::MacaulayNullspace)
+    A = null.matrix'
+    tol = real(null.accuracy) * sqrt(size(A, 2))
+    U = RowEchelon.rref!(Matrix(A), tol)
+    # An empty matrix has rank zero at any tolerance. Otherwise, we expect
+    # the r columns of the Macaulay nullspace basis to be independent, so
+    # its adjoint A should have r pivots. Zero rows come last in echelon
+    # form, so a nonzero rth row of U confirms that all r pivots were found.
+    if isempty(U) || !iszero(view(U, size(U, 1), :))
+        return U
+    end
+    # A zero last row may be genuine, e.g., after restricting the monomial
+    # basis. Count the pivots at roundoff tolerance to get a reference rank.
+    scale = norm(A, Inf)
+    roundoff = eps(float(scale))
+    V = RowEchelon.rref!(Matrix(A), roundoff)
+    r = findlast(!iszero, eachrow(V))
+    tol = min(tol, scale)
+    # Row r is zero exactly when U has fewer than r pivots.
+    while !isnothing(r) && iszero(view(U, r, :))
+        tol /= 2
+        if tol <= roundoff
+            return V
+        end
+        RowEchelon.rref!(copyto!(U, A), tol)
+    end
+    return U
 end
 
 # Columns of the pivots of a matrix `U` in reduced row echelon form computed
@@ -168,8 +167,7 @@ function border_basis_and_solver(
     # "Semidefinite characterization and computation of zero-dimensional real radical ideals."
     # Foundations of Computational Mathematics 8 (2008): 607-647.
 
-    Z = Matrix(null.matrix')
-    RowEchelon.rref!(Z, _rref_tolerance(null))
+    Z = _nullspace_rref(null)
     #r, vals = solve_system(U', μ.x)
     # TODO determine what is better between rank_check and sqrt(rank_check) here
     algebraic_solver = AlgebraicBorderSolver{D}(

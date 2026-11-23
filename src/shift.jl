@@ -42,11 +42,9 @@ a large impact on the computation time:
 
 * Without `rank_check`, the independent monomials are the pivots of the
   reduced row echelon form of `transpose(null.matrix)`. It is computed with a
-  single Gaussian elimination where the entries smaller than
-  `null.accuracy` times the square root of the number of rows of
-  `null.matrix` are considered to be zero. This tolerance accounts for both
-  the accuracy of the null space and the growth of the errors in the
-  Gaussian elimination.
+  Gaussian elimination with initial tolerance `null.accuracy` times the
+  square root of the number of monomials. If this loses rank, the
+  elimination is repeated at a lower tolerance.
 * With `rank_check`, the rows are added one by one and a row is independent
   if it increases the rank, as determined by `rank_check`, of the rows of
   the independent monomials found so far. This allows to choose how the rank
@@ -55,8 +53,7 @@ a large impact on the computation time:
   times slower.
 """
 function BasisDependence{LinearDependence}(null::MacaulayNullspace)
-    U = Matrix(transpose(null.matrix))
-    RowEchelon.rref!(U, _rref_tolerance(null))
+    U = _nullspace_rref(null)
     pivots = Set(_pivots(U))
     return BasisDependence{LinearDependence}(Pivots(pivots), null.basis)
 end

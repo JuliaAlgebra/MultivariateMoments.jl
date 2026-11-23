@@ -45,6 +45,51 @@ function test_lazy_matrix(x, y)
     return
 end
 
+function _test_pivots(null, indices)
+    expected = SA.sub_basis(null.basis, indices)
+    d = MM.BasisDependence{MM.LinearDependence}(null)
+    @test MM.independent_basis(d) == expected
+    border, _ = MM.border_basis_and_solver(null, MM.Echelon())
+    @test MM.independent_basis(border) == expected
+    return
+end
+
+function test_gap_below_selected_rank(x, y)
+    M = LinearAlgebra.diagm([1.0, 5e-4, 1e-3, 0.0])
+    basis = b(MP.monomials((x,), 0:3))
+    for perturbation in [0.0, 1e-12]
+        # The perturbation rotates the third direction into the second by
+        # about 2e-9 while leaving the last singular value exactly zero.
+        M[2, 3] = M[3, 2] = perturbation
+        chol =
+            MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.LeadingRelativeRankTol(7e-4))
+        null = MM.MacaulayNullspace(chol.L, basis, MM.accuracy(chol))
+        _test_pivots(null, [1, 3])
+    end
+    return
+end
+
+function test_pivots_preserve_rank(x, y)
+    M = LinearAlgebra.diagm([1.0, 1.1e-8])
+    chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.LeadingRelativeRankTol(1e-8))
+    full = MM.MacaulayNullspace(chol.L, b([1, x]), MM.accuracy(chol))
+    _test_pivots(full, [1, 2])
+    # Many small entries can together span a unit vector.
+    n = 128
+    dense = fill(inv(sqrt(n)), n, 1)
+    null = MM.MacaulayNullspace(dense, b(MP.monomials((x,), 0:(n-1))), 0.008)
+    _test_pivots(null, [1])
+    # A direction just above roundoff can require the smallest tolerance.
+    tiny = nextfloat(eps())
+    null = MM.MacaulayNullspace([1.0 0; 0 tiny], b([1, x]), 2eps())
+    _test_pivots(null, [1, 2])
+    # Restricting to the first two rows leaves a 2-by-2 matrix of rank one.
+    a = inv(sqrt(2))
+    null = MM.MacaulayNullspace([a 0; a 0; 0 1], b([1, x, x^2]), 0.02)
+    _test_pivots(null[[1, x]], [1])
+    return
+end
+
 function test_partial_commutative_fix(x, y)
     matrix = Float64[
         1 0 0 0 # 1

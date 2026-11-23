@@ -15,51 +15,75 @@ using `check`.
 function rank_from_singular_values end
 
 """
+    GapBasedAccuracy(check::RankCheck; gap_tol = 1e-2, search_later = false)
+
+Select the rank using `check` and configure how [`accuracy`](@ref) scales the
+pivot tolerance. A gap after singular value `σ[j]` means
+`σ[j+1] < gap_tol * σ[j]`.
+
+By default only the gap at the selected rank `r` is considered. Set
+`search_later = true` to use the first gap at or after `r`. A later gap
+can identify a noise floor below discarded signal directions. Both the
+noise level and its normalization change, so the resulting tolerance can
+increase or decrease. See
+[Tolerance of the numerical dependence of monomials](@ref) for examples.
+"""
+struct GapBasedAccuracy{C<:RankCheck,T<:Real} <: RankCheck
+    check::C
+    gap_tol::T
+    search_later::Bool
+end
+
+function GapBasedAccuracy(
+    check::RankCheck;
+    gap_tol = 1e-2,
+    search_later = false,
+)
+    return GapBasedAccuracy(check, gap_tol, search_later)
+end
+
+function rank_from_singular_values(σ, config::GapBasedAccuracy)
+    return rank_from_singular_values(σ, config.check)
+end
+
+function default_accuracy(σ, config::GapBasedAccuracy)
+    return default_accuracy(σ, config.check)
+end
+
+"""
     accuracy(σ, r, check::RankCheck)
 
-Returns a value measuring the accuracy of the rank check `check` returning rank
-`r` for a matrix with singular values `σ`. It estimates the error (i.e., the
-sine of the largest principal angle) of the computed space spanned by the
-first `r` (resp. last `length(σ) - r`) singular vectors.
+Return a relative tolerance for dependence calculations after selecting rank
+`r` from the decreasing singular values `σ`.
 
-The singular value `σ[j+1]` after the first gap, i.e., for the first `j ≥ r`
-such that `σ[j+1] < 1e-2 * σ[j]`, is the level of the noise of the matrix. Indeed,
-if `j > r`, the singular values `σ[r+1], ..., σ[j]` are not noise but they were
-discarded by the rank check. As the error of the space is the level of the
-noise divided by `σ[r]` [W72], the accuracy is `σ[j+1] / σ[r]`. This is the
-case for instance for the null space of a Macaulay matrix of exact equations
-which has a gap at `j = r`.
+By default, check for a gap at `r`. Use [`GapBasedAccuracy`](@ref) to configure
+the threshold and search range. For a gap after `σ[j]`, divide `σ[j+1]` by
+the weakest retained singular value `σ[r]`. If no gap is found, divide
+`σ[r+1]` by `σ[1]`. In both cases, first bound the numerator from below by
+`length(σ) * eps * σ[1]` to account for roundoff in the singular values.
+These ratios are heuristics for selecting pivots. Estimating a principal
+angle also requires information about the perturbation.
 
-If there is no gap, the level of noise cannot be determined so the accuracy
-is `σ[r+1] / σ[1]`. This is the case for instance for moment matrices
-obtained by an SDP solver whose singular values decrease without any gap.
-
-In both cases, the level of the noise is at least the error
-`length(σ) * eps * σ[1]` with which the singular values are computed, which
-is the default tolerance of `LinearAlgebra.rank`.
-
-This is used to determine the tolerance of the Gaussian elimination of
-[`Echelon`](@ref) and [`BasisDependence`](@ref).
-See the tutorial
-[Tolerance of the numerical dependence of monomials](@ref) for a comparison
-with other choices.
-
-[W72] Wedin, Per-Åke.
-*Perturbation bounds in connection with singular value decomposition.*
-BIT Numerical Mathematics 12 (1972): 99-111.
+For rank zero return zero. For full rank use the default for `check`.
+See [Tolerance of the numerical dependence of monomials](@ref) for examples.
 """
-function accuracy(σ::Vector{T}, r, check::RankCheck) where {T}
+function accuracy(σ::Vector, r, check::RankCheck)
+    return accuracy(σ, r, GapBasedAccuracy(check))
+end
+
+function accuracy(σ::Vector{T}, r, config::GapBasedAccuracy) where {T}
     if iszero(r)
         return zero(T)
     elseif r == lastindex(σ)
-        return default_accuracy(σ, check)
+        return default_accuracy(σ, config)
     end
-    # The first gap is between `σ[r+k-1]` and `σ[r+k]`
-    k = findfirst(j -> σ[j+1] < 1e-2 * σ[j], r:(lastindex(σ)-1))
-    if isnothing(k)
-        noise, scale = σ[r+1], σ[1]
-    else
-        noise, scale = σ[r+k], σ[r]
+    noise, scale = σ[r+1], σ[1]
+    last = config.search_later ? lastindex(σ) - 1 : r
+    for j in r:last
+        if σ[j+1] < config.gap_tol * σ[j]
+            noise, scale = σ[j+1], σ[r]
+            break
+        end
     end
     # The singular values are computed with an error of about
     # `length(σ) * eps * σ[1]` so a smaller computed singular value does not
@@ -77,6 +101,10 @@ This is used by [`FallbackRank`](@ref) for deciding whether the fallback
 should be used.
 """
 function doubt end
+
+function doubt(σ, config::GapBasedAccuracy)
+    return doubt(σ, config.check)
+end
 
 """
     struct UserRank <: RankCheck
@@ -464,9 +492,9 @@ end
 """
     accuracy(chol::LowRankLDLT)
 
-Return the accuracy of the space spanned by the columns of `chol.L` from the
-singular values of the matrix for which `chol` is the rank-`r` Cholesky
-decomposition, see [`accuracy`](@ref).
+Return the dependence tolerance derived from the retained rank and the
+spectrum stored by `chol`, see [`accuracy`](@ref). Cholesky-based
+factorizations use the sorted squared diagonal pivots.
 """
 function accuracy(chol::LowRankLDLT)
     return accuracy(chol.singular_values, size(chol.L, 2), chol.rank_check)
