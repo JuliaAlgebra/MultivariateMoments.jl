@@ -45,14 +45,18 @@ function noise_and_signal(A, piv)
     return noise, signal
 end
 
-function package_pivots(null)
-    d = MM.BasisDependence{MM.LinearDependence}(null)
-    return Set(findall(!MM.is_dependent, d.dependence))
+function gap_pivots(Z, basis, σ, r; gap_tol = 1e-2)
+    return map((false, true)) do search_later
+        policy = MM.GapBasedAccuracy(MM.FixedRank(r); gap_tol, search_later)
+        null = MM.MacaulayNullspace(Z, basis, MM.accuracy(σ, r, policy))
+        d = MM.BasisDependence{MM.LinearDependence}(null)
+        return Set(findall(!MM.is_dependent, d.dependence))
+    end
 end
 
-function row(name, null::MM.MacaulayNullspace, σ, r, piv)
-    A = Matrix(transpose(null.matrix))
-    n = size(null.matrix, 1)
+function row(name, Z, basis, σ, r, piv)
+    A = Matrix(transpose(Z))
+    n = size(Z, 1)
     noise, signal = noise_and_signal(A, piv)
     s = @sprintf(
         "| %s | %d | %.1e | %.1e | %.1e | %.1e |",
@@ -69,12 +73,15 @@ function row(name, null::MM.MacaulayNullspace, σ, r, piv)
     )
         s *= pivots(A, tol) == piv ? " ✓ |" : " ✗ |"
     end
-    return s * (package_pivots(null) == piv ? " ✓ |" : " ✗ |")
+    for found in gap_pivots(Z, basis, σ, r)
+        s *= found == piv ? " ✓ |" : " ✗ |"
+    end
+    return s
 end
 
 function table(rows)
-    header = "| Case | n | σ[r+1]/σ[1] | σ[r+1]/σ[r] | noise | signal | σ[r+1]/σ[1]/√n | σ[r+1]/σ[r]·√n | Package |"
-    sep = "|" * repeat(" --- |", 9)
+    header = "| Case | n | σ[r+1]/σ[1] | σ[r+1]/σ[r] | noise | signal | σ[r+1]/σ[1]/√n | σ[r+1]/σ[r]·√n | Gap at r | First gap at or after r |"
+    sep = "|" * repeat(" --- |", 10)
     return Markdown.parse(join([header; sep; rows], "\n"))
 end
 
@@ -86,12 +93,7 @@ function macaulay(equalities, D)
     F = svd(A; full = true)
     check = MM._default_nullspace_rank_check(A)
     r = MM.rank_from_singular_values(F.S, check)
-    null = MM.MacaulayNullspace(
-        F.Vt[(r+1):end, :]',
-        M.column_basis,
-        MM.accuracy(F.S, r, check),
-    )
-    σ = F.S
+    Z = F.Vt[(r+1):end, :]'
     big_A = big.(A)
     ref = svd(big_A; full = true)
     ref_rank = MM.rank_from_singular_values(
@@ -100,7 +102,14 @@ function macaulay(equalities, D)
     )
     @assert r == ref_rank
     piv = true_pivots(Matrix(ref.Vt[(ref_rank+1):end, :]))
-    return row(join(equalities, ", ") * ", D = $D", null, σ, r, piv)
+    return row(
+        join(equalities, ", ") * ", D = $D",
+        Z,
+        M.column_basis,
+        F.S,
+        r,
+        piv,
+    )
 end
 
 table([
@@ -121,14 +130,10 @@ function moments(name, vars, d, atoms, δ)
     E = (E + E') / 2
     M = exact + δ * opnorm(exact) / opnorm(E) * E
     chol = MM.low_rank_ldlt(M, MM.SVDLDLT(), MM.FixedRank(k))
-    null = MM.MacaulayNullspace(
-        chol.L,
-        MB.SubBasis{MB.Monomial}(monos),
-        MM.accuracy(chol),
-    )
     return row(
         @sprintf("%s, δ = %.0e", name, δ),
-        null,
+        chol.L,
+        MB.SubBasis{MB.Monomial}(monos),
         chol.singular_values,
         k,
         piv,
@@ -232,14 +237,46 @@ Markdown.parse(
 
 A = diagm([1.0, 5e-4, 1e-3, 0.0])
 A[2, 3] = A[3, 2] = 1e-12
-chol = MM.low_rank_ldlt(A, MM.SVDLDLT(), MM.FixedRank(2))
-basis = MB.SubBasis{MB.Monomial}(monomials([x], 0:3))
-example = MM.MacaulayNullspace(chol.L, basis, MM.accuracy(chol))
-spectrum = chol.singular_values
-later_gap_tol = max(spectrum[4] / spectrum[2], eps()) * sqrt(4)
-@assert pivots(Matrix(transpose(chol.L)), later_gap_tol) == Set([1, 2])
-@assert package_pivots(example) == Set([1, 3])
-table([row("coupled diagonal matrix", example, spectrum, 2, Set([1, 3]))])
+F_coupled = svd(A)
+Z_coupled = F_coupled.U[:, 1:2]
+basis_coupled = MB.SubBasis{MB.Monomial}(monomials([x], 0:3))
+coupled_pivots = gap_pivots(Z_coupled, basis_coupled, F_coupled.S, 2)
+@assert coupled_pivots == (Set([1, 3]), Set([1, 2]))
+
+Q = [
+    1.0000000000000002 2.9999999777389235 1.408602019734018 8.999999911981313 4.225805987406138 3.043010098670093
+    2.9999999777389235 8.999999911981313 4.225805987406138 26.999999824988187 12.677417999642149 9.129030026074997
+    1.408602019734018 4.225805987406138 3.043010098670093 12.677417999642149 9.129030026074997 9.580642414414385
+    8.999999911981313 26.999999824988187 12.677417999642149 80.99999955990646 38.03225428611012 27.387090350285558
+    4.225805987406138 12.677417999642149 9.129030026074997 38.03225428611012 27.387090350285558 28.74192618075039
+    3.043010098670093 9.129030026074997 9.580642414414385 27.387090350285558 28.74192618075039 35.73117167739159
+]
+F_atoms = svd(Q)
+Z_atoms = F_atoms.U[:, 1:1]
+basis_atoms = MB.SubBasis{MB.Monomial}(monomials([x, y], 0:2))
+atom_pivots = gap_pivots(Z_atoms, basis_atoms, F_atoms.S, 1)
+@assert atom_pivots == (Set([4]), Set([1]))
+
+table([
+    row(
+        "coupled diagonal matrix",
+        Z_coupled,
+        basis_coupled,
+        F_coupled.S,
+        2,
+        Set([1, 3]),
+    ),
+    row("two-atom moment matrix", Z_atoms, basis_atoms, F_atoms.S, 1, Set([1])),
+])
+
+measure_moments = MM.moment_matrix(Q, monomials([x, y], 0:2))
+policy = MM.GapBasedAccuracy(MM.FixedRank(1); search_later = true)
+image = MM.image_space(measure_moments, policy)
+d = MM.BasisDependence{MM.LinearDependence}(image)
+@assert findall(!MM.is_dependent, d.dependence) == [1]
+
+@assert gap_pivots(Z_atoms, basis_atoms, F_atoms.S, 1; gap_tol = 0.25) ==
+        (Set([4]), Set([4]))
 
 twisted_cubic_atoms =
     [[t, t^2, t^3] for t in big.([-0.9, -0.4, 0.1, 0.5, 0.5001, 0.95])]
